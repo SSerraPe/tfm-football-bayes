@@ -1,0 +1,32 @@
+---
+title: "Simulation Recovery Checks"
+output: html_document
+---
+
+```{r setup}
+library(readr)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r loadings}
+loadings_path <- "../outputs/tables/07_sim_lowrank_recovery_loadings.csv"
+if (file.exists(loadings_path)) {
+  loadings <- read_csv(loadings_path, show_col_types = FALSE)
+  ggplot(loadings, aes(truth_value, mean, color = parameter)) +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey50") +
+    geom_point() +
+    theme_minimal()
+}
+```
+
+```{r variances}
+variance_path <- "../outputs/tables/07_sim_lowrank_recovery_variances.csv"
+if (file.exists(variance_path)) {
+  variances <- read_csv(variance_path, show_col_types = FALSE)
+  ggplot(variances, aes(truth_value, mean, color = parameter)) +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey50") +
+    geom_point() +
+    theme_minimal()
+}
+```

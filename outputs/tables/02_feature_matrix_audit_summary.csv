@@ -1,0 +1,2 @@
+n_observations,n_variables,empirical_rank,max_abs_correlation,exact_correlation_threshold,warning_correlation_threshold,high_correlation_pairs
+4944,53,53,0.9722542663309252,0.999,0.95,1

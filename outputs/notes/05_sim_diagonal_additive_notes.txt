@@ -1,0 +1,4 @@
+Simulated Diagonal Additive Model
+
+This intentionally fits the diagonal additive covariance model to data generated from low-rank plus diagonal player and season effects.
+The purpose is misspecification comparison against known simulation covariance diagonals.

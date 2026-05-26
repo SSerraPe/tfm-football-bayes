@@ -1,0 +1,5 @@
+Irregular Panel Treatment
+
+The modelling unit is an observed player-season row.
+Missing player-seasons are not imputed or represented as missing responses.
+Player and season indices only map rows that are observed in the Wyscout-derived panel.

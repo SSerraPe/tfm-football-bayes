@@ -1,0 +1,5 @@
+Simulated Low-Rank Recovery Model
+
+This model matches the low-rank plus diagonal simulation design.
+Loadings use pure-anchor constraints: the first Q variables are positive own-factor anchors and have zero off-factor loadings.
+Recovery diagnostics compare posterior summaries against saved Lambda, Psi, and covariance-diagonal truth.

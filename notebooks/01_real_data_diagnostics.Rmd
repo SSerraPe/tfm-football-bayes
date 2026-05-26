@@ -1,0 +1,25 @@
+---
+title: "Real Data Additive Diagnostics"
+output: html_document
+---
+
+```{r setup}
+library(readr)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r variance}
+variance_path <- "../outputs/tables/07_real_variance_decomposition.csv"
+if (file.exists(variance_path)) {
+  variance <- read_csv(variance_path, show_col_types = FALSE)
+  print(head(variance, 20))
+}
+```
+
+```{r diagnostics}
+diagnostics_path <- "../outputs/diagnostics/03_real_diagonal_additive_diagnostic_summary.csv"
+if (file.exists(diagnostics_path)) {
+  read_csv(diagnostics_path, show_col_types = FALSE)
+}
+```

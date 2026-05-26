@@ -1,0 +1,5 @@
+Real Diagonal Additive Model
+
+Model: y_ij = mu + a_i + b_j + epsilon_ij.
+Player, season, and residual covariance matrices are diagonal in the scaled feature space.
+Random effects use non-centered standard-normal parameters and are column-centered in transformed parameters.

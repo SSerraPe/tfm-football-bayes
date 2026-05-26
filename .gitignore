@@ -1,0 +1,30 @@
+# Stan compiled binaries
+stan/*/
+*.exe
+*/model
+*.d
+
+# Large CmdStan posterior CSV draws (~12 GB)
+fits/csv/
+
+# Raw and interim data (large / proprietary)
+data/raw/
+data/interim/
+
+# R session artifacts
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj
+
+# macOS metadata
+.DS_Store
+**/.DS_Store
+
+# Log files
+*.log
+Rplots.pdf
+
+# Temporary files
+*.tmp
+*.bak

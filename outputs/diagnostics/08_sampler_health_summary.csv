@@ -1,0 +1,4 @@
+model_id,status,n_draws,n_divergent,max_treedepth,n_max_treedepth_hits,min_ebfmi,mean_accept_stat
+03_real_diagonal_additive,available,4000,0,8,0,0.5606937967969786,0.95342067289
+05_sim_diagonal_additive,available,4000,0,8,0,0.5512040696306718,0.950994358225
+06_sim_lowrank_recovery,available,4000,0,8,0,0.5859092950640646,0.9508263220475

@@ -1,0 +1,7 @@
+field_family,rule
+Identifiers,"Grouped by player_id, season_id, and competition_id; player_name is carried from the first non-missing value."
+Exposure,observed_matches counts distinct match_id; minutes sums total_minutes_on_field.
+Totals,All numeric total_* columns are summed across observed lower-level rows.
+Per-90 rates,"For each summed total_* count, per90_* = 90 * total / summed minutes."
+Success rates,Selected rate_* variables are recomputed from summed successful/attempt count pairs.
+Source averages/percentages,"Original average_* and percent_* fields are retained as minute-weighted audit summaries, not as primary modelling variables."

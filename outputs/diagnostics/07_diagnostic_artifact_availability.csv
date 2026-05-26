@@ -1,0 +1,4 @@
+artifact,available
+real_diagonal_summary,TRUE
+sim_diagonal_summary,TRUE
+sim_lowrank_summary,TRUE

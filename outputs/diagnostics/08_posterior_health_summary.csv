@@ -1,0 +1,4 @@
+model_id,status,n_parameters,max_rhat,n_rhat_over_1_01,n_rhat_over_1_05,min_ess_bulk,min_ess_tail,n_ess_bulk_lt_400,n_ess_tail_lt_400
+03_real_diagonal_additive,available,531,1.034561050881976,13,0,159.49641716910315,175.09218138316703,10,7
+05_sim_diagonal_additive,available,531,1.01022972363279,3,0,778.7214330289146,1412.162252109511,0,0
+06_sim_lowrank_recovery,available,688,1.738844591302919,233,208,6.098681227224155,106.72673407929769,215,194
