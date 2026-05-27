@@ -41,6 +41,7 @@ library(readr)
 library(dplyr)
 library(tibble)
 library(knitr)
+library(kableExtra)
 
 # Resolve model root from the location of this .qmd file
 model_root <- normalizePath(dirname(knitr::current_input(dir = TRUE)))
@@ -64,7 +65,9 @@ chain_fig <- function(subdir, f) file.path(figures_dir, "11_chain_plots", subdir
 show_table <- function(df, caption = NULL, digits = 4) {
   if (is.null(df)) return(invisible(NULL))
   knitr::kable(df, caption = caption, digits = digits,
-               booktabs = TRUE, linesep = "")
+               booktabs = TRUE, linesep = "") |>
+    kableExtra::kable_styling(latex_options = c("hold_position", "scale_down"),
+                              font_size = 9)
 }
 ```
 
@@ -98,21 +101,29 @@ The factor loadings $\Lambda_a \in \mathbb{R}^{P \times Q_a}$ capture latent pla
 
 ## Pipeline Stages
 
-| Stage | Script | Purpose |
-|---|---|---|
-| 00 | `00_build_longitudinal_dataset.R` | Aggregate match rows to player-season panel |
-| 01 | `01_read_clean_feature_engineering.R` | Clean, filter, engineer 53 features |
-| 02 | `02_prepare_model_objects.R` | Scale data, build indices and Stan data |
-| 03 | `03_fit_real_diagonal_additive.R` | Baseline diagonal model — real data |
-| 04 | `04_simulate_lowrank_additive_data.R` | Simulate data with known low-rank truth |
-| 05 | `05_fit_sim_diagonal_additive.R` | Diagonal model — simulated data (misspecification check) |
-| 06 | `06_fit_sim_lowrank_recovery.R` | Full low-rank recovery — failed (max $\hat{R} = 1.74$) |
-| 07 | `07_diagnostics_and_recovery_plots.R` | Recovery tables and plots for stages 03/05/06 |
-| 08 | `08_validate_all_models.R` | Comprehensive validation (sampler, posterior, LOO) |
-| **09** | `09_fit_sim_lowrank_a_diag_b.R` | **New model — simulated data (recovery validation)** |
-| **10** | `10_fit_real_lowrank_a_diag_b.R` | **New model — real La Liga data (main result)** |
-| **11** | `11_loading_analysis_and_chains.R` | Loading tables, chain plots, recovery metrics |
-| **12** | `12_football_interpretation.R` | Factor interpretation, player archetypes |
+```{r pipeline-stages-table}
+tibble::tribble(
+  ~Stage, ~Script, ~Purpose,
+  "00", "00_build_longitudinal_dataset.R",      "Aggregate match rows to player-season panel",
+  "01", "01_read_clean_feature_engineering.R",  "Clean, filter, engineer 53 features",
+  "02", "02_prepare_model_objects.R",            "Scale data, build indices and Stan data",
+  "03", "03_fit_real_diagonal_additive.R",       "Baseline diagonal model — real data",
+  "04", "04_simulate_lowrank_additive_data.R",  "Simulate data with known low-rank truth",
+  "05", "05_fit_sim_diagonal_additive.R",        "Diagonal model — simulated data (misspecification check)",
+  "06", "06_fit_sim_lowrank_recovery.R",         "Full low-rank recovery — failed (max Rhat = 1.74)",
+  "07", "07_diagnostics_and_recovery_plots.R",  "Recovery tables and plots for stages 03/05/06",
+  "08", "08_validate_all_models.R",              "Comprehensive validation (sampler, posterior, LOO)",
+  "09", "09_fit_sim_lowrank_a_diag_b.R",         "New model — simulated data (recovery validation)",
+  "10", "10_fit_real_lowrank_a_diag_b.R",        "New model — real La Liga data (main result)",
+  "11", "11_loading_analysis_and_chains.R",      "Loading tables, chain plots, recovery metrics",
+  "12", "12_football_interpretation.R",          "Factor interpretation, player archetypes"
+) |>
+  knitr::kable(booktabs = TRUE, linesep = "", caption = "Pipeline stage reference") |>
+  kableExtra::kable_styling(latex_options = c("hold_position", "scale_down"), font_size = 9) |>
+  kableExtra::column_spec(1, width = "0.8cm") |>
+  kableExtra::column_spec(2, width = "5.5cm") |>
+  kableExtra::column_spec(3, width = "7cm")
+```
 
 ## Environment Variables
 
@@ -172,8 +183,26 @@ if (!is.null(sh)) {
   sh |>
     select(model_id, n_draws, n_divergent, max_treedepth,
            n_max_treedepth_hits, min_ebfmi, mean_accept_stat) |>
-    mutate(across(where(is.numeric), \(x) round(x, 4))) |>
-    show_table(caption = "Sampler health — stages 03/05/06")
+    mutate(
+      model_id = sub("^0[0-9]+_", "", model_id),
+      model_id = sub("_additive$", "", model_id),
+      model_id = sub("_recovery$", "_recov", model_id),
+      across(where(is.numeric), \(x) round(x, 4))
+    ) |>
+    rename(
+      Model        = model_id,
+      Draws        = n_draws,
+      Diverg.      = n_divergent,
+      MaxTree      = max_treedepth,
+      TreeHits     = n_max_treedepth_hits,
+      MinEBFMI     = min_ebfmi,
+      AcceptStat   = mean_accept_stat
+    ) |>
+    knitr::kable(booktabs = TRUE, linesep = "",
+                 caption = "Sampler health — stages 03/05/06") |>
+    kableExtra::kable_styling(latex_options = c("hold_position", "scale_down"),
+                              font_size = 9) |>
+    kableExtra::column_spec(1, width = "4cm")
 }
 ```
 
@@ -342,10 +371,25 @@ if (file.exists(p_d)) knitr::include_graphics(p_d)
 
 ### Bugs Fixed This Run
 
-| File | Bug | Fix |
-|---|---|---|
-| `scripts/11_loading_analysis_and_chains.R` | `truth$psi_a_sd` does not exist in truth object | Replaced with `truth$Sigma_a_diag` (precomputed) |
-| `scripts/11_loading_analysis_and_chains.R` | `true_lambda[row_vec, col_vec]` extracts a submatrix (11,236 values) instead of element-wise | Changed to `true_lambda[cbind(observed_index, factor_index)]` |
+```{r bugs-fixed}
+tibble::tribble(
+  ~File, ~Bug, ~Fix,
+  "11_loading_analysis_and_chains.R",
+    "truth\\$psi\\_a\\_sd does not exist in truth object",
+    "Replaced with truth\\$Sigma\\_a\\_diag (precomputed diagonal of Sigma\\_a)",
+  "11_loading_analysis_and_chains.R",
+    "true\\_lambda[row\\_vec, col\\_vec] extracts 106x106 submatrix (11,236 elements) instead of element-wise",
+    "Changed to true\\_lambda[cbind(observed\\_index, factor\\_index)]"
+) |>
+  knitr::kable(booktabs = TRUE, linesep = "",
+               caption = "Bugs fixed during this pipeline run",
+               escape = FALSE) |>
+  kableExtra::kable_styling(latex_options = c("hold_position", "scale_down"),
+                            font_size = 8) |>
+  kableExtra::column_spec(1, width = "4cm") |>
+  kableExtra::column_spec(2, width = "5.5cm") |>
+  kableExtra::column_spec(3, width = "5.5cm")
+```
 
 ### Notes and Interpretation
 
