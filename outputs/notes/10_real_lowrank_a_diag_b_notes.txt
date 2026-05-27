@@ -1,0 +1,12 @@
+Real La Liga Data: Low-Rank Sigma_a + Diagonal Sigma_b
+
+N = 4944 player-season rows
+P = 53 scaled features
+I = 1650 unique players
+S = 12 seasons
+Q_a = 2 player latent factors
+
+Season effects are plain diagonal: Sigma_b = Diag(sigma_b^2).
+Player effects are low-rank plus uniqueness: Sigma_a = Lambda_a Lambda_a' + Diag(psi_a^2).
+
+Loading interpretation in stage 12.

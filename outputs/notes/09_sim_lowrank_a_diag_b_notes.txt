@@ -1,0 +1,9 @@
+Simulated Data: Low-Rank Sigma_a + Diagonal Sigma_b
+
+Player factor rank Q_a = 2
+Season effects: plain diagonal (sigma_b per feature, no latent factors).
+This is the key improvement over stage 06 (full low-rank recovery):
+  - Stage 06 had both Sigma_a AND Sigma_b as factor models => poor season mixing (max Rhat 1.739)
+  - Stage 09 keeps Sigma_b diagonal => better identifiability with only 12 seasons.
+
+Recovery diagnostics in stage 11 compare Lambda_a posterior vs simulation truth.

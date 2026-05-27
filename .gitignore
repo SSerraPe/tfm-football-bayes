@@ -1,5 +1,6 @@
-# Stan compiled binaries
+# Stan compiled binaries (directories and compiled executable files)
 stan/*/
+stan/additive_*
 *.exe
 */model
 *.d

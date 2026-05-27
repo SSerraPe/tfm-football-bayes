@@ -214,9 +214,7 @@ if (!is.null(sim_summary) && file.exists(truth_path)) {
 
     # Sigma_a_diag recovery
     sigma_a_post <- extract_vector_summary(sim_summary, "Sigma_a_diag", feature_names)
-    true_sigma_a_diag <- diag(
-      truth$Lambda_a %*% t(truth$Lambda_a) + diag(truth$psi_a_sd^2)
-    )
+    true_sigma_a_diag <- truth$Sigma_a_diag
     sigma_a_recovery <- tibble::tibble(
       parameter = "Sigma_a_diag",
       n    = length(true_sigma_a_diag),
@@ -230,9 +228,7 @@ if (!is.null(sim_summary) && file.exists(truth_path)) {
 
     # sigma_b^2 vs truth Sigma_b diagonal
     vb_post <- extract_vector_summary(sim_summary, "var_b", feature_names)
-    true_sigma_b_diag <- diag(
-      truth$Lambda_b %*% t(truth$Lambda_b) + diag(truth$psi_b_sd^2)
-    )
+    true_sigma_b_diag <- truth$Sigma_b_diag
     sigma_b_recovery <- tibble::tibble(
       parameter = "var_b_vs_Sigma_b_diag",
       n    = length(true_sigma_b_diag),
@@ -256,7 +252,7 @@ if (!is.null(sim_summary) && file.exists(truth_path)) {
     # Scatter: posterior mean vs truth for Lambda_a
     scatter_df <- lambda_a_post |>
       dplyr::mutate(
-        true_val = as.vector(true_lambda[observed_index, factor_index]),
+        true_val = true_lambda[cbind(observed_index, factor_index)],
         factor_label = paste0("Factor ", factor_index)
       )
 

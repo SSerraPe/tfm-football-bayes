@@ -1,0 +1,420 @@
+---
+title: |
+  Hierarchical Bayesian Football Performance Model\
+  Pipeline Results Journal
+subtitle: La Liga — Low-Rank Player Effects + Diagonal Season Effects
+author: "S. Serra Pe"
+date: today
+format:
+  pdf:
+    documentclass: article
+    classoption: [11pt, a4paper]
+    geometry: "margin=2.5cm"
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    colorlinks: true
+    linkcolor: "blue!60!black"
+    urlcolor: "blue!60!black"
+    pdf-engine: pdflatex
+    include-in-header:
+      text: |
+        \usepackage{amsmath, amssymb}
+        \usepackage{bm}
+        \usepackage{booktabs}
+        \usepackage{float}
+        \usepackage{xcolor}
+        \usepackage{graphicx}
+        \usepackage{caption}
+        \usepackage{subcaption}
+        \usepackage{array}
+        \usepackage{longtable}
+        \floatplacement{figure}{H}
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup}
+library(readr)
+library(dplyr)
+library(tibble)
+library(knitr)
+
+# Resolve model root from the location of this .qmd file
+model_root <- normalizePath(dirname(knitr::current_input(dir = TRUE)))
+
+tables_dir      <- file.path(model_root, "outputs", "tables")
+figures_dir     <- file.path(model_root, "outputs", "figures")
+diagnostics_dir <- file.path(model_root, "outputs", "diagnostics")
+
+# Helpers
+read_t <- function(f) {
+  p <- file.path(tables_dir, f)
+  if (file.exists(p)) readr::read_csv(p, show_col_types = FALSE) else NULL
+}
+read_d <- function(f) {
+  p <- file.path(diagnostics_dir, f)
+  if (file.exists(p)) readr::read_csv(p, show_col_types = FALSE) else NULL
+}
+fig <- function(f) file.path(figures_dir, f)
+chain_fig <- function(subdir, f) file.path(figures_dir, "11_chain_plots", subdir, f)
+
+show_table <- function(df, caption = NULL, digits = 4) {
+  if (is.null(df)) return(invisible(NULL))
+  knitr::kable(df, caption = caption, digits = digits,
+               booktabs = TRUE, linesep = "")
+}
+```
+
+---
+
+# Project Overview
+
+## Model
+
+The pipeline decomposes La Liga player-season performance using an additive hierarchical model:
+
+$$\mathbf{y}_n = \boldsymbol{\mu} + \mathbf{a}_{i[n]} + \mathbf{b}_{j[n]} + \boldsymbol{\varepsilon}_n, \qquad n = 1, \ldots, N$$
+
+where $\mathbf{y}_n \in \mathbb{R}^P$ is a vector of $P$ scaled features, $\mathbf{a}_i \sim \mathcal{N}(\mathbf{0}, \Sigma_a)$ is a player effect, $\mathbf{b}_j \sim \mathcal{N}(\mathbf{0}, \Sigma_b)$ is a season effect, and $\boldsymbol{\varepsilon}_n \sim \mathcal{N}(\mathbf{0}, \Sigma_\varepsilon)$ is residual noise. The key contribution is the **low-rank player + diagonal season** specification (stages 09/10):
+
+$$\Sigma_a = \Lambda_a \Lambda_a^\top + \Psi_a, \qquad \Sigma_b = \mathrm{Diag}(\sigma_b^2)$$
+
+The factor loadings $\Lambda_a \in \mathbb{R}^{P \times Q_a}$ capture latent player archetypes. The diagonal season structure is motivated by the small number of seasons ($S = 12$), which provides insufficient data to identify cross-feature seasonal covariance.
+
+## Data
+
+| Item | Value |
+|---|---|
+| Source | Wyscout La Liga event data |
+| Seasons | 12 (2014/15 – 2025/26) |
+| Sample | Non-GK players $\geq 450$ min/season |
+| Player-season rows $N$ | 4,944 |
+| Unique players $I$ | 1,650 |
+| Features $P$ | 53 (scaled per-90 + success rates) |
+| Player factor rank $Q_a$ | 2 (default; set via `BFA_SIM_RANK_A`) |
+
+## Pipeline Stages
+
+| Stage | Script | Purpose |
+|---|---|---|
+| 00 | `00_build_longitudinal_dataset.R` | Aggregate match rows to player-season panel |
+| 01 | `01_read_clean_feature_engineering.R` | Clean, filter, engineer 53 features |
+| 02 | `02_prepare_model_objects.R` | Scale data, build indices and Stan data |
+| 03 | `03_fit_real_diagonal_additive.R` | Baseline diagonal model — real data |
+| 04 | `04_simulate_lowrank_additive_data.R` | Simulate data with known low-rank truth |
+| 05 | `05_fit_sim_diagonal_additive.R` | Diagonal model — simulated data (misspecification check) |
+| 06 | `06_fit_sim_lowrank_recovery.R` | Full low-rank recovery — failed (max $\hat{R} = 1.74$) |
+| 07 | `07_diagnostics_and_recovery_plots.R` | Recovery tables and plots for stages 03/05/06 |
+| 08 | `08_validate_all_models.R` | Comprehensive validation (sampler, posterior, LOO) |
+| **09** | `09_fit_sim_lowrank_a_diag_b.R` | **New model — simulated data (recovery validation)** |
+| **10** | `10_fit_real_lowrank_a_diag_b.R` | **New model — real La Liga data (main result)** |
+| **11** | `11_loading_analysis_and_chains.R` | Loading tables, chain plots, recovery metrics |
+| **12** | `12_football_interpretation.R` | Factor interpretation, player archetypes |
+
+## Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `BFA_RUN_STAN` | `false` | Set `true` to run Stan sampling |
+| `BFA_REUSE_FIT` | `true` | Reuse existing CSV fits if found |
+| `BFA_CHAINS` | `4` | Number of MCMC chains |
+| `BFA_PARALLEL_CHAINS` | `4` | Parallel chains |
+| `BFA_ITER_WARMUP` | `1000` | Warmup iterations per chain |
+| `BFA_ITER_SAMPLING` | `1000` | Sampling iterations per chain |
+| `BFA_ADAPT_DELTA` | `0.95` | Target acceptance probability |
+| `BFA_MAX_TREEDEPTH` | `12` | Max NUTS tree depth |
+| `BFA_SIM_RANK_A` | `2` | Player factor rank $Q_a$ |
+| `BFA_SEED` | `20260513` | Random seed |
+
+---
+
+# Journal Entries
+
+---
+
+## Entry 1 — 2026-05-27 — Stages 03–12: Baseline through New Low-Rank Model
+
+### Configuration
+
+| Parameter | Value |
+|---|---|
+| Seed | 20260513 |
+| Chains | 4 |
+| Parallel chains | 4 |
+| Iter warmup | 1000 |
+| Iter sampling | 1000 |
+| Adapt delta | 0.95 |
+| Max treedepth | 12 |
+| Player factor rank $Q_a$ | 2 |
+
+### Stages Run
+
+- **03** — Diagonal additive model fitted to real La Liga data. Establishes baseline variance decomposition.
+- **05** — Diagonal additive model fitted to simulated low-rank data. Validates that diagonal model recovers diagonal elements well even under misspecification.
+- **06** — Full low-rank recovery (both $\Sigma_a$ and $\Sigma_b$ as factor models). Failed to converge: both $\Sigma_a$ and $\Sigma_b$ factor loadings poorly mixed. Diagnosed as identifiability problem with only 12 seasons.
+- **07** — Recovery plots and diagnostic tables for stages 03/05/06.
+- **08** — Comprehensive validation: sampler health, posterior health, PSIS-LOO. LOO estimates unreliable (Pareto $k \gg 1$ for most observations).
+- **09** — New model (low-rank $\Sigma_a$ + diagonal $\Sigma_b$) fitted to simulated data. Validates Factor 2 recovery; Factor 1 still poorly mixed.
+- **10** — New model fitted to real La Liga data. Main substantive result.
+- **11** — Loading tables, chain plots, recovery metrics vs simulation truth. Two bugs fixed in this run (wrong truth field names, wrong matrix indexing for scatter plot).
+- **12** — Football-level factor interpretation and player archetype labelling.
+
+### Sampler Health
+
+#### Stages 03, 05, 06 (from stage 08 validation)
+
+```{r sampler-health-08}
+sh <- read_d("08_sampler_health_summary.csv")
+if (!is.null(sh)) {
+  sh |>
+    select(model_id, n_draws, n_divergent, max_treedepth,
+           n_max_treedepth_hits, min_ebfmi, mean_accept_stat) |>
+    mutate(across(where(is.numeric), \(x) round(x, 4))) |>
+    show_table(caption = "Sampler health — stages 03/05/06")
+}
+```
+
+#### Stages 09 and 10 (from stage 11 analysis)
+
+```{r sampler-health-11}
+ph <- read_d("11_posterior_health_new_model.csv")
+if (!is.null(ph)) {
+  ph |>
+    mutate(across(where(is.numeric), \(x) round(x, 4))) |>
+    show_table(caption = "Posterior health — stages 09/10 (low-rank $\\Sigma_a$ + diagonal $\\Sigma_b$)")
+}
+```
+
+**Interpretation:** Stages 03/05/06 have clean geometry (zero divergences, no treedepth saturation). Stages 09/10 also have zero divergences but show high $\hat{R}$ ($\approx 1.75$–$1.78$) and very low ESS ($\approx 6$) for Factor 1 loading parameters. This is a **mixing failure**, not a geometry failure — the sampler accepts proposals but explores the loading space inefficiently due to sign/scale ambiguity in the first factor. Factor 2 and all variance components converge cleanly.
+
+### Recovery Metrics (Stage 09 vs Simulation Truth)
+
+```{r recovery-metrics}
+rec <- read_t("11_sim_recovery_metrics.csv")
+if (!is.null(rec)) {
+  rec |>
+    select(parameter, n, bias, mae, rmse, corr, cov90) |>
+    mutate(across(where(is.numeric), \(x) round(x, 4))) |>
+    arrange(parameter) |>
+    show_table(caption = "Stage 09 recovery vs simulation truth (posterior mean vs true value)")
+}
+```
+
+**Interpretation:**
+
+- **$\Lambda_a$ Factor 2**: Near-perfect recovery (corr $= 0.999$, MAE $= 0.013$). Factor 2 is identified and mixing well.
+- **$\Lambda_a$ Factor 1**: Corr $= 0.305$ — essentially unrecovered. The posterior median is weakly correlated with the truth, though coverage is high (96.2%) because the posterior is wide.
+- **$\Sigma_a$ diagonal**: Excellent recovery (corr $= 0.997$, MAE $= 0.009$). Marginal player variances are reliably estimated regardless of loading mixing issues.
+- **$\text{var}_b$ vs $\Sigma_b$ diagonal**: Good recovery (corr $= 0.884$, MAE $= 0.030$). Season variance recovery is slightly weaker, as expected with only 12 seasons.
+
+### Variance Decomposition — Real Data (Stage 10)
+
+```{r variance-decomp-tables}
+vd <- read_t("11_real_variance_decomposition.csv")
+
+if (!is.null(vd)) {
+  top_player <- vd |>
+    arrange(desc(prop_a_mean)) |>
+    slice_head(n = 8) |>
+    select(feature, prop_a_mean, prop_b_mean, prop_e_mean) |>
+    mutate(across(starts_with("prop"), \(x) round(x * 100, 1)))
+  colnames(top_player) <- c("Feature", "Player %", "Season %", "Residual %")
+  show_table(top_player, caption = "Top 8 player-dominated features (sorted by player share)")
+
+  top_season <- vd |>
+    arrange(desc(prop_b_mean)) |>
+    slice_head(n = 6) |>
+    select(feature, prop_a_mean, prop_b_mean, prop_e_mean) |>
+    mutate(across(starts_with("prop"), \(x) round(x * 100, 1)))
+  colnames(top_season) <- c("Feature", "Player %", "Season %", "Residual %")
+  show_table(top_season, caption = "Top 6 season-driven features (sorted by season share)")
+
+  top_resid <- vd |>
+    arrange(desc(prop_e_mean)) |>
+    slice_head(n = 6) |>
+    select(feature, prop_a_mean, prop_b_mean, prop_e_mean) |>
+    mutate(across(starts_with("prop"), \(x) round(x * 100, 1)))
+  colnames(top_resid) <- c("Feature", "Player %", "Season %", "Residual %")
+  show_table(top_resid, caption = "Top 6 residual-dominated features (sorted by residual share)")
+}
+```
+
+```{r variance-decomp-plot, fig.cap="Variance decomposition by feature and component — low-rank $\\Sigma_a$ model (real data). Features sorted by player share within each group.", out.width="100%", fig.height=14}
+p <- fig("11_real_variance_decomposition_lowrank.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+### Factor Loading Structure — Real Data
+
+```{r loading-heatmap, fig.cap="$\\Lambda_a$ loading heatmap — real La Liga data (stage 10). Posterior means; rows = features, columns = factors.", out.width="75%", fig.height=14, fig.align="center"}
+p <- fig("11_real_lambda_a_heatmap.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r loading-topn, fig.cap="Top 12 loadings per factor with 90\\% posterior credible intervals — real data.", out.width="100%"}
+p <- fig("11_real_lambda_a_top_loadings.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r loading-radar, fig.cap="Mean absolute loading by feature group and factor — real data.", out.width="90%", fig.align="center"}
+p <- fig("11_real_lambda_a_group_radar.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r loading-comparison, fig.cap="Factor loading comparison across factors — real data (stage 12).", out.width="100%"}
+p <- fig("12_real_loading_comparison.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r group-radar-12, fig.cap="Factor group radar chart — football feature groups (stage 12).", out.width="85%", fig.align="center"}
+p <- fig("12_real_factor_group_radar.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+**Factor 1 interpretation:** Separates **attacking/finishing players** (high: `touch_in_box` +0.691, `offensive_duels` +0.671, `shots` +0.653, `xg_shot` +0.627, `dribbles` +0.549) from **defensive/possession midfielders** (low: `forward_passes` $-$0.816, `recoveries` $-$0.737, `progressive_passes` $-$0.694, `lateral_passes` $-$0.658, `interceptions` $-$0.615). This is the dominant axis of variation in La Liga player profiles.
+
+**Factor 2 interpretation:** Only `assists` (+0.297) has a credible interval clearly above zero. All other Factor 2 loadings span zero widely. At $Q_a = 2$, Factor 2 is not meaningfully identified in the real data — likely reflects a subtle playmaker/finisher split that requires more data or a stronger anchor.
+
+### Simulation Recovery Scatter (Stage 09)
+
+```{r sim-scatter, fig.cap="$\\Lambda_a$ posterior mean vs simulation truth per factor — stage 09. Dashed line = perfect recovery. Factor 2 recovers almost exactly; Factor 1 does not.", out.width="100%"}
+p <- fig("11_sim_lambda_a_vs_truth.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+### Chain Diagnostics
+
+#### Stage 09 — Simulated Data
+
+```{r chains-09-diag-trace, fig.cap="Stage 09: $\\lambda_a$ diagonal anchor parameters — trace plots (4 chains).", out.width="100%"}
+p <- chain_fig("09_sim", "lambda_a_diag_trace.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r chains-09-diag-density, fig.cap="Stage 09: $\\lambda_a$ diagonal anchor parameters — posterior densities by chain.", out.width="100%"}
+p <- chain_fig("09_sim", "lambda_a_diag_density.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r chains-09-free-trace, fig.cap="Stage 09: top free $\\lambda_a$ parameters (by absolute posterior mean) — trace plots.", out.width="100%"}
+p <- chain_fig("09_sim", "lambda_a_free_top_trace.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r chains-09-free-density, fig.cap="Stage 09: top free $\\lambda_a$ parameters — posterior densities by chain.", out.width="100%"}
+p <- chain_fig("09_sim", "lambda_a_free_top_density.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r chains-09-psi, fig.cap="Stage 09: uniqueness parameters $\\psi_a$ (first 6 features) — trace and density.", out.width="100%"}
+p_t <- chain_fig("09_sim", "psi_a_trace.png")
+p_d <- chain_fig("09_sim", "psi_a_density.png")
+if (file.exists(p_t)) knitr::include_graphics(p_t)
+if (file.exists(p_d)) knitr::include_graphics(p_d)
+```
+
+#### Stage 10 — Real La Liga Data
+
+```{r chains-10-diag-trace, fig.cap="Stage 10 (real data): $\\lambda_a$ diagonal anchors — trace plots.", out.width="100%"}
+p <- chain_fig("10_real", "lambda_a_diag_trace.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r chains-10-diag-density, fig.cap="Stage 10 (real data): $\\lambda_a$ diagonal anchors — densities.", out.width="100%"}
+p <- chain_fig("10_real", "lambda_a_diag_density.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r chains-10-free-trace, fig.cap="Stage 10 (real data): top free $\\lambda_a$ parameters — trace plots.", out.width="100%"}
+p <- chain_fig("10_real", "lambda_a_free_top_trace.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r chains-10-sigma-b, fig.cap="Stage 10 (real data): top season scale parameters $\\sigma_b$ — trace and density.", out.width="100%"}
+p_t <- chain_fig("10_real", "sigma_b_top_trace.png")
+p_d <- chain_fig("10_real", "sigma_b_top_density.png")
+if (file.exists(p_t)) knitr::include_graphics(p_t)
+if (file.exists(p_d)) knitr::include_graphics(p_d)
+```
+
+### Bugs Fixed This Run
+
+| File | Bug | Fix |
+|---|---|---|
+| `scripts/11_loading_analysis_and_chains.R` | `truth$psi_a_sd` does not exist in truth object | Replaced with `truth$Sigma_a_diag` (precomputed) |
+| `scripts/11_loading_analysis_and_chains.R` | `true_lambda[row_vec, col_vec]` extracts a submatrix (11,236 values) instead of element-wise | Changed to `true_lambda[cbind(observed_index, factor_index)]` |
+
+### Notes and Interpretation
+
+**Convergence verdict:** The loading identification problem in Factor 1 persists across both the simulated (stage 09) and real (stage 10) fits. This is consistent with a fundamental sign/scale ambiguity in the first anchor loading under the current constraint. The diagonal variance components and Factor 2 converge cleanly.
+
+**Key football finding:** Factor 1 is the dominant axis of La Liga player variation, cleanly separating attacking/finishing profiles from defensive/possession midfielders. This is stable and interpretable despite the mixing issues, since the posterior median is consistent across chains for the high-magnitude loadings.
+
+**What works well:** Marginal player variances ($\Sigma_a$ diagonal), season variances ($\sigma_b$), residual scales ($\sigma_\varepsilon$), global means ($\mu$), and Factor 2 (both in simulation and partially in real data) all converge reliably.
+
+**What to address next:**
+- Investigate stronger anchor constraints or ordering constraints for Factor 1 to resolve the sign/scale ambiguity.
+- Consider increasing $Q_a$ or testing $Q_a = 1$ to assess whether a single factor is sufficient for the real data.
+- Factor scores for players were not produced (size mismatch in stage 12) — needs a small fix in `12_football_interpretation.R`.
+- PSIS-LOO is unreliable for this model (Pareto $k \gg 1$); K-fold cross-validation is the recommended next step for formal model comparison.
+
+---
+
+# Entry Template (Reference for Future Updates)
+
+The following template should be used for each new journal entry appended to this document.
+Copy from the `---` separator below and fill in the bracketed fields.
+
+```
+---
+
+## Entry [N] — YYYY-MM-DD — [Short descriptive title]
+
+### Configuration
+
+| Parameter | Value |
+|---|---|
+| Seed | [value] |
+| Chains | [value] |
+| Iter warmup | [value] |
+| Iter sampling | [value] |
+| Adapt delta | [value] |
+| Max treedepth | [value] |
+| Player factor rank Q_a | [value] |
+
+### Stages Run
+
+- **[XX]** — [one-line description of what was run and why]
+
+### Sampler Health
+
+[R code chunk reading from relevant diagnostic CSVs for these stages]
+
+### Recovery Metrics (if sim stage)
+
+[R code chunk reading from 11_sim_recovery_metrics.csv or equivalent]
+
+### Variance Decomposition (if real-data stage)
+
+[Tables + include_graphics for variance decomp plot]
+
+### Loading Structure (if stage 11/12 ran)
+
+[include_graphics for heatmap, top-loadings, radar]
+
+### Chain Diagnostics
+
+[include_graphics for lambda_a_diag and lambda_a_free_top trace/density
+ from outputs/figures/11_chain_plots/{model_tag}/]
+
+### Bugs Fixed This Run
+
+[Table of any bugs found and fixed during this run]
+
+### Notes and Interpretation
+
+[Convergence verdict, substantive findings, football interpretation, next steps]
+```

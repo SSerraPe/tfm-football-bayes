@@ -150,3 +150,51 @@ Lightweight fit pointers in `fits/*.rds` allow reconstruction via `cmdstanr::as_
 - CmdStan ≥ 2.32 (install via `cmdstanr::install_cmdstan()`)
 - R packages: `cmdstanr`, `posterior`, `bayesplot`, `ggplot2`, `dplyr`, `tidyr`, `readr`, `tibble`, `scales`
 - Optional: `ggrepel` (player label annotations), `quarto` (PDF report)
+
+---
+
+<!-- CLAUDE: PIPELINE JOURNAL AUTO-UPDATE INSTRUCTIONS
+
+FILE:    pipeline_journal.qmd  (model root, same directory as run_pipeline.R)
+RENDER:  quarto render pipeline_journal.qmd   (run from model root)
+OUTPUT:  pipeline_journal.pdf  (appears in model root alongside the .qmd)
+
+TRIGGER: Append a new entry whenever any of the following appear:
+  - new files in outputs/diagnostics/  (e.g. *_diagnostic_summary.csv, *_sampler_diagnostics.csv)
+  - new files in outputs/tables/       (e.g. *_posterior_summary.csv, *_recovery_metrics.csv)
+  - new PNG files in outputs/figures/  (e.g. new chain plots, loading heatmaps)
+
+HOW TO ADD AN ENTRY — step by step:
+  1. Read this README note for context.
+  2. Read the new output CSV/PNG files to extract the results for the entry.
+  3. Open pipeline_journal.qmd and scroll to the VERY END of the file.
+  4. Append a new section following the "Entry Template" at the bottom of that file.
+     Use the next sequential entry number and today's date.
+  5. NEVER delete or edit any previous entry — all entries are permanent journal records.
+  6. Run:  quarto render pipeline_journal.qmd
+     to produce the updated pipeline_journal.pdf.
+
+ENTRY CONTENT CHECKLIST (fill each subsection from the files listed):
+  [ ] Configuration table     — seed, chains, iter_warmup, iter_sampling, adapt_delta, max_treedepth
+  [ ] Stages run              — stage numbers + one-line purpose each
+  [ ] Sampler health table    — from outputs/diagnostics/*_diagnostic_summary.csv or
+                                outputs/diagnostics/11_posterior_health_new_model.csv
+  [ ] Recovery metrics table  — from outputs/tables/11_sim_recovery_metrics.csv (sim stages only)
+  [ ] Variance decomp table   — from outputs/tables/11_real_variance_decomposition.csv (real stages)
+  [ ] Variance decomp plot    — outputs/figures/11_real_variance_decomposition_lowrank.png
+  [ ] Loading heatmap         — outputs/figures/11_real_lambda_a_heatmap.png
+  [ ] Top loadings plot       — outputs/figures/11_real_lambda_a_top_loadings.png
+  [ ] Group radar             — outputs/figures/11_real_lambda_a_group_radar.png
+  [ ] Chain trace plots       — outputs/figures/11_chain_plots/{model_tag}/lambda_a_diag_trace.png
+  [ ] Chain density plots     — outputs/figures/11_chain_plots/{model_tag}/lambda_a_diag_density.png
+  [ ] Bugs fixed              — table of any scripts fixed during this run
+  [ ] Notes                   — convergence verdict, football interpretation, next steps
+
+IMPORTANT RULES:
+  - Entries are append-only. Never modify or delete Entry 1 or any prior entry.
+  - Use the entry template at the bottom of pipeline_journal.qmd as the structural guide.
+  - If a file does not exist yet (e.g. stage 12 was not run), simply omit that subsection.
+  - Re-render the PDF after every append so pipeline_journal.pdf stays current.
+-->
+
+<sub>*`pipeline_journal.qmd` / `pipeline_journal.pdf` — living results journal, auto-updated by Claude on each pipeline run.*</sub>
