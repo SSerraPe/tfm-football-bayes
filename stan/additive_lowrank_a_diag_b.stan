@@ -1,26 +1,16 @@
 functions {
-  matrix make_anchor_loadings(int P, int Q, array[] int anchor, vector positive_diag, vector free_values) {
+  // Lower-triangular identification: L[q,q] > 0, L[p,q] free for p > q, L[p,q] = 0 for p < q.
+  // Free values are stored column-major: col 1 rows 2..P, then col 2 rows 3..P, etc.
+  matrix make_lower_tri_loadings(int P, int Q, vector positive_diag, vector free_values) {
     matrix[P, Q] L = rep_matrix(0, P, Q);
     int pos = 1;
-
     for (q in 1:Q) {
-      for (p in 1:P) {
-        int is_anchor_row = 0;
-        for (k in 1:Q) {
-          if (p == anchor[k]) {
-            is_anchor_row = 1;
-          }
-        }
-
-        if (p == anchor[q]) {
-          L[p, q] = positive_diag[q];
-        } else if (is_anchor_row == 0) {
-          L[p, q] = free_values[pos];
-          pos += 1;
-        }
+      L[q, q] = positive_diag[q];
+      for (p in (q + 1):P) {
+        L[p, q] = free_values[pos];
+        pos += 1;
       }
     }
-
     return L;
   }
 }
@@ -35,7 +25,6 @@ data {
   matrix[N, P] Y;
   array[N] int<lower=1, upper=I> player_index;
   array[N] int<lower=1, upper=S> season_index;
-  array[Q_a] int<lower=1, upper=P> lambda_a_anchor;
   real<lower=0> sigma_floor;
 }
 
@@ -60,7 +49,7 @@ parameters {
 }
 
 transformed parameters {
-  matrix[P, Q_a] Lambda_a = make_anchor_loadings(P, Q_a, lambda_a_anchor, lambda_a_diag, lambda_a_free);
+  matrix[P, Q_a] Lambda_a = make_lower_tri_loadings(P, Q_a, lambda_a_diag, lambda_a_free);
 
   // Column-centre all random effects for identifiability
   vector[Q_a] eta_a_bar;
@@ -89,7 +78,7 @@ model {
   to_vector(z_a_raw)   ~ std_normal();
   to_vector(z_b)       ~ std_normal();
 
-  lambda_a_diag ~ lognormal(log(0.6), 0.35);
+  lambda_a_diag ~ lognormal(log(0.7), 0.20);
   lambda_a_free ~ normal(0, 0.35);
   psi_a         ~ normal(0, 0.4);
   sigma_b       ~ normal(0, 0.5);

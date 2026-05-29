@@ -12,17 +12,23 @@ make_anchor_loadings <- function(P, Q, diag_min, diag_max, free_sd) {
   diag_values <- stats::runif(Q, diag_min, diag_max)
   for (q in seq_len(Q)) {
     L[q, q] <- diag_values[q]
-  }
-  if (P > Q) {
-    L[(Q + 1L):P, ] <- matrix(stats::rnorm((P - Q) * Q, 0, free_sd), nrow = P - Q)
+    if (q < P) {
+      L[(q + 1L):P, q] <- stats::rnorm(P - q, 0, free_sd)
+    }
   }
   L
 }
 
+# Extract lower-triangle free values in column-major order matching Stan's
+# make_lower_tri_loadings: col 1 rows 2..P, then col 2 rows 3..P, etc.
 anchor_free_values <- function(L, Q) {
-  P <- nrow(L)
-  if (P <= Q) return(numeric(0))
-  as.vector(L[(Q + 1L):P, , drop = FALSE])
+  free <- c()
+  for (q in seq_len(Q)) {
+    if (q < nrow(L)) {
+      free <- c(free, L[(q + 1L):nrow(L), q])
+    }
+  }
+  free
 }
 
 matrix_to_long_table <- function(x, matrix_name, row_names = NULL, col_prefix = "factor") {

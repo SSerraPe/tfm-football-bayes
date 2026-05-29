@@ -41,11 +41,10 @@ build_lowrank_a_diag_b_stan_data <- function(model_objects, Y, rank_a) {
     I = length(model_objects$player_levels),
     S = length(model_objects$season_levels),
     Q_a = rank_a,
-    N_lambda_a_free = anchor_free_count(P, rank_a),
+    N_lambda_a_free = lower_tri_free_count(P, rank_a),
     Y = unname(Y),
     player_index = as.integer(model_objects$player_index),
     season_index = as.integer(model_objects$season_index),
-    lambda_a_anchor = default_anchor_index(P, rank_a),
     sigma_floor = pipeline$sigma_floor
   )
 }
@@ -144,7 +143,119 @@ summary_variables_for_model <- function(model_id) {
   )
 }
 
-fit_cmdstan_model <- function(stan_file, stan_data, fit_path, seed, model_id) {
+# Rotate a P×K loading matrix to lower-triangular with positive diagonal.
+# Applies QR to the top K×K block, fixes signs from R's diagonal, then zeros
+# the upper triangle and ensures positive diagonal entries.
+make_plt <- function(L) {
+  K   <- ncol(L)
+  A   <- L[1:K, , drop = FALSE]
+  qr_A <- qr(t(A))
+  Q   <- qr.Q(qr_A)
+  R   <- qr.R(qr_A)
+  sgn <- sign(diag(R))
+  sgn[sgn == 0] <- 1
+  Q   <- Q %*% diag(sgn, K)
+  L_tri <- L %*% Q
+  for (j in seq_len(K)) for (h in seq_len(K)) if (h > j) L_tri[j, h] <- 0
+  for (h in seq_len(K)) if (L_tri[h, h] < 0) L_tri[, h] <- -L_tri[, h]
+  L_tri
+}
+
+# Build a PCA-based initialization function for the low-rank-Sigma_a model.
+# Adapted from professor's make_crossed_init() in two.zip/lowrank_diag.R.
+# Returns a closure init_fn(chain_id) compatible with CmdStan's init argument.
+build_pca_init <- function(stan_data, scale_floor = 0.05, lambda_jitter = 0.02) {
+  Y      <- stan_data$Y
+  player <- stan_data$player_index
+  season <- stan_data$season_index
+  I      <- stan_data$I
+  S      <- stan_data$S
+  P      <- stan_data$P
+  K      <- stan_data$Q_a
+
+  # Season means, centered across seasons
+  season_counts <- tabulate(season, nbins = S)
+  B0 <- sweep(rowsum(Y, season), 1, season_counts, "/")
+  B0 <- sweep(B0, 2, colMeans(B0), "-")
+
+  # Player means on season-adjusted residuals, centered across players
+  Y_adj <- Y - B0[season, ]
+  player_counts <- tabulate(player, nbins = I)
+  A0 <- sweep(rowsum(Y_adj, player), 1, player_counts, "/")
+  A0 <- sweep(A0, 2, colMeans(A0), "-")
+
+  # Eigendecompose sample covariance of player means
+  S_A <- crossprod(A0) / I
+  eig <- eigen(S_A, symmetric = TRUE)
+  vals <- eig$values
+  vecs <- eig$vectors
+
+  sigma2_iso <- if (K < P) mean(vals[(K + 1L):P]) else min(vals) * 0.5
+  load_vals  <- pmax(vals[seq_len(K)] - sigma2_iso, 1e-4)
+  L0 <- vecs[, seq_len(K), drop = FALSE] %*% diag(sqrt(load_vals), K)
+  L0 <- make_plt(L0)
+
+  # Residual uniqueness SD
+  resid_var0 <- pmax(diag(S_A) - rowSums(L0^2), scale_floor^2)
+  psi_a0 <- sqrt(resid_var0)
+
+  # Factor scores via posterior mean formula (Gaussian factor model update)
+  psi_inv <- 1 / psi_a0^2
+  W  <- sweep(L0, 1, psi_inv, "*")
+  Vv <- solve(diag(K) + crossprod(L0, W))
+  F0 <- A0 %*% W %*% Vv
+
+  # Uniqueness residuals, rescaled to unit SD per feature
+  U0     <- A0 - F0 %*% t(L0)
+  psi_a0 <- pmax(apply(U0, 2, sd), scale_floor)
+  z_u0   <- sweep(U0, 2, psi_a0, "/")
+
+  # Season effects, standardised
+  sigma_b0 <- pmax(apply(B0, 2, sd), scale_floor)
+  z_b0     <- sweep(B0, 2, sigma_b0, "/")
+
+  # Residual SD from full reconstruction residuals
+  Ahat0    <- F0 %*% t(L0) + U0
+  E0       <- Y - Ahat0[player, ] - B0[season, ]
+  sigma_e0 <- pmax(apply(E0, 2, sd), scale_floor)
+
+  # Jitter then enforce lower-triangular with positive diagonal
+  L0 <- L0 + matrix(stats::rnorm(P * K, 0, lambda_jitter), P, K)
+  for (h in seq_len(K)) {
+    for (j in seq_len(P)) if (h > j) L0[j, h] <- 0
+    L0[h, h] <- abs(L0[h, h]) + 0.05
+  }
+
+  # Unpack L0 into lambda_a_diag and lambda_a_free (column-major lower triangle)
+  n_free        <- K * P - (K * (K + 1L)) %/% 2L
+  lambda_a_diag0 <- diag(L0[seq_len(K), seq_len(K), drop = FALSE])
+  lambda_a_free0 <- numeric(n_free)
+  pos <- 1L
+  for (h in seq_len(K)) {
+    if (h < P) {
+      for (j in (h + 1L):P) {
+        lambda_a_free0[pos] <- L0[j, h]
+        pos <- pos + 1L
+      }
+    }
+  }
+
+  function(chain_id = 1) {
+    list(
+      mu            = rep(0, P),
+      eta_a_raw     = F0,
+      z_a_raw       = z_u0,
+      z_b           = z_b0,
+      lambda_a_diag = lambda_a_diag0,
+      lambda_a_free = lambda_a_free0,
+      psi_a         = psi_a0,
+      sigma_b       = sigma_b0,
+      sigma_e       = sigma_e0
+    )
+  }
+}
+
+fit_cmdstan_model <- function(stan_file, stan_data, fit_path, seed, model_id, init = NULL) {
   if (sampler$reuse_fit) {
     reusable_fit <- load_cmdstan_fit(fit_path = fit_path, model_id = model_id)
     if (!is.null(reusable_fit)) {
@@ -164,19 +275,21 @@ fit_cmdstan_model <- function(stan_file, stan_data, fit_path, seed, model_id) {
   model <- cmdstanr::cmdstan_model(stan_file)
   output_dir <- file.path(paths$fits, "csv", model_id, format(Sys.time(), "%Y%m%d_%H%M%S"))
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
-  fit <- model$sample(
-    data = stan_data,
-    seed = seed,
-    chains = sampler$chains,
+  sample_args <- list(
+    data            = stan_data,
+    seed            = seed,
+    chains          = sampler$chains,
     parallel_chains = sampler$parallel_chains,
-    iter_warmup = sampler$iter_warmup,
-    iter_sampling = sampler$iter_sampling,
-    adapt_delta = sampler$adapt_delta,
-    max_treedepth = sampler$max_treedepth,
-    refresh = sampler$refresh,
-    output_dir = output_dir,
+    iter_warmup     = sampler$iter_warmup,
+    iter_sampling   = sampler$iter_sampling,
+    adapt_delta     = sampler$adapt_delta,
+    max_treedepth   = sampler$max_treedepth,
+    refresh         = sampler$refresh,
+    output_dir      = output_dir,
     output_basename = model_id
   )
+  if (!is.null(init)) sample_args$init <- init
+  fit <- do.call(model$sample, sample_args)
 
   csv_files <- fit$output_files()
   persist_fit_pointer(model_id, stan_file, csv_files, fit_path)

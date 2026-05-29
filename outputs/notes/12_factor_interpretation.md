@@ -55,4 +55,4 @@ Posterior summary: /Users/sserra/Documents/01_MESIO_UPC/TFM/model/outputs/tables
 Loading table:     /Users/sserra/Documents/01_MESIO_UPC/TFM/model/outputs/tables/11_real_lambda_a_loading_table.csv
 Player scores:     /Users/sserra/Documents/01_MESIO_UPC/TFM/model/outputs/tables/12_player_factor_scores.csv
 
-Generated: 2026-05-27 19:39:25.380577
+Generated: 2026-05-29 01:40:21.517533

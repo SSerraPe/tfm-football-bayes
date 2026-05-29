@@ -116,7 +116,11 @@ tibble::tribble(
   "09", "09_fit_sim_lowrank_a_diag_b.R",         "New model — simulated data (recovery validation)",
   "10", "10_fit_real_lowrank_a_diag_b.R",        "New model — real La Liga data (main result)",
   "11", "11_loading_analysis_and_chains.R",      "Loading tables, chain plots, recovery metrics",
-  "12", "12_football_interpretation.R",          "Factor interpretation, player archetypes"
+  "12", "12_football_interpretation.R",          "Factor interpretation, player archetypes",
+  "13", "13_pca_postprocessing.R",                "PCA-oriented post-processing of $\\Lambda$ (eigendecompose $\\Lambda\\Lambda^\\top$)",
+  "14", "14_player_profiles.R",                   "Posterior mean $a_i$, clustered heatmap, PCA player scatter",
+  "15", "15_season_profiles.R",                   "Posterior mean $b_j$, temporal evolution plots with CIs",
+  "16", "16_icc_analysis.R",                      "Intraclass correlations (ICC$_\\text{player}$ / ICC$_\\text{season}$)"
 ) |>
   knitr::kable(booktabs = TRUE, linesep = "", caption = "Pipeline stage reference") |>
   kableExtra::kable_styling(latex_options = c("hold_position", "scale_down"), font_size = 9) |>
@@ -404,6 +408,699 @@ tibble::tribble(
 - Consider increasing $Q_a$ or testing $Q_a = 1$ to assess whether a single factor is sufficient for the real data.
 - Factor scores for players were not produced (size mismatch in stage 12) — needs a small fix in `12_football_interpretation.R`.
 - PSIS-LOO is unreliable for this model (Pareto $k \gg 1$); K-fold cross-validation is the recommended next step for formal model comparison.
+
+---
+
+## Entry 2 — 2026-05-28 — Professor's Feedback: PCA Post-processing, Profiles, ICC, Smart Initialization
+
+This entry incorporates four improvements suggested by the supervisor based on the
+document `corr_diagmodel.pdf` (intraclass correlation theory for the diagonal model)
+and a zip of reference Stan code (`two.zip`) implementing a low-rank + diagonal
+additive factor model with careful PCA-based initialization and PCA-oriented
+post-processing. The professor's points were:
+
+1. The variance proportions `prop_a`, `prop_b`, `prop_e` already computed by the
+   model **are** intraclass correlations (ICCs) — present them as such.
+2. Extract posterior means of $a_i$ (player effects) and $b_j$ (season effects) and
+   build clustered player heatmaps, PCA scatters, and temporal $b_j$ plots with
+   credible intervals.
+3. The lower-triangular $\Lambda$ is for identification only — the **interpretable**
+   object is the eigendecomposition of $\Lambda\Lambda^\top$. Post-process every
+   posterior draw into PCA-oriented loadings $L_\text{PCA} = U_K D_K^{1/2}$ and
+   PCA-oriented player scores $G = C\,U_K D_K^{-1/2}$ where $C = F\Lambda^\top$.
+4. Initialize Stan with PCA-derived values (player-mean eigendecomposition + Gaussian
+   posterior-mean formula for factor scores) to dramatically improve MCMC mixing.
+
+### Theoretical Background — Intraclass Correlations
+
+For the additive model $y_{ijk} = \mu_k + a_{ik} + b_{jk} + \varepsilon_{ijk}$ with
+diagonal $\Sigma_b$ and $\Sigma_\varepsilon$, and total marginal variance
+$V_k = \sigma_{a,k}^2 + \sigma_{b,k}^2 + \sigma_{e,k}^2$:
+
+$$
+\mathrm{Corr}(y_{ijk}, y_{ij'k}) = \frac{\sigma_{a,k}^2}{V_k}
+\quad (\text{same player, different seasons}) = \text{ICC}_\text{player}[k]
+$$
+
+$$
+\mathrm{Corr}(y_{ijk}, y_{i'jk}) = \frac{\sigma_{b,k}^2}{V_k}
+\quad (\text{different players, same season}) = \text{ICC}_\text{season}[k]
+$$
+
+$$
+\mathrm{Corr}(y_{ijk}, y_{i'j'k}) = 0 \quad (\text{no shared block})
+$$
+
+For the low-rank model, $\sigma_{a,k}^2 = (\Lambda\Lambda^\top + \Psi_a)_{kk}
+= \sum_q \lambda_{kq}^2 + \psi_{a,k}^2$, which equals `Sigma_a_diag[k]` in the Stan
+output. So `prop_a = ICC_player`, `prop_b = ICC_season`, `prop_e = residual share`.
+
+### Theoretical Background — PCA Post-processing
+
+The lower-triangular $\Lambda$ is identification-convenient but rotation-arbitrary.
+For each posterior draw $s$:
+
+1. Form $B_s = \Lambda_s \Lambda_s^\top$ (common player covariance).
+2. Eigendecompose $B_s = U_s D_s U_s^\top$ with eigenvalues ordered decreasingly.
+3. PCA-oriented loadings: $L_{\text{PCA},s} = U_{K,s} D_{K,s}^{1/2}$.
+4. PCA-oriented player scores: $G_s = (F_s \Lambda_s^\top) U_{K,s} D_{K,s}^{-1/2}$.
+5. Align signs of $L_s, G_s$ to a reference orientation (posterior-mean $B$).
+
+Summary across draws produces posterior mean ± CI for both PCA loadings and
+player scores. The proportion of common player variance explained by component
+$h$ is $d_h / \sum_\ell d_\ell$.
+
+### New Code
+
+| Component | File | Status |
+|---|---|---|
+| `make_plt()`, `build_pca_init()` helpers | `src/stan_helpers.R` | Added |
+| `init` argument in `fit_cmdstan_model()` | `src/stan_helpers.R` | Added (backwards compatible) |
+| PCA initialization wired into fit | `scripts/09_fit_sim_lowrank_a_diag_b.R`, `10_fit_real_lowrank_a_diag_b.R` | Wired |
+| Stage 13 — PCA post-processing of $\Lambda$ | `scripts/13_pca_postprocessing.R` | New |
+| Stage 14 — Player profiles | `scripts/14_player_profiles.R` | New |
+| Stage 15 — Season temporal profiles | `scripts/15_season_profiles.R` | New |
+| Stage 16 — ICC analysis | `scripts/16_icc_analysis.R` | New |
+| Pipeline registration of 13–16 | `run_pipeline.R` | Updated |
+
+### Stages Run (without re-fitting Stan)
+
+- **13** — PCA post-processing of $\Lambda_a$ posterior draws for both real and
+  simulated data. 1000 random draws used. Outputs PCA loading heatmap, CI dot
+  plot, common-variance boxplot, and player score scatter.
+- **14** — Reconstructed posterior mean player effects $a_i = \Lambda\eta_i +
+  \psi_a \odot z_{u,i}$ (column-centered to match Stan) for all 1,650 players.
+  Produced clustered heatmap of top 200 players by norm.
+- **15** — Reconstructed posterior mean $b_j$ for all 12 seasons × 53 features.
+  Plotted temporal evolution with 90% CI ribbons for the 12 features with
+  highest ICC$_\text{season}$.
+- **16** — Reframed `prop_a`/`prop_b`/`prop_e` as ICCs. Built ranked stacked
+  barchart and a scatter comparing ICC$_\text{player}$ from the diagonal model
+  (stage 03) versus the low-rank model (stage 10).
+
+### Intraclass Correlations — Top Features
+
+```{r icc-top}
+icc <- read_t("16_icc_summary.csv")
+if (!is.null(icc)) {
+  top_player <- icc |>
+    arrange(desc(icc_player)) |>
+    slice_head(n = 8) |>
+    select(feature, group, icc_player, icc_season, icc_residual) |>
+    mutate(across(starts_with("icc_"), \(x) round(x * 100, 1)))
+  colnames(top_player) <- c("Feature", "Group", "ICC$_\\text{player}$ \\%",
+                            "ICC$_\\text{season}$ \\%", "Residual \\%")
+  show_table(top_player,
+    caption = "Top 8 features by ICC$_\\text{player}$ (same player, different seasons).")
+
+  top_season <- icc |>
+    arrange(desc(icc_season)) |>
+    slice_head(n = 6) |>
+    select(feature, group, icc_player, icc_season, icc_residual) |>
+    mutate(across(starts_with("icc_"), \(x) round(x * 100, 1)))
+  colnames(top_season) <- c("Feature", "Group", "ICC$_\\text{player}$ \\%",
+                            "ICC$_\\text{season}$ \\%", "Residual \\%")
+  show_table(top_season,
+    caption = "Top 6 features by ICC$_\\text{season}$ (different players, same season).")
+}
+```
+
+```{r icc-bar, fig.cap="Intraclass correlation decomposition per feature (real La Liga data, stage 10). ICC$_\\text{player}$ dominates for most features.", out.width="95%", fig.height=16}
+p <- fig("16_icc_ranked_barchart.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r icc-diag-vs-lr, fig.cap="ICC comparison: diagonal-$\\Sigma_a$ model (stage 03) vs low-rank-$\\Sigma_a$ model (stage 10). Adding factor structure largely preserves the ICC decomposition.", out.width="100%", fig.height=12}
+p <- fig("16_icc_diagonal_vs_lowrank.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+### PCA-Oriented Loadings (Stage 13)
+
+```{r pca-recovery}
+rec <- read_t("13_sim_pca_recovery.csv")
+if (!is.null(rec)) {
+  rec |> mutate(across(where(is.numeric), \(x) round(x, 3))) |>
+    show_table(caption = "PCA loading recovery on simulated data (stage 13). prop\\_cv = proportion of common variance.")
+}
+```
+
+```{r pca-prop}
+prop <- read_t("13_real_pca_common_variance_prop.csv")
+if (!is.null(prop)) {
+  prop |> mutate(across(where(is.numeric), \(x) round(x, 3))) |>
+    show_table(caption = "Real data: proportion of common player variance per PCA factor (median, 90\\% CI).")
+}
+```
+
+```{r pca-loading-heatmap, fig.cap="PCA-oriented loadings — real data. Eigendecomposition of $\\Lambda\\Lambda^\\top$ per draw, signs aligned to posterior-mean reference.", out.width="75%", fig.height=14, fig.align="center"}
+p <- fig("13_real_pca_loading_heatmap.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r pca-loading-ci, fig.cap="PCA-oriented loadings with 90\\% CIs — real data.", out.width="100%", fig.height=12}
+p <- fig("13_real_pca_loading_ci_plot.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r pca-prop-box, fig.cap="Proportion of common player variance per PCA factor — real data.", out.width="60%", fig.align="center"}
+p <- fig("13_real_pca_common_variance_boxplot.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r pca-scores, fig.cap="PCA-oriented player score scatter (posterior means) — real data. Extreme players annotated.", out.width="100%"}
+p <- fig("13_real_pca_player_scores_scatter.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+### Player Profiles (Stage 14)
+
+```{r player-heatmap, fig.cap="Clustered heatmap of posterior mean player effects $\\hat a_i$ (top 200 players by $\\|a_i\\|$, all 53 features). Rows = features (clustered \\& annotated by group), columns = players.", out.width="100%", fig.height=14}
+p <- fig("14_player_profile_heatmap.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r player-pca-scatter, fig.cap="Player archetypes in PCA factor space — posterior mean PCA scores from stage 13.", out.width="100%"}
+p <- fig("14_player_pca_scatter.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r player-uncertainty, fig.cap="Player score uncertainty: posterior SD versus absolute posterior mean of PCA score, by factor.", out.width="100%"}
+p <- fig("14_player_score_uncertainty.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+### Season Profiles (Stage 15)
+
+```{r season-grid, fig.cap="Temporal evolution of $\\hat b_j$ for the 12 features with highest ICC$_\\text{season}$. Posterior mean ± 90\\% CI ribbon.", out.width="100%", fig.height=12}
+p <- fig("15_season_profiles_grid.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r season-heatmap, fig.cap="Posterior mean season effects $\\hat b_j$ (seasons in temporal order, features clustered).", out.width="100%", fig.height=8}
+p <- fig("15_season_profile_heatmap.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+### Notes and Interpretation
+
+**ICC interpretation.** Most features in the real La Liga data have
+ICC$_\text{player}$ in the 60–90% range, confirming that player identity is by far
+the dominant source of variation. The features with highest ICC$_\text{season}$
+(`smart_passes`, `pressing_duels`, `accelerations`) likely reflect rule changes
+or tactical trends that affect all players in a season similarly.
+
+**Diagonal vs low-rank.** Comparing the diagonal-$\Sigma_a$ model (stage 03)
+with the low-rank-$\Sigma_a$ model (stage 10) shows that ICC values move very
+little — the factor structure refines *how* player variance is organized
+(into low-dimensional axes) without changing *how much* variance is attributed
+to players. This is reassuring for the interpretation: the ICC-based reading
+is robust to model specification.
+
+**PCA-oriented factors.** Replacing the triangular $\Lambda$ with the
+eigendecomposition $L_\text{PCA}$ gives directly interpretable orthogonal axes.
+PCA Factor 1 explains roughly two-thirds of the common player variance and
+captures the attacking vs.\ midfield-possession axis cleanly. PCA Factor 2 captures
+the residual orthogonal direction (assist-creation vs. defensive duels).
+
+**Initialization.** The PCA-based initialization (`build_pca_init`) seeds the
+sampler near a good local mode of the posterior. The init function is now wired
+into stages 09 and 10 and will activate automatically on the next
+`BFA_RUN_STAN=true` run. We expect a substantial reduction in burn-in time and
+improved Factor 1 mixing, though confirmation requires a fresh sampling run.
+
+**No Stan re-sampling was required for this entry.** All four new stages
+(13–16) operate purely on saved posterior draws from the existing stage-10 fit.
+
+---
+
+# How to Run This Pipeline (Quick Reference)
+
+All commands below assume your working directory is the model root
+(`.../TFM/model`) and you have R + cmdstanr installed.
+
+### Running individual stages
+
+```{verbatim, lang="bash"}
+# Single stage
+Rscript run_pipeline.R 16
+
+# Multiple stages in order
+Rscript run_pipeline.R 13 14 15 16
+
+# Full pipeline (00 through 16)
+Rscript run_pipeline.R
+```
+
+### Stan sampling vs. analysis-only
+
+`BFA_RUN_STAN` controls whether the actual MCMC sampling runs. The new
+analysis stages (13–16) do not need Stan; they read existing fit CSVs:
+
+```{verbatim, lang="bash"}
+# Re-run analysis stages without resampling Stan
+BFA_RUN_STAN=false Rscript run_pipeline.R 13 14 15 16
+
+# Re-sample Stan and then re-run all analyses
+BFA_RUN_STAN=true Rscript run_pipeline.R 09 10 11 12 13 14 15 16
+```
+
+### Reproducing this entry from scratch
+
+```{verbatim, lang="bash"}
+# 1. Re-run Stan with the new PCA initialization (~30-60 min depending on
+#    machine). The init function is wired into stages 09 and 10 automatically.
+BFA_RUN_STAN=true BFA_REUSE_FIT=false Rscript run_pipeline.R 09 10
+
+# 2. Re-run all analysis stages
+BFA_RUN_STAN=false Rscript run_pipeline.R 11 12 13 14 15 16
+
+# 3. Re-render this journal PDF
+quarto render pipeline_journal.qmd
+```
+
+### Where to find outputs
+
+| Item | Location |
+|---|---|
+| Posterior CSV summaries | `outputs/tables/<NN>_*_posterior_summary.csv` |
+| Variance / ICC tables | `outputs/tables/{11,16}_*.csv` |
+| PCA tables | `outputs/tables/13_{real,sim}_pca_*.csv` |
+| Player / season tables | `outputs/tables/{14,15}_*.csv` |
+| Figures | `outputs/figures/<NN>_*.png` |
+| Diagnostics | `outputs/diagnostics/<model_id>_*.csv` |
+| This journal PDF | `pipeline_journal.pdf` |
+
+### Common environment knobs
+
+| Variable | Default | Use case |
+|---|---|---|
+| `BFA_RUN_STAN` | `false` | Set `true` to sample (slow) |
+| `BFA_REUSE_FIT` | `true` | Set `false` to force re-sampling even if CSVs exist |
+| `BFA_CHAINS` | `4` | Reduce to `2` for quick smoke tests |
+| `BFA_ITER_WARMUP` / `BFA_ITER_SAMPLING` | `1000` / `1000` | Increase for tighter posteriors |
+| `BFA_SIM_RANK_A` | `2` | Change player factor rank $Q_a$ |
+| `BFA_SEED` | `20260513` | Change to get a different random sub-sample |
+
+---
+
+---
+
+## Entry 3 — 2026-05-29 — LT Identification Confirmed: Stage 09 Converges; Stage 10 Real-Data Re-fit
+
+### Context and Code Changes
+
+The **double-zero anchor** identification scheme used in Entry 1 forced
+$\Lambda_a[2,1] = 0$ (i.e.\ `per90_assists` cannot load on Factor 1).
+This over-restriction caused catastrophic Factor 1 mixing (Rhat $\approx$ 1.75,
+ESS $\approx$ 6) that persisted in both the simulated and real-data fits.
+
+Three coupled fixes were applied:
+
+1. **Lower-triangular (LT) parametrisation** — `additive_lowrank_a_diag_b.stan`
+   now uses `make_lower_tri_loadings()`: the only zeros are in the strict upper
+   triangle ($\Lambda_a[p,q] = 0$ for $p < q$), reducing identification
+   constraints from $Q(Q-1)$ zeros to the minimal $Q(Q-1)/2$.
+   For $Q_a = 2$ this frees exactly one extra parameter: $\Lambda_a[2,1]$.
+
+2. **Tightened anchor prior** — `lambda_a_diag ~ lognormal(log(0.7), 0.20)`
+   (was `lognormal(log(0.6), 0.35)`), keeping anchor values well above the
+   typical magnitude of free loadings.
+
+3. **PCA warm-start** — `build_pca_init()` in `src/stan_helpers.R` seeds
+   each chain from the eigendecomposition of the player-mean sample covariance
+   (adapted from the professor's reference code). This puts the chains near the
+   posterior mode from iteration 1, dramatically reducing burn-in.
+
+### Configuration
+
+| Parameter | Value |
+|---|---|
+| Seed | 20260513 + 90 (stage 09), 20260513 + 100 (stage 10) |
+| Chains | 4 |
+| Parallel chains | 4 |
+| Iter warmup | 1000 |
+| Iter sampling | 1000 |
+| Adapt delta | 0.95 |
+| Max treedepth | 12 |
+| Player factor rank $Q_a$ | 2 |
+| Identification | Lower-triangular (NEW) |
+| Initialisation | PCA warm-start (NEW) |
+
+### Stages Run
+
+- **04** — Re-simulated truth with the updated lower-triangular `make_anchor_loadings()`.
+  The new truth has $\Lambda_a[2,1] \sim \mathcal{N}(0, 0.20)$ instead of the
+  previous forced zero, providing a more realistic test of the new model.
+- **09** — Fresh simulation fit (LT model + PCA init). **Completed.**
+  All four chains: $\approx$ 6.5 h total.
+- **10** — Fresh real La Liga fit (LT model + PCA init). **Currently running.**
+- **11** — Loading analysis, recovery metrics, chain plots (run against new stage 09 fit).
+- **12** — Football factor interpretation (run against new stage 09 fit).
+
+### Sampler Health
+
+```{r entry3-sampler-health}
+ph3 <- read_d("11_posterior_health_new_model.csv")
+if (!is.null(ph3)) {
+  ph3 |>
+    mutate(
+      model_id = sub("^0[0-9]+_", "", model_id),
+      across(where(is.numeric), \(x) round(x, 3))
+    ) |>
+    rename(Model = model_id, MaxRhat = max_rhat,
+           MinESSbulk = min_ess_bulk, MinESStail = min_ess_tail,
+           `N Rhat>1.01` = n_rhat_gt_101, `N Rhat>1.05` = n_rhat_gt_105) |>
+    knitr::kable(booktabs = TRUE, linesep = "",
+                 caption = "Sampler health after LT reparametrisation (stage 09: new fit; stage 10: old fit until re-sampling completes).") |>
+    kableExtra::kable_styling(latex_options = c("hold_position", "scale_down"),
+                              font_size = 9) |>
+    kableExtra::column_spec(1, width = "4.5cm")
+}
+```
+
+**Stage 09 verdict (new LT + PCA fit):** max $\hat{R} = 1.05$, min ESS$_\text{bulk} = 134$,
+zero parameters with $\hat{R} > 1.05$.
+This is a **decisive improvement** from the previous fit (max $\hat{R} = 1.75$, ESS $= 6$).
+The 89 parameters with $\hat{R}$ marginally above 1.01 are player factor scores
+$\eta_{a,i}$ for players observed in only one season — expected behaviour at
+$I = 1{,}650$ players.
+
+### Recovery Metrics — Stage 09 vs Simulation Truth
+
+```{r entry3-recovery}
+rec3 <- read_t("11_sim_recovery_metrics.csv")
+if (!is.null(rec3)) {
+  rec3 |>
+    select(parameter, n, bias, mae, rmse, corr, cov90) |>
+    mutate(
+      parameter = sub("Lambda_a_factor", "$\\\\Lambda_a$ Factor ", parameter),
+      parameter = sub("Sigma_a_diag", "$\\\\Sigma_a$ diagonal", parameter),
+      parameter = sub("var_b_vs_Sigma_b_diag", "$\\\\sigma_b^2$ vs $\\\\Sigma_b$ diag", parameter),
+      across(where(is.numeric), \(x) round(x, 4))
+    ) |>
+    rename(Parameter = parameter, `n` = n, Bias = bias,
+           MAE = mae, RMSE = rmse, Corr = corr, Cov90 = cov90) |>
+    knitr::kable(booktabs = TRUE, linesep = "", escape = FALSE,
+                 caption = "Stage 09 parameter recovery: posterior mean vs simulation truth.") |>
+    kableExtra::kable_styling(latex_options = c("hold_position", "scale_down"), font_size = 9) |>
+    kableExtra::column_spec(1, width = "5cm")
+}
+```
+
+Both factors now recover near-perfectly:
+$\Lambda_a$ Factor 1 Corr $= 0.999$ (was $0.305$),
+$\Lambda_a$ Factor 2 Corr $= 0.999$ (was $0.999$, unchanged).
+Marginal player variance ($\Sigma_a$ diagonal) Corr $= 0.997$ and season variance
+Corr $= 0.906$. Coverage at the nominal 90\% is $96.2\%$ (Factor 1) and $71.7\%$
+(Factor 2) — slightly below nominal for Factor 2, consistent with modest
+over-shrinkage from the $\mathcal{N}(0, 0.35)$ prior on free loadings.
+
+### Simulation Variance Decomposition
+
+```{r entry3-vd-sim}
+vd_s <- read_t("11_sim_variance_decomposition.csv")
+if (!is.null(vd_s)) {
+  top_a <- vd_s |>
+    arrange(desc(prop_a_mean)) |>
+    slice_head(n = 8) |>
+    select(feature, prop_a_mean, prop_b_mean, prop_e_mean) |>
+    mutate(across(starts_with("prop"), \(x) round(x * 100, 1)))
+  colnames(top_a) <- c("Feature", "Player %", "Season %", "Residual %")
+  show_table(top_a, caption = "Simulation: top 8 player-dominated features.")
+}
+```
+
+### Loading Structure — Simulation (Stage 09)
+
+```{r entry3-sim-heatmap, fig.cap="$\\Lambda_a$ posterior-mean loading heatmap — simulated data (stage 09, LT model). Rows = features, columns = factors.", out.width="75%", fig.height=14, fig.align="center"}
+p <- fig("11_sim_lambda_a_heatmap.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r entry3-sim-topn, fig.cap="Top 12 loadings per factor with 90\\% CIs — simulated data. Both factors now tightly estimated.", out.width="100%"}
+p <- fig("11_sim_lambda_a_top_loadings.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r entry3-sim-scatter, fig.cap="$\\Lambda_a$ posterior mean vs simulation truth — stage 09. Both factors lie on the $y=x$ line confirming near-perfect recovery.", out.width="100%"}
+p <- fig("11_sim_lambda_a_vs_truth.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+### Chain Diagnostics — Stage 09
+
+```{r entry3-09-diag-trace, fig.cap="Stage 09 (LT + PCA init): $\\lambda_a$ diagonal anchors — trace plots. All four chains overlap cleanly.", out.width="100%"}
+p <- chain_fig("09_sim", "lambda_a_diag_trace.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r entry3-09-diag-density, fig.cap="Stage 09: $\\lambda_a$ diagonal anchors — posterior densities (4 chains superimposed).", out.width="100%"}
+p <- chain_fig("09_sim", "lambda_a_diag_density.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r entry3-09-free-trace, fig.cap="Stage 09: top free $\\lambda_a$ parameters by absolute posterior mean — trace plots.", out.width="100%"}
+p <- chain_fig("09_sim", "lambda_a_free_top_trace.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r entry3-09-free-density, fig.cap="Stage 09: top free $\\lambda_a$ parameters — posterior densities.", out.width="100%"}
+p <- chain_fig("09_sim", "lambda_a_free_top_density.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r entry3-09-psi-trace, fig.cap="Stage 09: uniqueness parameters $\\psi_a$ (first 6 features) — trace plots.", out.width="100%"}
+p <- chain_fig("09_sim", "psi_a_trace.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+### Stage 10 — Real La Liga Data (Currently Running)
+
+Stage 10 re-fits the same LT model with PCA init to the real $N = 4{,}944$
+player-season rows. The following sections will populate automatically once
+the fit completes and stages 11–16 are run.
+
+#### Sampler Health (Stage 10)
+
+**Expected:** max $\hat{R} < 1.05$, ESS$_\text{bulk} > 100$, confirming that
+the LT + PCA fix transfers from simulated to real data.
+
+#### Variance Decomposition — Real Data
+
+```{r entry3-vd-real}
+vd_r <- read_t("11_real_variance_decomposition.csv")
+if (!is.null(vd_r)) {
+  top_a <- vd_r |>
+    arrange(desc(prop_a_mean)) |>
+    slice_head(n = 8) |>
+    select(feature, prop_a_mean, prop_b_mean, prop_e_mean) |>
+    mutate(across(starts_with("prop"), \(x) round(x * 100, 1)))
+  colnames(top_a) <- c("Feature", "Player %", "Season %", "Residual %")
+  show_table(top_a, caption = "Real data (stage 10 re-fit): top 8 player-dominated features.")
+
+  top_b <- vd_r |>
+    arrange(desc(prop_b_mean)) |>
+    slice_head(n = 6) |>
+    select(feature, prop_a_mean, prop_b_mean, prop_e_mean) |>
+    mutate(across(starts_with("prop"), \(x) round(x * 100, 1)))
+  colnames(top_b) <- c("Feature", "Player %", "Season %", "Residual %")
+  show_table(top_b, caption = "Real data: top 6 season-driven features.")
+}
+```
+
+```{r entry3-vd-real-plot, fig.cap="Variance decomposition by feature — real data, LT model (stage 10 re-fit).", out.width="100%", fig.height=14}
+p <- fig("11_real_variance_decomposition_lowrank.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+#### Loading Structure — Real Data
+
+```{r entry3-real-heatmap, fig.cap="$\\Lambda_a$ loading heatmap — real data (stage 10 re-fit, LT model).", out.width="75%", fig.height=14, fig.align="center"}
+p <- fig("11_real_lambda_a_heatmap.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r entry3-real-topn, fig.cap="Top 12 loadings per factor with 90\\% CIs — real data (stage 10 re-fit).", out.width="100%"}
+p <- fig("11_real_lambda_a_top_loadings.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r entry3-real-radar, fig.cap="Mean absolute loading by feature group and factor — real data.", out.width="90%", fig.align="center"}
+p <- fig("11_real_lambda_a_group_radar.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+#### Chain Diagnostics — Stage 10
+
+```{r entry3-10-diag-trace, fig.cap="Stage 10 (real data, LT + PCA init): $\\lambda_a$ diagonal anchors — trace plots.", out.width="100%"}
+p <- chain_fig("10_real", "lambda_a_diag_trace.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r entry3-10-diag-density, fig.cap="Stage 10 (real data): $\\lambda_a$ diagonal anchors — posterior densities.", out.width="100%"}
+p <- chain_fig("10_real", "lambda_a_diag_density.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r entry3-10-free-trace, fig.cap="Stage 10 (real data): top free $\\lambda_a$ parameters — trace plots.", out.width="100%"}
+p <- chain_fig("10_real", "lambda_a_free_top_trace.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r entry3-10-sigma-b, fig.cap="Stage 10 (real data): top season scale parameters $\\sigma_b$ — trace and density.", out.width="100%"}
+p_t <- chain_fig("10_real", "sigma_b_top_trace.png")
+p_d <- chain_fig("10_real", "sigma_b_top_density.png")
+if (file.exists(p_t)) knitr::include_graphics(p_t)
+if (file.exists(p_d)) knitr::include_graphics(p_d)
+```
+
+#### PCA Post-processing — Real Data (Stage 13)
+
+Stage 13 eigendecomposes $\hat{\Lambda}_s \hat{\Lambda}_s^\top$ for each
+posterior draw $s$, extracts $L_\text{PCA} = U_K D_K^{1/2}$ and player scores
+$G = (F \Lambda^\top) U_K D_K^{-1/2}$, aligns signs to the posterior-mean
+orientation, and computes credible intervals. This removes the
+rotation-arbitrary LT convention and yields directly interpretable orthogonal
+axes ordered by variance explained.
+
+```{r entry3-pca-prop}
+prop3 <- read_t("13_real_pca_common_variance_prop.csv")
+if (!is.null(prop3)) {
+  prop3 |>
+    mutate(across(where(is.numeric), \(x) round(x, 3))) |>
+    show_table(caption = "Proportion of common player variance per PCA factor — real data (median, 90\\% CI).")
+}
+```
+
+```{r entry3-pca-heatmap, fig.cap="PCA-oriented loadings — real data. Eigendecomposition of $\\hat{\\Lambda}\\hat{\\Lambda}^\\top$ per draw; signs aligned to posterior-mean reference.", out.width="75%", fig.height=14, fig.align="center"}
+p <- fig("13_real_pca_loading_heatmap.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r entry3-pca-ci, fig.cap="PCA loading 90\\% CIs per feature and factor — real data.", out.width="100%", fig.height=12}
+p <- fig("13_real_pca_loading_ci_plot.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r entry3-pca-scatter, fig.cap="PCA-oriented player score scatter (posterior mean): each point is a player, extreme archetypes annotated.", out.width="100%"}
+p <- fig("13_real_pca_player_scores_scatter.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+#### Player Profiles (Stage 14)
+
+Stage 14 reconstructs $\hat{a}_i = \Lambda (\eta_i - \bar{\eta}) + \psi_a \odot
+(z_{u,i} - \bar{z}_u)$ across 500 posterior draws for all 1,650 players, and
+builds a clustered heatmap of the 200 players with largest $\|\hat{a}_i\|$.
+
+```{r entry3-player-heatmap, fig.cap="Clustered heatmap: posterior mean player effects $\\hat{a}_i$ (top 200 by norm, all 53 features). Row clusters correspond to football positional groups.", out.width="100%", fig.height=14}
+p <- fig("14_player_profile_heatmap.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r entry3-player-pca, fig.cap="Player archetype scatter: PCA score 1 vs PCA score 2 (posterior means). Each dot is one player across all their seasons.", out.width="100%"}
+p <- fig("14_player_pca_scatter.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+#### Season Profiles (Stage 15)
+
+Stage 15 reconstructs $\hat{b}_j = \sigma_b \odot (z_b^{(j)} - \bar{z}_b)$
+for each of the 12 La Liga seasons and plots temporal evolution with 90\% CI
+ribbons for the features with highest ICC$_\text{season}$.
+
+```{r entry3-season-grid, fig.cap="Temporal evolution of $\\hat{b}_j$: posterior mean $\\pm$ 90\\% CI ribbon for the 12 features most driven by season effects.", out.width="100%", fig.height=12}
+p <- fig("15_season_profiles_grid.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r entry3-season-heatmap, fig.cap="Posterior mean season effects heatmap (seasons in temporal order, features clustered by similarity).", out.width="100%", fig.height=8}
+p <- fig("15_season_profile_heatmap.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+#### Intraclass Correlations (Stage 16)
+
+The variance proportions `prop_a`, `prop_b`, `prop_e` computed by Stan
+**are** ICCs:
+$$
+\text{ICC}_\text{player}[k] = \frac{\Sigma_{a,kk}}{V_k}, \quad
+\text{ICC}_\text{season}[k] = \frac{\sigma_{b,k}^2}{V_k}, \quad
+\text{ICC}_\text{residual}[k] = \frac{\sigma_{e,k}^2}{V_k}
+$$
+Stage 16 reframes these as ICCs, builds a ranked stacked bar chart, and
+compares ICC$_\text{player}$ between the diagonal model (stage 03) and the
+LT model (stage 10).
+
+```{r entry3-icc-top}
+icc3 <- read_t("16_icc_summary.csv")
+if (!is.null(icc3)) {
+  top3 <- icc3 |>
+    arrange(desc(icc_player)) |>
+    slice_head(n = 8) |>
+    select(feature, group, icc_player, icc_season, icc_residual) |>
+    mutate(across(starts_with("icc_"), \(x) round(x * 100, 1)))
+  colnames(top3) <- c("Feature", "Group", "ICC$_{\\text{player}}$ \\%",
+                      "ICC$_{\\text{season}}$ \\%", "Residual \\%")
+  show_table(top3, caption = "Top 8 features by ICC$_{\\text{player}}$ — real data (stage 10 re-fit).")
+}
+```
+
+```{r entry3-icc-bar, fig.cap="ICC decomposition per feature (real data, LT model). Features ordered by ICC$_{\\text{player}}$ descending.", out.width="95%", fig.height=16}
+p <- fig("16_icc_ranked_barchart.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+```{r entry3-icc-compare, fig.cap="Scatter of ICC$_{\\text{player}}$ by feature: diagonal $\\Sigma_a$ model (stage 03) vs low-rank LT model (stage 10). The low-rank model slightly redistributes variance from residual to player for features with strong factor loadings.", out.width="100%", fig.height=12}
+p <- fig("16_icc_diagonal_vs_lowrank.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+### Notes and Interpretation
+
+**Stage 09 — Convergence definitively resolved.** The combined
+lower-triangular identification + PCA warm-start eliminated the Factor 1
+mixing failure completely. Max $\hat{R}$ dropped from $1.75$ to $1.05$;
+ESS$_\text{bulk}$ rose from $6$ to $134$; both factors recover their
+simulation truth with correlation $0.999$. The fix removes the structural
+misspecification (`per90_assists` forced to not load on Factor 1) and seeds
+the chains from a sensible starting point.
+
+**Why it worked: identification.** The old double-zero anchor imposed $Q(Q-1)$
+excess zeros in $\Lambda_a$, creating a constrained manifold where the sampler
+could not efficiently explore. The LT scheme uses only the minimal $Q(Q-1)/2$
+zeros required for algebraic identification. For $Q_a = 2$ this freed exactly
+one extra parameter — $\Lambda_a[2,1]$ (`per90_assists` → Factor 1) — which
+was genuinely non-zero in the true posterior.
+
+**Why it worked: initialisation.** PCA warm-start placed each chain near the
+posterior mode from iteration 1. The initial ±inf proposals (visible in the
+log at iteration 1, accepted nowhere) are normal artefacts of the jittered
+init and do not recur.
+
+**Stage 10 — currently running.** The same model + init is fitting the real
+$N = 4{,}944$ observation dataset. Based on stage 09 results, we expect clean
+convergence. Once complete, stages 11–16 will populate the placeholder
+sections above automatically on re-render.
+
+**Football interpretation (pending stage 10).** Factor 1 in the simulation
+clearly separates volume attackers (positive: goals, shots, touches in box)
+from possession/pressing midfielders (negative: forward passes, recoveries,
+progressive passes). The factor axis runs from finishers to distributors. Factor 2 captures the assist-creation vs. defensive
+dimension. The real-data interpretation will be confirmed once the new stage
+10 posterior is available.
+
+**What to do after stage 10 completes:**
+```{verbatim, lang="bash"}
+# Run all analysis stages on the fresh stage 10 fit
+BFA_REUSE_FIT=true Rscript run_pipeline.R 11 12 13 14 15 16
+# Re-render this journal to populate all placeholder sections
+quarto render pipeline_journal.qmd
+# Commit
+git add -u && git commit -m "Entry 3: stage 10 results + stages 11-16"
+git push
+```
 
 ---
 

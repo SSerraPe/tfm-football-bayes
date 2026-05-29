@@ -36,12 +36,15 @@ stan_data <- build_lowrank_a_diag_b_stan_data(
 saveRDS(stan_data, stan_data_path)
 message("Stan data saved: ", stan_data_path)
 
+init_fn <- build_pca_init(stan_data)
+
 fit <- fit_cmdstan_model(
   stan_file  = file.path(paths$stan, "additive_lowrank_a_diag_b.stan"),
   stan_data  = stan_data,
   fit_path   = file.path(paths$fits, "09_sim_lowrank_a_diag_b_fit.rds"),
   seed       = pipeline$seed + 90L,
-  model_id   = "09_sim_lowrank_a_diag_b"
+  model_id   = "09_sim_lowrank_a_diag_b",
+  init       = init_fn
 )
 
 write_fit_outputs(fit, "09_sim_lowrank_a_diag_b")

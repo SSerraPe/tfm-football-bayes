@@ -31,6 +31,15 @@ anchor_free_count <- function(P, Q) {
   as.integer((P - Q) * Q)
 }
 
+lower_tri_free_count <- function(P, Q) {
+  if (Q < 1L) return(0L)
+  if (Q > P) {
+    stop("Cannot identify rank ", Q, " with only ", P, " observed variables.",
+         call. = FALSE)
+  }
+  as.integer(P * Q - Q * (Q + 1L) / 2L)
+}
+
 default_anchor_index <- function(P, Q) {
   if (Q > P) {
     stop("Rank cannot exceed the number of observed variables.", call. = FALSE)

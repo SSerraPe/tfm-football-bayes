@@ -18,7 +18,11 @@ stage_map <- c(
   "09" = "09_fit_sim_lowrank_a_diag_b.R",
   "10" = "10_fit_real_lowrank_a_diag_b.R",
   "11" = "11_loading_analysis_and_chains.R",
-  "12" = "12_football_interpretation.R"
+  "12" = "12_football_interpretation.R",
+  "13" = "13_pca_postprocessing.R",
+  "14" = "14_player_profiles.R",
+  "15" = "15_season_profiles.R",
+  "16" = "16_icc_analysis.R"
 )
 
 if (length(args) == 0L) {
