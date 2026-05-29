@@ -7,8 +7,8 @@ Data: real La Liga Wyscout data (1650 players, 12 seasons, 53 features)
 
 ### Factor_1: Attacking / Creative
 
-**Top positive loadings:** per90_forward_passes (-0.816), per90_recoveries (-0.737), per90_progressive_passes (-0.694), per90_touch_in_box (0.691), per90_offensive_duels (0.671)
-**Top negative loadings:** per90_forward_passes (-0.816), per90_recoveries (-0.737), per90_progressive_passes (-0.694), per90_lateral_passes (-0.658), per90_passes (-0.629)
+**Top positive loadings:** per90_offensive_duels (0.847), per90_touch_in_box (0.804), per90_shots (0.779), per90_forward_passes (-0.760), per90_recoveries (-0.739)
+**Top negative loadings:** per90_forward_passes (-0.760), per90_recoveries (-0.739), per90_long_passes (-0.697), per90_clearances (-0.641), per90_progressive_passes (-0.623)
 
 **Interpretation:**
 Factor 1 captures the latent dimension labelled 'Attacking / Creative'.
@@ -17,8 +17,8 @@ on the positively-loading features and suppressed values on negatively-loading o
 
 ### Factor_2: Attacking / Creative
 
-**Top positive loadings:** per90_assists (0.297), per90_forward_passes (-0.214), per90_recoveries (-0.204), per90_offensive_duels (0.202), per90_touch_in_box (0.199)
-**Top negative loadings:** per90_forward_passes (-0.214), per90_recoveries (-0.204), per90_progressive_passes (-0.176), per90_long_passes (-0.171), per90_interceptions (-0.168)
+**Top positive loadings:** per90_received_pass (0.797), per90_passes (0.796), per90_back_passes (0.679), per90_lateral_passes (0.635), per90_passes_to_final_third (0.612)
+**Top negative loadings:** rate_aerial_duels_won (-0.337), per90_head_shots (-0.243), per90_aerial_duels (-0.210), per90_long_passes (-0.061), per90_xg_shot (-0.045)
 
 **Interpretation:**
 Factor 2 captures the latent dimension labelled 'Attacking / Creative'.
@@ -55,4 +55,4 @@ Posterior summary: /Users/sserra/Documents/01_MESIO_UPC/TFM/model/outputs/tables
 Loading table:     /Users/sserra/Documents/01_MESIO_UPC/TFM/model/outputs/tables/11_real_lambda_a_loading_table.csv
 Player scores:     /Users/sserra/Documents/01_MESIO_UPC/TFM/model/outputs/tables/12_player_factor_scores.csv
 
-Generated: 2026-05-29 01:40:21.517533
+Generated: 2026-05-29 08:22:13.050647
