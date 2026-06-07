@@ -1,0 +1,14 @@
+Stage 19: Posterior predictive checks
+
+Check 1: Cross-variable correlation
+  Model-implied correlation from Sigma_a = Lambda_a Lambda_a' + diag(psi_a^2).
+  Compare to observed sample correlation of Y (already Z-scaled).
+  Result: see outputs/figures/19_correlation_ppc_scatter.png
+  Table:  outputs/tables/19_correlation_ppc.csv
+
+Check 2: Residual distributions
+  Residuals = Y - posterior_mean(a_i) - posterior_mean(b_j).
+  Compared to Normal(0, posterior_mean(sigma_e)) for selected features.
+  Result: see outputs/figures/19_residual_distribution_check.png
+
+Selected features for residual check: per90_recoveries, per90_touch_in_box, per90_smart_passes, per90_pressing_duels, rate_successful_crosses, rate_successful_sliding_tackles

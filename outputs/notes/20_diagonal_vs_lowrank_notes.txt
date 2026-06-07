@@ -1,0 +1,18 @@
+Stage 20: Diagonal vs Low-Rank model comparison
+
+Diagonal model: additive_diagonal.stan (stage 03)
+  Sigma_a = diag(sigma_a^2), Sigma_b = diag(sigma_b^2)
+
+Low-rank model: additive_lowrank_a_diag_b.stan (stage 10)
+  Sigma_a = Lambda Lambda' + diag(psi_a^2), Sigma_b = diag(sigma_b^2)
+
+LOO-CV results (log predictive density; higher is better):
+       elpd_diff se_diff
+model2     0.0       0.0
+model1 -3723.5     186.9
+
+Model preferred by LOO: model2
+ELPD difference (low-rank vs diagonal): 0 ± 0
+
+See outputs/tables/20_loo_diagonal_vs_lowrank.csv and
+    outputs/figures/20_icc_diagonal_vs_lowrank.png

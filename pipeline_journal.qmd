@@ -1104,6 +1104,251 @@ git push
 
 ---
 
+## Entry 4 — 2026-06-07 — Model clarifications, rank selection, t-errors, and predictive checks
+
+### Overview
+
+This entry covers the next batch of work following Entry 3. It addresses all items on the
+professor's TODO list from `ideas_and_such/TODO.Rmd` and integrates the rank-selection
+methodology from `rank comparison/`. The work is organised as four new pipeline stages (17–20)
+plus a clarification note on the global mean $\mu$.
+
+### Model clarification: the role of $\mu$
+
+The current Stan model (`additive_lowrank_a_diag_b.stan`) contains a global mean vector
+$\boldsymbol{\mu}$ with prior $\mu_p \sim \mathcal{N}(0, 1)$. Stage 02 already Z-scales every
+feature to mean 0 and SD 1, so $\boldsymbol{\mu}$ is redundant — its posterior should be
+concentrated near zero. The professor's `ideas_and_such/ideas.Rmd` is explicit:
+
+> *"There is no explicit mean parameter. The data should therefore be centered in a meaningful
+> way before fitting."*
+
+**Consequence:** the stage 10 results are unaffected. Going forward, new Stan models (stages
+18 onward) are written without $\boldsymbol{\mu}$, matching the professor's notation:
+
+$$\mathbf{y}_{ij} = \mathbf{a}_i + \mathbf{b}_j + \boldsymbol{\varepsilon}_{ij}$$
+
+See `outputs/notes/note_mu_centering.md` for the full write-up.
+
+---
+
+### Stage 17 — Rank selection on real data
+
+**What and why.** The professor's `rank comparison/` folder implements a cross-validation
+criterion for choosing the number of player latent factors $K_a$. The idea is to hold out
+specific (player, variable) pairs, refit the model without those observations, and measure
+how well the fitted model predicts the held-out values. The rank with the highest held-out
+Expected Log Predictive Density (ELPD) is selected.
+
+**Why this criterion.** AIC and BIC count parameters but assume the model is well-specified.
+Here the low-rank + diagonal structure is an approximation, so the effective parameter count
+is not meaningful. Held-out ELPD directly measures predictive accuracy on unseen data.
+
+**CV design.** The unit of cross-validation is a (player, variable) pair $(i, k)$. When pair
+$(i, k)$ is assigned to fold $m$, variable $k$ is held out for player $i$ in **every** season
+that player was observed. This means the model can still estimate player $i$'s general effects
+from the remaining 52 variables. With $n_\text{folds} = 5$, each fold holds out roughly $1/5$
+of all (player, variable) pairs, generating on the order of 50,000–100,000 individual
+held-out observations.
+
+**ELPD formula.** For fold $m$ and rank $K$:
+
+$$\widehat{\text{ELPD}}_K = \sum_{m=1}^{5} \sum_{(i,j,k) \in \mathcal{H}_m}
+  \log \left[ \frac{1}{S} \sum_{s=1}^S \mathcal{N}\!\left(y_{ijk} \,\Big|\,
+  a_{i,k}^{(s)} + b_{j,k}^{(s)},\; \sigma_{e,k}^{(s)\,2}\right) \right]$$
+
+The selected rank is $K^* = \arg\max_K \widehat{\text{ELPD}}_K$.
+
+**Validation.** The professor tested this on 8 simulated datasets (2 per true rank
+$K \in \{0,1,2,3\}$). The criterion recovered the true rank in all 8 cases.
+
+**Configuration.**
+
+| Parameter | Value |
+|---|---|
+| Ranks evaluated | $K \in \{0, 1, 2, 3, 4\}$ |
+| Folds | 5 |
+| Fold seed | 11 |
+| Fit seed | 1000 |
+| Chains | 4 |
+| Iter warmup | 500 |
+| Iter sampling | 500 |
+| Adapt delta | 0.98 |
+
+**Script:** `scripts/17_rank_selection_real.R` (sources `rank comparison/rank_selection.R`
+and uses the Stan models in `rank comparison/stan/`).
+
+**Results** (fill in once stage 17 completes):
+
+```{r entry4-rank-elpd}
+elpd_path <- file.path("outputs", "rank_selection", "real_data_elpd.csv")
+if (file.exists(elpd_path)) {
+  elpd_df <- read.csv(elpd_path)
+  knitr::kable(elpd_df, caption = "Held-out ELPD by rank (real data)",
+               digits = 2, format = "pipe")
+} else {
+  cat("*Stage 17 not yet run.*")
+}
+```
+
+**Interpretation** (fill in after results are available):
+
+*Pending stage 17 completion.*
+
+See `outputs/notes/note_rank_selection_methodology.md` (methodology) and
+`outputs/notes/note_rank_selection_results.md` (results, written after stage 17 runs).
+
+---
+
+### Stage 18 — Student-t errors
+
+**What and why.** The model currently assumes $\varepsilon_{ij} \sim \mathcal{N}(0, \Sigma_e)$.
+In football data, some player-seasons may be genuine outliers: injury-affected seasons, loan
+stints, or extraordinary performances that the player effect alone cannot explain. Normal
+errors down-weight these too aggressively.
+
+The Student-t distribution with $\nu$ degrees of freedom is a heavier-tailed alternative. It
+nests the Normal as $\nu \to \infty$. A small posterior $\nu$ (say $< 10$) signals that
+meaningful heavy tails are present; a large $\nu$ (say $> 30$) means the Normal is adequate.
+
+**Model change.** New Stan model `additive_lowrank_a_diag_b_t.stan`:
+- No $\boldsymbol{\mu}$ (data is Z-scaled).
+- Likelihood: $y_{n,p} \sim \text{Student-}t(\nu,\; \text{mean}_{np},\; \sigma_{e,p})$.
+- Prior: $\nu \sim \text{Gamma}(2, 0.1)$ (Juárez & Steel 2010; also the Stan reference prior).
+
+**Comparison.** Both this fit and stage 10 compute `log_lik[n]` in generated quantities.
+We use `loo_compare()` to assess whether t-errors improve held-out predictive accuracy.
+
+**Results** (fill in once stage 18 completes):
+
+```{r entry4-t-errors-nu}
+t_diag_path <- file.path("outputs", "tables", "18_loo_normal_vs_t.csv")
+if (file.exists(t_diag_path)) {
+  loo_df <- read.csv(t_diag_path)
+  knitr::kable(loo_df, caption = "LOO comparison: Normal vs Student-t residuals",
+               digits = 2, format = "pipe")
+} else {
+  cat("*Stage 18 not yet run.*")
+}
+```
+
+```{r entry4-t-errors-nu-notes}
+t_notes_path <- file.path("outputs", "notes", "18_real_lowrank_a_diag_b_t_notes.txt")
+if (file.exists(t_notes_path)) {
+  cat(readLines(t_notes_path), sep = "\n")
+} else {
+  cat("*Stage 18 not yet run.*")
+}
+```
+
+See `outputs/notes/note_t_errors.md` for a plain-language explanation.
+
+---
+
+### Stage 19 — Posterior predictive checks
+
+**What and why.** A posterior predictive check (PPC) asks whether data simulated from the
+fitted model resembles the observed data. We run two checks:
+
+**Check 1: Cross-variable correlation.** The low-rank model claims that cross-feature
+correlations among player metrics are driven by $K=2$ latent factors. The model-implied
+off-diagonal covariance between features $k$ and $l$ comes entirely from
+$\Sigma_a = \Lambda \Lambda' + \Psi_a$ (since $\Sigma_b$ and $\Sigma_e$ are diagonal).
+We compare the posterior mean model-implied correlation to the observed sample correlation.
+
+$$\text{Corr}_\text{model}(k, l) = \frac{\Sigma_a[k,l]}{\sqrt{\text{Var}(y_k) \cdot \text{Var}(y_l)}}$$
+
+where $\text{Var}(y_k) = \Sigma_a[k,k] + \sigma_{b,k}^2 + \sigma_{e,k}^2$.
+
+**Check 2: Residual distributions.** Residuals $e_{n,p} = y_{n,p} - \hat{a}_{i[n],p} -
+\hat{b}_{j[n],p}$ (using posterior mean effects from stages 14–15) should look like
+$\mathcal{N}(0, \sigma_{e,p})$ if the Normal model is adequate. Heavy tails or skew suggest
+the Student-t model (stage 18) is needed.
+
+**Results:**
+
+```{r entry4-ppc-corr, fig.cap="Cross-variable correlation PPC: observed vs model-implied (posterior mean ± 90\\% CI). Points near the diagonal indicate the model captures the observed correlation structure.", out.width="80%"}
+p <- file.path("outputs", "figures", "19_correlation_ppc_scatter.png")
+if (file.exists(p)) knitr::include_graphics(p) else cat("*Stage 19 not yet run.*")
+```
+
+```{r entry4-ppc-resid, fig.cap="Residual distribution check for selected features. Blue histogram: observed residuals. Red curve: Normal(0, sigma\\_e) with posterior mean sigma\\_e.", out.width="90%"}
+p <- file.path("outputs", "figures", "19_residual_distribution_check.png")
+if (file.exists(p)) knitr::include_graphics(p) else cat("*Stage 19 not yet run.*")
+```
+
+See `outputs/notes/note_posterior_predictive_checks.md` for interpretation guidance.
+
+---
+
+### Stage 20 — Diagonal vs low-rank model comparison
+
+**What and why.** Does the low-rank factor structure actually improve predictions over a
+simpler diagonal $\Sigma_a$ model? We compare stage 03 (diagonal $\Sigma_a$ and $\Sigma_b$,
+already fit on real data) to stage 10 (low-rank $\Sigma_a$) using LOO cross-validation.
+
+**Diagonal model:** $\mathbf{a}_i \sim \mathcal{N}(\mathbf{0}, \text{diag}(\sigma_a^2))$.
+Each feature's player effect is independent — no shared factor structure.
+
+**LOO interpretation.** A higher ELPD means the model predicts held-out player-seasons better.
+A positive $\Delta$ELPD (low-rank minus diagonal) larger than twice its SE provides clear
+evidence that the factor structure improves predictions.
+
+**Results:**
+
+```{r entry4-loo-comparison}
+loo_path <- file.path("outputs", "tables", "20_loo_diagonal_vs_lowrank.csv")
+if (file.exists(loo_path)) {
+  loo_df <- read.csv(loo_path)
+  knitr::kable(loo_df, caption = "LOO comparison: diagonal Σ_a (stage 03) vs low-rank Σ_a (stage 10)",
+               digits = 2, format = "pipe")
+} else {
+  cat("*Stage 20 not yet run.*")
+}
+```
+
+```{r entry4-icc-compare, fig.cap="ICC\\_{player} per feature: diagonal model (stage 03) vs low-rank model (stage 10). The low-rank model redistributes player variance through the factor structure.", out.width="80%"}
+p <- file.path("outputs", "figures", "20_icc_diagonal_vs_lowrank.png")
+if (file.exists(p)) knitr::include_graphics(p) else cat("*Stage 20 not yet run.*")
+```
+
+See `outputs/notes/note_diagonal_vs_lowrank.md` for interpretation guidance.
+
+---
+
+### Notes on existing TODO items (addressed by stages 13–16)
+
+The TODO list from `ideas_and_such/TODO.Rmd` included several items already addressed by
+Entry 3:
+
+- **Explained variability** (Σ_a + Σ_b)/(Σ_a + Σ_b + Σ_e): computed in stage 16 as
+  `prop_a + prop_b` per feature. Top ICC_player features: recoveries (88.5%), passes (86.7%).
+  See `outputs/notes/note_explained_variability.md`.
+- **Interpretation of a_i** through posterior means, PCA, clusters: stages 13 (PCA of
+  ΛΛ'), 14 (player profiles and clustering). See `outputs/notes/note_player_interpretation.md`.
+- **Interpretation of b_j**: stage 15 (season effect heatmap and time series). The
+  ICC_season analysis in stage 16 shows modest season-level variation in most features.
+
+---
+
+### What to run
+
+```{verbatim, lang="bash"}
+# Stage 19 and 20 use existing fits and run quickly:
+BFA_REUSE_FIT=true Rscript run_pipeline.R 19 20
+
+# Stage 17 (rank selection) is expensive (~25 Stan fits); run in background:
+nohup Rscript scripts/17_rank_selection_real.R > logs/17_rank_selection.log 2>&1 &
+
+# Stage 18 (t-errors) requires a new Stan fit; run in background:
+BFA_RUN_STAN=true Rscript run_pipeline.R 18
+
+# After all stages complete, re-render to populate result placeholders:
+quarto render pipeline_journal.qmd
+```
+
+---
+
 # Entry Template (Reference for Future Updates)
 
 The following template should be used for each new journal entry appended to this document.

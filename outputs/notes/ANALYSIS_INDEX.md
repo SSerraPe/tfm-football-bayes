@@ -68,10 +68,23 @@ Quick reference for all outputs in `outputs/`.
 | `11_sim_lambda_a_loading_table.csv` | Lambda_a loadings with CI — simulated data fit |
 | `11_real_lambda_a_loading_table.csv` | Lambda_a loadings with CI — real La Liga fit |
 
-### Cross-validation (stage 08)
+### Cross-validation and model comparison (stages 08, 20)
 | File | Description |
 |------|-------------|
 | `08_loo_summary.csv` | PSIS-LOO results (UNRELIABLE: Pareto k too high) |
+| `20_loo_diagonal_vs_lowrank.csv` | LOO comparison: diagonal (stage 03) vs low-rank (stage 10) |
+| `20_icc_diagonal_vs_lowrank.csv` | ICC_player per feature, both models side by side |
+
+### Posterior predictive checks (stage 19)
+| File | Description |
+|------|-------------|
+| `19_correlation_ppc.csv` | Observed vs model-implied correlation per feature pair |
+
+### Rank selection (stage 17)
+| File | Description |
+|------|-------------|
+| `outputs/rank_selection/real_data_elpd.csv` | Held-out ELPD by rank (K=0..4) |
+| `outputs/rank_selection/real_data_holdouts.csv` | Fold structure and held-out counts |
 
 ### Football interpretation (stage 12)
 | File | Description |
@@ -120,6 +133,17 @@ Quick reference for all outputs in `outputs/`.
 |------|-------------|
 | `08_posterior_health_summary.png` | Rhat and ESS summary across all models |
 
+### Posterior predictive checks (stage 19)
+| File | Description |
+|------|-------------|
+| `19_correlation_ppc_scatter.png` | Observed vs model-implied correlation — scatter plot |
+| `19_residual_distribution_check.png` | Residual histograms vs Normal(0, σ_e) for selected features |
+
+### Model comparison (stage 20)
+| File | Description |
+|------|-------------|
+| `20_icc_diagonal_vs_lowrank.png` | ICC_player scatter: diagonal (stage 03) vs low-rank (stage 10) |
+
 ### Chain plots (stage 11)
 | Directory | Description |
 |-----------|-------------|
@@ -148,4 +172,12 @@ Quick reference for all outputs in `outputs/`.
 | `09_validation_interpretation.md` | What results mean for the thesis |
 | `10_comprehensive_validation_analysis.md` | Full technical validation (1640 lines) |
 | `12_factor_interpretation.md` | Football interpretation of factor loadings |
+| `note_mu_centering.md` | Why μ is redundant (data already Z-scaled) |
+| `note_explained_variability.md` | ICC_player and ICC_season interpretation |
+| `note_player_interpretation.md` | PCA of ΛΛ', factor meanings, player clustering |
+| `note_rank_selection_methodology.md` | CV-ELPD rank selection: how and why |
+| `note_rank_selection_results.md` | Selected rank K* (written after stage 17 runs) |
+| `note_t_errors.md` | Student-t residuals: motivation and interpretation |
+| `note_posterior_predictive_checks.md` | What the PPCs test and how to read them |
+| `note_diagonal_vs_lowrank.md` | LOO comparison result: low-rank wins by Δ=3724 (19.9 SE) |
 | `ANALYSIS_INDEX.md` | This file |

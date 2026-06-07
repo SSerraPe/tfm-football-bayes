@@ -22,7 +22,11 @@ stage_map <- c(
   "13" = "13_pca_postprocessing.R",
   "14" = "14_player_profiles.R",
   "15" = "15_season_profiles.R",
-  "16" = "16_icc_analysis.R"
+  "16" = "16_icc_analysis.R",
+  "17" = "17_rank_selection_real.R",
+  "18" = "18_fit_real_t_errors.R",
+  "19" = "19_posterior_predictive_checks.R",
+  "20" = "20_diagonal_comparison.R"
 )
 
 if (length(args) == 0L) {

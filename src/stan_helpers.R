@@ -97,7 +97,11 @@ load_cmdstan_fit <- function(fit_path = NULL, model_id = NULL) {
       return(fit_object)
     }
     if (is.list(fit_object) && !is.null(fit_object$csv_files)) {
-      return(cmdstanr::as_cmdstan_fit(fit_object$csv_files))
+      valid_csv <- fit_object$csv_files[file.exists(fit_object$csv_files)]
+      if (length(valid_csv) > 0L) {
+        return(cmdstanr::as_cmdstan_fit(valid_csv))
+      }
+      # CSV paths are stale (e.g., project moved); fall through to discovery below.
     }
   }
 
