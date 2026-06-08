@@ -5,6 +5,11 @@
 //   - Residual distribution is Student-t(nu) instead of Normal.
 //     nu is estimated with prior Gamma(2, 0.1), as recommended by
 //     Juarez & Steel (2010) and the Stan documentation.
+//   - Scores are centred first (same numerical approach as the Normal model),
+//     then A[I,P] and B[S,P] are precomputed as matrices so the model block
+//     uses a single vectorised student_t call per observation instead of a
+//     nested p-loop. This avoids inf−inf = NaN that arises when centering
+//     large effects rather than small scores.
 //
 // If nu is large (> ~30) the t distribution is effectively Normal, so this
 // model nests the normal-errors version. A small nu (< 10) indicates that
@@ -62,24 +67,27 @@ parameters {
 transformed parameters {
   matrix[P, Q_a] Lambda_a = make_lower_tri_loadings(P, Q_a, lambda_a_diag, lambda_a_free);
 
-  vector[Q_a] eta_a_bar;
-  vector[P]   z_a_bar;
-  vector[P]   z_b_bar;
+  // Precompute player effect matrix A[I, P] and season effect matrix B[S, P].
+  // Centering is applied to the RAW SCORES (not to the effects), which avoids
+  // the inf - inf = NaN instability that occurs when centering large effect matrices.
 
-  for (q in 1:Q_a) {
-    eta_a_bar[q] = 0;
-    for (i in 1:I) eta_a_bar[q] += eta_a_raw[i, q];
-    eta_a_bar[q] /= I;
-  }
+  // 1. Centre factor scores: eta_c[i,q] = eta_a_raw[i,q] - mean_q(eta_a_raw)
+  row_vector[Q_a] eta_a_bar = rep_row_vector(1.0 / I, I) * eta_a_raw;
+  matrix[I, Q_a] eta_c = eta_a_raw - rep_matrix(eta_a_bar, I);
 
-  for (p in 1:P) {
-    z_a_bar[p] = 0;
-    z_b_bar[p] = 0;
-    for (i in 1:I) z_a_bar[p] += z_a_raw[i, p];
-    z_a_bar[p] /= I;
-    for (s in 1:S) z_b_bar[p] += z_b[s, p];
-    z_b_bar[p] /= S;
-  }
+  // 2. Centre uniqueness scores: z_a_c[i,p] = z_a_raw[i,p] - mean_p(z_a_raw)
+  row_vector[P] z_a_bar = rep_row_vector(1.0 / I, I) * z_a_raw;
+  matrix[I, P] z_a_c = z_a_raw - rep_matrix(z_a_bar, I);
+
+  // 3. Player effects: A = eta_c * Lambda_a' + z_a_c .* psi_a  (I × P matrix)
+  matrix[I, P] A = eta_c * Lambda_a' + z_a_c .* rep_matrix(psi_a', I);
+
+  // 4. Centre season scores: z_b_c[s,p] = z_b[s,p] - mean_p(z_b)
+  row_vector[P] z_b_bar = rep_row_vector(1.0 / S, S) * z_b;
+  matrix[S, P] z_b_c = z_b - rep_matrix(z_b_bar, S);
+
+  // 5. Season effects: B = z_b_c .* sigma_b  (S × P matrix)
+  matrix[S, P] B = z_b_c .* rep_matrix(sigma_b', S);
 }
 
 model {
@@ -95,15 +103,10 @@ model {
   sigma_b       ~ normal(0, 0.5);
   sigma_e       ~ normal(0, 0.7);
 
+  // One vectorised student_t call per observation (over P features).
   for (n in 1:N) {
-    for (p in 1:P) {
-      real mean_np = psi_a[p] * (z_a_raw[player_index[n], p] - z_a_bar[p])
-                   + sigma_b[p] * (z_b[season_index[n], p] - z_b_bar[p]);
-      for (q in 1:Q_a) {
-        mean_np += Lambda_a[p, q] * (eta_a_raw[player_index[n], q] - eta_a_bar[q]);
-      }
-      Y[n, p] ~ student_t(nu, mean_np, sigma_e[p]);
-    }
+    vector[P] mean_n = to_vector(A[player_index[n]] + B[season_index[n]]);
+    Y[n]' ~ student_t(nu, mean_n, sigma_e);
   }
 }
 
@@ -117,12 +120,9 @@ generated quantities {
   vector[P] prop_e;
 
   for (p in 1:P) {
-    real factor_var_a = 0;
-    for (q in 1:Q_a) factor_var_a += square(Lambda_a[p, q]);
-    Sigma_a_diag[p] = factor_var_a + square(psi_a[p]);
+    Sigma_a_diag[p] = sum(square(Lambda_a[p])) + square(psi_a[p]);
     var_b[p] = square(sigma_b[p]);
-    // For t(nu), Var(ε) = sigma_e^2 * nu/(nu-2). We report sigma_e^2 for
-    // comparability with the normal model; the extra factor is in prop_e below.
+    // For t(nu), Var(ε) = sigma_e^2 * nu/(nu-2).
     var_e[p] = square(sigma_e[p]) * nu / (nu - 2);
 
     real total_var = Sigma_a_diag[p] + var_b[p] + var_e[p];
@@ -132,15 +132,7 @@ generated quantities {
   }
 
   for (n in 1:N) {
-    real lp = 0;
-    for (p in 1:P) {
-      real mean_np = psi_a[p] * (z_a_raw[player_index[n], p] - z_a_bar[p])
-                   + sigma_b[p] * (z_b[season_index[n], p] - z_b_bar[p]);
-      for (q in 1:Q_a) {
-        mean_np += Lambda_a[p, q] * (eta_a_raw[player_index[n], q] - eta_a_bar[q]);
-      }
-      lp += student_t_lpdf(Y[n, p] | nu, mean_np, sigma_e[p]);
-    }
-    log_lik[n] = lp;
+    vector[P] mean_n = to_vector(A[player_index[n]] + B[season_index[n]]);
+    log_lik[n] = student_t_lpdf(Y[n]' | nu, mean_n, sigma_e);
   }
 }
