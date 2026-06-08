@@ -1219,29 +1219,28 @@ meaningful heavy tails are present; a large $\nu$ (say $> 30$) means the Normal 
 **Comparison.** Both this fit and stage 10 compute `log_lik[n]` in generated quantities.
 We use `loo_compare()` to assess whether t-errors improve held-out predictive accuracy.
 
-**Results** (fill in once stage 18 completes):
+**Results (2026-06-08):**
 
-```{r entry4-t-errors-nu}
+**Posterior of $\nu$:** mean = 2.95, median = 2.95, 95% CI [2.91, 2.99].
+$\nu \approx 3$ is barely above the theoretical minimum of 2. This indicates extremely
+heavy-tailed residuals — the football data contains genuine outliers (injury seasons,
+loan stints, exceptional or catastrophic performances) that Normal errors cannot accommodate.
+
+```{r entry4-t-errors-loo}
 t_diag_path <- file.path("outputs", "tables", "18_loo_normal_vs_t.csv")
 if (file.exists(t_diag_path)) {
-  loo_df <- read.csv(t_diag_path)
-  knitr::kable(loo_df, caption = "LOO comparison: Normal vs Student-t residuals",
-               digits = 2, format = "pipe")
+  loo_df <- read.csv(t_diag_path, row.names = 1)
+  knitr::kable(loo_df, caption = "LOO comparison: Normal errors (stage 10) vs Student-t errors (stage 18)",
+               digits = 1, format = "pipe")
 } else {
   cat("*Stage 18 not yet run.*")
 }
 ```
 
-```{r entry4-t-errors-nu-notes}
-t_notes_path <- file.path("outputs", "notes", "18_real_lowrank_a_diag_b_t_notes.txt")
-if (file.exists(t_notes_path)) {
-  cat(readLines(t_notes_path), sep = "\n")
-} else {
-  cat("*Stage 18 not yet run.*")
-}
-```
-
-See `outputs/notes/note_t_errors.md` for a plain-language explanation.
+The t-errors model is preferred by $\approx 11{,}668$ ELPD units (21 SE). Both models
+show high Pareto $k$ values (expected for large hierarchical models), so the exact
+magnitude is uncertain, but the direction is unambiguous. See
+`outputs/notes/note_t_errors.md` for full interpretation.
 
 ---
 
