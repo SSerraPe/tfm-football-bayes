@@ -1191,12 +1191,15 @@ if (file.exists(elpd_path)) {
 }
 ```
 
-**Interpretation** (fill in after results are available):
-
-*Pending stage 17 completion.*
+**Results (2026-06-09):** K = 4 achieves the highest held-out ELPD among the tested ranks.
+The ELPD improves monotonically with K and has not levelled off at K = 4 — the K = 3 → 4
+improvement (+16,257) is still substantial, suggesting K ≥ 5 might improve further. The
+current main model (K = 2, stages 10–16) captures real factor structure (ELPD +72,881
+over the diagonal K = 0 baseline) but leaves predictive signal on the table. A production
+model should use K ≥ 4.
 
 See `outputs/notes/note_rank_selection_methodology.md` (methodology) and
-`outputs/notes/note_rank_selection_results.md` (results, written after stage 17 runs).
+`outputs/notes/note_rank_selection_results.md` (full results and interpretation).
 
 ---
 
