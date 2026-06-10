@@ -19,6 +19,7 @@ format:
     pdf-engine: pdflatex
     include-in-header:
       text: |
+        \usepackage[utf8]{inputenc}
         \usepackage{amsmath, amssymb}
         \usepackage{bm}
         \usepackage{booktabs}
@@ -1192,11 +1193,11 @@ if (file.exists(elpd_path)) {
 ```
 
 **Results (2026-06-09):** K = 4 achieves the highest held-out ELPD among the tested ranks.
-The ELPD improves monotonically with K and has not levelled off at K = 4 — the K = 3 → 4
-improvement (+16,257) is still substantial, suggesting K ≥ 5 might improve further. The
+The ELPD improves monotonically with K and has not levelled off at K = 4 --- the K = 3 to 4
+improvement (+16,257) is still substantial, suggesting K $\geq$ 5 might improve further. The
 current main model (K = 2, stages 10–16) captures real factor structure (ELPD +72,881
 over the diagonal K = 0 baseline) but leaves predictive signal on the table. A production
-model should use K ≥ 4.
+model should use K $\geq$ 4.
 
 See `outputs/notes/note_rank_selection_methodology.md` (methodology) and
 `outputs/notes/note_rank_selection_results.md` (full results and interpretation).
@@ -1302,7 +1303,7 @@ evidence that the factor structure improves predictions.
 loo_path <- file.path("outputs", "tables", "20_loo_diagonal_vs_lowrank.csv")
 if (file.exists(loo_path)) {
   loo_df <- read.csv(loo_path)
-  knitr::kable(loo_df, caption = "LOO comparison: diagonal Σ_a (stage 03) vs low-rank Σ_a (stage 10)",
+  knitr::kable(loo_df, caption = "LOO comparison: diagonal $\\Sigma_a$ (stage 03) vs low-rank $\\Sigma_a$ (stage 10)",
                digits = 2, format = "pipe")
 } else {
   cat("*Stage 20 not yet run.*")
@@ -1323,11 +1324,11 @@ See `outputs/notes/note_diagonal_vs_lowrank.md` for interpretation guidance.
 The TODO list from `ideas_and_such/TODO.Rmd` included several items already addressed by
 Entry 3:
 
-- **Explained variability** (Σ_a + Σ_b)/(Σ_a + Σ_b + Σ_e): computed in stage 16 as
+- **Explained variability** $(\Sigma_a + \Sigma_b)/(\Sigma_a + \Sigma_b + \Sigma_e)$: computed in stage 16 as
   `prop_a + prop_b` per feature. Top ICC_player features: recoveries (88.5%), passes (86.7%).
   See `outputs/notes/note_explained_variability.md`.
 - **Interpretation of a_i** through posterior means, PCA, clusters: stages 13 (PCA of
-  ΛΛ'), 14 (player profiles and clustering). See `outputs/notes/note_player_interpretation.md`.
+  $\Lambda\Lambda'$), 14 (player profiles and clustering). See `outputs/notes/note_player_interpretation.md`.
 - **Interpretation of b_j**: stage 15 (season effect heatmap and time series). The
   ICC_season analysis in stage 16 shows modest season-level variation in most features.
 
