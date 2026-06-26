@@ -1,0 +1,341 @@
+---
+title: "Bayesian comparison of player-covariance models"
+date: "2026-06-02"
+geometry: margin=0.8in
+fontsize: 10pt
+header-includes:
+  - \usepackage{amsmath,amssymb}
+  - \usepackage{booktabs}
+  - \usepackage{array}
+---
+
+# Question
+
+The student's data contain several variables measured for each player in each
+observed season. The main question is whether the covariance of the player
+effects is adequately described by a diagonal matrix, or whether it contains
+a lower-dimensional factor structure.
+
+I compare five Bayesian models:
+
+$$
+K\in\{0,1,2,3,4\}.
+$$
+
+The model with $K=0$ is the diagonal baseline. A model with $K>0$ has $K$
+latent factors for the player effects. All models were fitted with Stan.
+
+# Models
+
+Let $y_{ij}\in\mathbb R^p$ be the vector of measurements for player $i$ in
+season $j$. The model is
+
+$$
+y_{ij}=a_i+b_j+\varepsilon_{ij},
+$$
+
+where $a_i$ is the player effect, $b_j$ is the season effect, and
+$\varepsilon_{ij}$ is the error. The season effects and errors have diagonal
+covariance matrices in every fitted model:
+
+$$
+b_j\sim N_p(0,\Psi_b),
+\qquad
+\varepsilon_{ij}\sim N_p(0,\Psi_e),
+$$
+
+where
+
+$$
+\Psi_b=\operatorname{diag}(\sigma_{b,1}^2,\ldots,\sigma_{b,p}^2),
+\qquad
+\Psi_e=\operatorname{diag}(\sigma_{e,1}^2,\ldots,\sigma_{e,p}^2).
+$$
+
+The models differ only in the covariance of the player effects. For the
+diagonal baseline,
+
+$$
+M_0:\qquad
+a_i\sim N_p(0,D_a),
+\qquad
+D_a=\operatorname{diag}(\sigma_{a,1}^2,\ldots,\sigma_{a,p}^2).
+$$
+
+Therefore, $K=0$ means that the player covariance is fully diagonal.
+
+For a model with $K>0$ factors,
+
+$$
+M_K:\qquad
+a_i=\Lambda f_i+u_i,
+\qquad
+f_i\sim N_K(0,I_K),
+\qquad
+u_i\sim N_p(0,\Psi_a),
+\qquad
+\Psi_a=\operatorname{diag}(\psi_{a,1}^2,\ldots,\psi_{a,p}^2).
+$$
+
+The covariance of the player effects is
+
+$$
+\Sigma_a=\Lambda\Lambda^\top+\Psi_a.
+$$
+
+The matrix $\Lambda\Lambda^\top$ describes the covariance explained by the
+common factors. The diagonal matrix $\Psi_a$ describes variable-specific
+player variation that is not explained by those factors.
+
+The scale priors have the same specification in every fitted model:
+
+$$
+\sigma_{a,k},\psi_{a,k},\sigma_{b,k},\sigma_{e,k}\sim t_3^+(0,1),
+\qquad
+k\in\{1,\ldots,p\}.
+$$
+
+The parameter $\sigma_{a,k}$ is used in $M_0$, and $\psi_{a,k}$ is used in
+$M_K$ when $K>0$. The Stan code identifies the orientation of the factors by
+using a lower-triangular loading matrix with positive diagonal entries:
+
+$$
+\lambda_{kh}=0 \quad \text{if } k<h,
+\qquad
+\lambda_{hh}>0 \quad \text{for } h\in\{1,\ldots,K\}.
+$$
+
+The loading priors are
+
+$$
+\lambda_{hh}\sim N^+(0,1),
+\qquad
+\lambda_{kh}\sim N(0,1),
+\qquad
+h\in\{1,\ldots,K\},\quad k\in\{h+1,\ldots,p\}.
+$$
+
+Initialization follows the working strategy in `lowrank_diag.R`: estimate
+rough season means, estimate season-adjusted player means, use PCA to start
+the loadings, start factor scores from those loadings, and start the remaining
+scales from the variation not explained by the starting values. The existing
+`lowrank_diag.R` file was not modified.
+
+# Methodology used to choose rank
+
+Rank selection is based on masking player-variable combinations. The unit
+assigned to a fold is a pair $(i,k)$, where $i$ identifies a player and $k$
+identifies a variable. If a pair is assigned to the fold currently being
+evaluated, that variable is omitted for that player in every observed season.
+
+For example, suppose $(i,k)=(17,4)$ is assigned to fold 1. If player 17 was
+observed in seasons 1, 3, 4, and 6, the fold-1 fit does not see that player's
+four values for variable 4. It must reconstruct those four values.
+
+The folds are not constructed by omitting exactly one variable at a time.
+Assignments are generated independently for each variable. Consequently,
+several variables for player 17 may also be assigned to fold 1 and omitted in
+the same fit. Variables for player 17 that are assigned to the other fold
+remain available. With $p=12$ variables and two folds, the expected number of
+variables omitted for a given player in either fold is $12/2=6$, although the
+actual number varies by player and fold.
+
+The construction assigns every player-variable combination to one fold:
+
+$$
+80\text{ players}\times12\text{ variables}
+=960\text{ player-variable combinations}.
+$$
+
+The combinations are assigned to two folds as follows. For each variable
+$k\in\{1,\ldots,p\}$, I randomly permute the 80 players. In the simulation,
+the first 40 players in that random permutation are assigned to fold 1 and the
+remaining 40 are assigned to fold 2. The random permutation is generated
+separately for each variable. Thus, each fold contains exactly
+
+$$
+40\text{ players}\times12\text{ variables}
+=480\text{ player-variable combinations}.
+$$
+
+A pair $(i,k)$ usually corresponds to several observed values because player
+$i$ may be observed in several seasons.
+
+For $m\in\{1,2\}$, define the set of individual values left out in fold $m$:
+
+$$
+\mathcal H_m
+=
+\left\{
+(i,j,k):
+\text{player }i\text{ is observed in season }j
+\text{ and }(i,k)\text{ is assigned to fold }m
+\right\}.
+$$
+
+When fitting fold $m$, every value indexed by $\mathcal H_m$ is omitted and
+every other observed value is retained. In particular, all variables for
+player $i$ whose pairs $(i,k)$ were assigned to fold $m$ are omitted
+simultaneously. The two sets are disjoint, and their union contains every
+observed player-season-variable value. Each observed value is therefore left
+out exactly once.
+
+The number of individual values reconstructed is larger than 960 because a
+player-variable combination usually covers several seasons. Depending on the
+simulated dataset, the procedure reconstructs between 4,188 and 4,584
+individual values.
+
+The main score is held-out expected log predictive density (ELPD). Cross-
+validated predictive densities are a standard method for Bayesian model
+comparison; see [Vehtari and Lampinen
+(2002)](https://doi.org/10.1162/08997660260293292). Cross-validation has also
+been used specifically to select the number of common factors; see [Toyoda
+(1986)](https://doi.org/10.5926/jjep1953.34.3_252).
+
+For candidate rank $K$ and fold $m$, let $\mathcal D_{-m}$ denote the data
+retained after the values in $\mathcal H_m$ have been omitted. For
+$(i,j,k)\in\mathcal H_m$, the omitted value is $y_{ijk}$. Conditional on the
+model parameters and latent effects,
+
+$$
+y_{ijk}\mid\theta_{K,m}
+\sim
+N\!\left(a_{i,k}+b_{j,k},\sigma_{e,k}^2\right).
+$$
+
+Here $\theta_{K,m}$ collects the parameters and latent effects in model $K$.
+The posterior predictive density of the omitted value is
+
+$$
+p_K(y_{ijk}\mid\mathcal D_{-m})
+=
+\int
+p_K(y_{ijk}\mid\theta_{K,m})
+p_K(\theta_{K,m}\mid\mathcal D_{-m})
+\,d\theta_{K,m}.
+$$
+
+Suppose
+$\theta_{K,m}^{(s)}$, with $s\in\{1,\ldots,S\}$, are posterior draws retained
+from Stan. I approximate this density by
+
+$$
+\widehat p_K(y_{ijk}\mid\mathcal D_{-m})
+=
+\frac{1}{S}
+\sum_{s=1}^S
+p_K(y_{ijk}\mid\theta_{K,m}^{(s)}).
+$$
+
+The held-out ELPD score is the sum of the log posterior predictive densities
+of the omitted individual values:
+
+$$
+\widehat{\operatorname{ELPD}}_K
+=
+\sum_{m=1}^2
+\sum_{(i,j,k)\in\mathcal H_m}
+\log
+\widehat p_K(y_{ijk}\mid\mathcal D_{-m}).
+$$
+
+Larger ELPD is better. The score evaluates reconstruction of individual
+left-out values under the simultaneous masking scheme above. It should not
+be interpreted as performance when exactly one variable is missing and all
+other $p-1$ variables for that player are retained. It does not treat all
+seasons for one player-variable combination as one joint multivariate
+prediction.
+
+The selected rank is the value of $K$ with the largest held-out ELPD.
+
+# Simulation study
+
+The student's data are not currently available. I therefore checked the
+procedure in simulations where the correct factor rank is known.
+
+For each simulated dataset:
+
+1. Generate an unbalanced panel with 80 players, 6 possible seasons, and 12
+   variables. Each player appears in 3 to 6 seasons.
+2. Generate player effects, season effects, and errors from the model above.
+   Standardize each variable.
+3. Repeat this under four different truths: $K\in\{0,1,2,3\}$. The $K=0$
+   truth is the fully diagonal player-covariance case.
+4. Fit all five candidate models, $K\in\{0,1,2,3,4\}$, with Stan.
+5. Check whether maximum held-out ELPD selects the correct rank.
+
+The longer run used two independently simulated datasets for each true rank,
+two groups of left-out player-variable combinations, four chains, 500 warmup
+iterations, and 500 sampling iterations per chain.
+
+Maximum held-out ELPD selected the correct generating rank in all eight
+simulated datasets:
+
+\begin{center}
+\begin{tabular}{rrr}
+\toprule
+True player rank & Number of simulated datasets & Rank selected by maximum ELPD \\
+\midrule
+0 (diagonal) & 2 & $K=0$ in 2/2 \\
+1 & 2 & $K=1$ in 2/2 \\
+2 & 2 & $K=2$ in 2/2 \\
+3 & 2 & $K=3$ in 2/2 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The mean held-out ELPD per reconstructed value was:
+
+\begin{center}
+\begin{tabular}{rrrrrr}
+\toprule
+True player rank & Fitted $K=0$ & Fitted $K=1$ & Fitted $K=2$ & Fitted $K=3$ & Fitted $K=4$ \\
+\midrule
+0 (diagonal) & \textbf{-1.385} & -1.390 & -1.397 & -1.402 & -1.406 \\
+1 & -1.415 & \textbf{-1.021} & -1.027 & -1.030 & -1.033 \\
+2 & -1.409 & -1.189 & \textbf{-0.993} & -1.002 & -1.006 \\
+3 & -1.413 & -1.283 & -1.178 & \textbf{-1.060} & -1.066 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+# Two supplementary comparisons
+
+I also ran two smaller supplementary comparisons to show that the most useful
+way to leave out data depends on the intended use of the model. This
+distinction matters in latent-variable models; see [Merkle, Furr, and
+Rabe-Hesketh (2019)](https://doi.org/10.1007/s11336-019-09679-0).
+
+1. Missing season: leave out all 12 variables from one observed
+   player-season row. Other seasons for that player remain in the fit.
+2. New player: leave out all observations for one player.
+
+The entries below are total held-out ELPD, calculated jointly for each
+left-out row or player. Larger is better.
+
+| Truth | Supplementary comparison | Left-out units | Fitted $K=0$ | Fitted $K=1$ | Fitted $K=2$ | Fitted $K=3$ | Fitted $K=4$ |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 0 | Missing season | 358 rows | **-5625.5** | -5630.6 | -5630.8 | -5639.6 | -5646.0 |
+| 0 | New player | 80 players | -5742.3 | **-5739.2** | -5760.6 | -5774.2 | -5788.1 |
+| 2 | Missing season | 354 rows | -3712.4 | -3523.2 | -3397.6 | **-3386.8** | -3410.5 |
+| 2 | New player | 80 players | -6308.7 | -5139.5 | **-3942.5** | -4039.9 | -4017.8 |
+
+The selected rank changes slightly with the supplementary comparison. For
+diagonal truth, new-player ELPD is slightly larger for $K=1$ than for $K=0$.
+For rank-two truth, new-player prediction selects $K=2$, while missing-season
+prediction selects $K=3$. These comparisons answer different questions from
+the main masked player-variable comparison.
+
+# References
+
+- Merkle, E. C., Furr, D., and Rabe-Hesketh, S. (2019). [Bayesian Comparison
+  of Latent Variable Models: Conditional Versus Marginal
+  Likelihoods](https://doi.org/10.1007/s11336-019-09679-0).
+  *Psychometrika*, 84(3), 802--829.
+- Toyoda, H. (1986). [A Method for Determining the Number of Common Factors by
+  Cross-Validation](https://doi.org/10.5926/jjep1953.34.3_252). *The Japanese
+  Journal of Educational Psychology*, 34(3), 252--256.
+- Vehtari, A., and Lampinen, J. (2002). [Bayesian Model Assessment and
+  Comparison Using Cross-Validation Predictive
+  Densities](https://doi.org/10.1162/08997660260293292). *Neural
+  Computation*, 14(10), 2439--2468.

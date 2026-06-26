@@ -1,0 +1,28 @@
+---
+title: "TODO: Soccer data"
+output: pdf_document
+date: "2026-05-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+* Posterior predictive checks for model with $\Sigma_a$ low-rank plus diagonal and $\Sigma_b$ diagonal.
+
+* Explained variability by model with $\Sigma_a + \Sigma_b$ over $\Sigma_a + \Sigma_b + \Sigma_e$. 
+
+* Interpretation of $a_i$ and $b_i$ through posterior means: PCA, clusters, etc.
+
+* Interpretation of latent factors through PCA of $\Lambda \Lambda'$. See if there are clusters, and a few factors explaining most of the variance. 
+
+* Other things to interpret model. 
+
+* Fit model with $\Sigma_a$ and $\Sigma_b$ diagonal with basically same priors. Compare results against newer model: posterior predictive checks, WAIC, leave one out cross-validation (maybe not), etc. 
+
+* Write up results.
+
+* Try out $t$ errors and see if that helps. 
+
+* Start thinking about how to choose $K$. 
+

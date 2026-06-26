@@ -1,0 +1,243 @@
+---
+title: "Crossed Player-Season Factor Model"
+output:
+  pdf_document:
+    latex_engine: pdflatex
+fontsize: 11pt
+header-includes:
+  - \usepackage{amsmath}
+  - \usepackage{amssymb}
+---
+
+\vspace{-3pc}
+
+## Model
+
+Let $y_{ij}\in\mathbb R^p$ be the standardized vector of variables for player $i$ in season $j$. We fit the additive model
+\[
+y_{ij}=a_i+b_j+\varepsilon_{ij},
+\]
+where $a_i$ is a player effect, $b_j$ is a season effect, and $\varepsilon_{ij}$ is the error.
+
+The player effect is
+\[
+a_i=\Lambda f_i+u_i,
+\]
+with
+\[
+f_i\sim N_K(0,I_K),
+\qquad
+u_i\sim N_p(0,\Psi_a),
+\]
+where
+\[
+\Psi_a=\operatorname{diag}(\psi_{a,1}^2,\ldots,\psi_{a,p}^2).
+\]
+Thus, marginally,
+\[
+a_i\sim N_p(0,\Sigma_a),
+\qquad
+\Sigma_a=\Lambda\Lambda^\top+\Psi_a.
+\]
+
+The season and error components are diagonal:
+\[
+b_j\sim N_p(0,D_b),
+\qquad
+D_b=\operatorname{diag}(\sigma_{b,1}^2,\ldots,\sigma_{b,p}^2),
+\]
+and
+\[
+\varepsilon_{ij}\sim N_p(0,D_e),
+\qquad
+D_e=\operatorname{diag}(\sigma_{e,1}^2,\ldots,\sigma_{e,p}^2).
+\]
+Conditionally on $f_i,u_i,b_j$,
+\[
+y_{ij}\mid f_i,u_i,b_j,\Lambda,\Psi_a,D_b,D_e
+\sim
+N_p(\Lambda f_i+u_i+b_j,D_e).
+\]
+
+## Identification
+
+The factor model is rotationally non-identifiable: for any orthogonal matrix $Q$,
+\[
+\Lambda f_i=(\Lambda Q)(Q^\top f_i).
+\]
+To choose one representative, we impose a lower-triangular loading matrix with positive diagonal:
+\[
+\lambda_{kh}=0\quad\text{if }h>k,
+\qquad
+\lambda_{hh}>0,\quad h=1,\ldots,K.
+\]
+This fixes the orientation used during sampling.
+
+## Priors
+
+The baseline priors are weakly informative on the standardized scale:
+\[
+f_i\sim N_K(0,I_K),
+\]
+\[
+z_{u,i}\sim N_p(0,I_p),
+\qquad
+z_{b,j}\sim N_p(0,I_p),
+\]
+with
+\[
+u_i=\operatorname{diag}(\psi_a)z_{u,i},
+\qquad
+b_j=\operatorname{diag}(\sigma_b)z_{b,j}.
+\]
+
+For the loadings,
+\[
+\lambda_{hh}\sim N^+(0,\tau_\lambda^2),
+\]
+and, for the free off-diagonal entries,
+\[
+\lambda_{kh}\sim N(0,\tau_\lambda^2),
+\qquad k>h.
+\]
+In the current code, $\tau_\lambda=1$.
+
+For the scale parameters,
+\[
+\psi_{a,k}\sim t_3^+(0,\tau_s),
+\qquad
+\sigma_{b,k}\sim t_3^+(0,\tau_s),
+\qquad
+\sigma_{e,k}\sim t_3^+(0,\tau_s),
+\]
+with $\tau_s=1$.
+
+## Initialization
+
+Good initialization is important. The initialization is based on crude additive estimates from the observed standardized data. First estimate season effects by season means:
+\[
+b_j^{(0)}
+=
+\frac{1}{n_j}\sum_{r:\,j[r]=j} y_r,
+\]
+and center them across seasons:
+\[
+b_j^{(0)}
+\leftarrow
+b_j^{(0)}
+-
+\frac{1}{J}\sum_{\ell=1}^J b_\ell^{(0)}.
+\]
+
+Then remove these crude season effects and estimate player effects:
+\[
+\tilde y_r=y_r-b_{j[r]}^{(0)},
+\]
+\[
+a_i^{(0)}
+=
+\frac{1}{n_i}\sum_{r:\,i[r]=i}\tilde y_r,
+\]
+again centering across players.
+
+Let $A^{(0)}$ be the matrix with rows $(a_i^{(0)})^\top$. Compute
+\[
+S_A=\frac{1}{I}{A^{(0)}}^\top A^{(0)}.
+\]
+The initial loading matrix is obtained from the leading $K$ eigenvectors of $S_A$, using a rank-$K$ approximation, and then rotated into the lower-triangular positive-diagonal convention.
+
+Given this initial loading matrix $\Lambda^{(0)}$, the initial uniquenesses are based on the residual diagonal variance:
+\[
+(\psi_{a,k}^{(0)})^2
+\approx
+\left(S_A-\Lambda^{(0)}{\Lambda^{(0)}}^\top\right)_{kk},
+\]
+with a small positive floor to avoid near-zero initial scales.
+
+Initial factor scores use the Gaussian posterior mean formula. With
+\[
+\Psi_a^{(0)}=\operatorname{diag}\{(\psi_{a,1}^{(0)})^2,\ldots,(\psi_{a,p}^{(0)})^2\},
+\]
+define
+\[
+V^{(0)}
+=
+\left[
+I_K+
+{\Lambda^{(0)}}^\top
+{\Psi_a^{(0)}}^{-1}
+\Lambda^{(0)}
+\right]^{-1}.
+\]
+Then
+\[
+f_i^{(0)}
+=
+V^{(0)}
+{\Lambda^{(0)}}^\top
+{\Psi_a^{(0)}}^{-1}
+a_i^{(0)}.
+\]
+The remaining initial player idiosyncratic effects are
+\[
+u_i^{(0)}
+=
+a_i^{(0)}-\Lambda^{(0)}f_i^{(0)}.
+\]
+The residual scale is initialized from
+\[
+e_r^{(0)}
+=
+y_r-a_{i[r]}^{(0)}-b_{j[r]}^{(0)}.
+\]
+
+## PCA-oriented post-processing
+
+The triangular $\Lambda$ is useful for identification during sampling, but it is not necessarily the best object for interpretation. For interpretation, we use the eigendecomposition of the common player covariance:
+\[
+B_a=\Lambda\Lambda^\top.
+\]
+For each posterior draw,
+\[
+B_a^{(s)}=U^{(s)}D^{(s)}{U^{(s)}}^\top,
+\]
+with eigenvalues ordered decreasingly:
+\[
+d_1^{(s)}\geq d_2^{(s)}\geq\cdots.
+\]
+The PCA-oriented loadings are
+\[
+L_{\mathrm{PCA}}^{(s)}
+=
+U_K^{(s)}{D_K^{(s)}}^{1/2}.
+\]
+These loadings give orthogonal directions ordered by explained common player variance.
+
+If the positive eigenvalues are distinct, the eigendirections are identifiable up to sign. The signs have no statistical meaning, so we fix them by a deterministic convention, such as requiring the entry with largest absolute value in each component to be positive, or aligning posterior draws to a reference draw.
+
+The proportion of common player variance explained by component $h$ is
+\[
+\frac{d_h}{\sum_{\ell=1}^K d_\ell}.
+\]
+
+## PCA-oriented player scores
+
+Let
+\[
+c_i=\Lambda f_i
+\]
+be the low-rank common player effect. If
+\[
+B_a=UDU^\top,
+\]
+then the PCA-oriented player score is
+\[
+g_i
+=
+D_K^{-1/2}U_K^\top c_i.
+\]
+Equivalently, if $C$ is the $I\times p$ matrix whose $i$-th row is $c_i^\top$, then
+\[
+G=C\,U_KD_K^{-1/2}.
+\]
+These scores locate players in the ordered common player dimensions.

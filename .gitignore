@@ -29,3 +29,29 @@ Rplots.pdf
 # Temporary files
 *.tmp
 *.bak
+
+# --- Cleanup 2026-06-26 ---
+# Rendered PDFs are regenerable from their .qmd/.Rmd sources.
+# Keep only the two shareable deliverables tracked.
+**/*.pdf
+!docs/professor/professor_summary.pdf
+!docs/thesis/thesis_technical_document.pdf
+
+# LaTeX build intermediates and Quarto render caches
+*.aux
+*.out
+**/*_files/
+
+# Large, regenerable processed data
+# (small essentials stay tracked: player_map.csv, season_map.csv,
+#  scaling_parameters.csv, Y_scaled.csv, model_objects.rds)
+data/processed/longitudinal_player_seasons.csv
+data/processed/processed_feature_table.csv
+data/processed/model_feature_matrix_unscaled.csv
+data/processed/metadata_table.csv
+data/processed/model_row_mapping.csv
+data/processed/simulated_*
+
+# Compiled Stan executables (platform-specific build artifacts; keep .stan source only)
+rank comparison/stan/player_season_diagonal
+rank comparison/stan/player_season_lowrank

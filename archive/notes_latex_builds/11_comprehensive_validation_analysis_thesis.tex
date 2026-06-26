@@ -1,0 +1,807 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!55!black,
+  urlcolor=blue!55!black,
+  citecolor=blue!55!black,
+  pdftitle={Comprehensive Validation Analysis: Thesis Note},
+  pdfauthor={TFM Bayesian Football Analytics Pipeline}
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\renewcommand{\arraystretch}{1.12}
+\setlength{\tabcolsep}{3pt}
+\emergencystretch=2em
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\dd}{\,\mathrm{d}}
+
+\title{\textbf{Comprehensive Validation Analysis}\\
+\large Thesis-Ready Interpretation of the Additive Bayesian Modelling Pipeline}
+\author{Bayesian Football Analytics Pipeline}
+\date{Generated 2026-05-14}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This note summarizes the validation state of the real diagonal, simulated
+diagonal, and simulated low-rank recovery models. The main thesis result is a
+descriptive variance decomposition of multivariate football player-season
+outcomes into player, season, and residual components. The real-data diagonal
+additive model is usable with mild convergence caveats. Simulation results
+support the diagonal variance-decomposition machinery for player and residual
+components and, more cautiously, for season components. The low-rank recovery
+experiment is an important negative result: it samples without Hamiltonian
+Monte Carlo geometry failures but does not identify loading matrices reliably.
+PSIS-LOO was computed, but Pareto-\(k\) diagnostics make the approximation
+unreliable for formal model selection.
+\end{abstract}
+
+\section{Motivation and Research Question}
+
+The scientific aim is not simply to fit a model that runs. The aim is to
+establish which football-performance quantities can be interpreted as stable
+player-level variation, which can be interpreted as season-level variation, and
+which remain mostly unexplained row-level variation after accounting for
+players and seasons.
+
+The central research question is:
+\begin{quote}
+For a multivariate panel of standardized football features, how much variation
+is attributable to stable player differences, common season shifts, and
+player-season residual variation?
+\end{quote}
+
+The analysis conditions on the observed Wyscout-derived player-season panel.
+It does not model transfers, injuries, tactical systems, position, team
+identity, coach identity, match-level opponent strength, or minutes selection
+beyond the existing filtering. Therefore a player effect should be interpreted
+as a stable player-season profile effect within the observed data-generating
+and selection process, not as a pure causal ability parameter.
+
+\section{Data Structure and Estimands}
+
+\subsection{Panel Structure}
+
+The modelling unit is an observed player-season row. Missing player-seasons are
+not imputed. This choice avoids assuming that absence from the panel is
+ignorable. In football data, absence may be caused by transfers, injuries,
+relegation, age, retirement, or selection. The cost is that conclusions apply
+to observed eligible player-seasons, not to all possible player-season
+combinations.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Observed model object summary.}
+\label{tab:model-object}
+\begin{tabular}{L{0.58\textwidth}R{0.22\textwidth}}
+\toprule
+Quantity & Value \\
+\midrule
+Observed player-season rows & 4,944 \\
+Selected features & 53 \\
+Players & 1,650 \\
+Seasons & 12 \\
+One-season players & 605 \\
+Repeated players & 1,045 \\
+Players with gaps & 346 \\
+Feature matrix rank & 53 \\
+Maximum absolute feature correlation & 0.972 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The feature matrix is full rank. The maximum retained absolute feature
+correlation is high, mainly reflecting closely related pass-volume variables.
+This does not break the diagonal additive model, but it warns that some
+features carry nearly redundant information.
+
+\subsection{Notation}
+
+\begin{longtable}{L{0.20\textwidth}L{0.72\textwidth}}
+\caption{Core notation used in the validation analysis.}
+\label{tab:notation}\\
+\toprule
+Symbol & Meaning \\
+\midrule
+\endfirsthead
+\toprule
+Symbol & Meaning \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\(n = 1,\ldots,N\) & Observed player-season row index. \\
+\(p = 1,\ldots,P\) & Feature index. \\
+\(i = 1,\ldots,I\) & Player index. \\
+\(j = 1,\ldots,S\) & Season index. \\
+\(N\) & Number of observed player-season rows; here \(N=4{,}944\). \\
+\(P\) & Number of selected scaled football features; here \(P=53\). \\
+\(I\) & Number of players; here \(I=1{,}650\). \\
+\(S\) & Number of seasons; here \(S=12\). \\
+\(i[n]\) & Player associated with row \(n\). \\
+\(j[n]\) & Season associated with row \(n\). \\
+\(\mathbf{y}_n\in\mathbb{R}^{P}\) & Full multivariate response for row \(n\). \\
+\(y_{np}\) & Value of feature \(p\) in row \(n\). \\
+\(\boldsymbol{\mu}\in\mathbb{R}^{P}\) & Population mean in scaled feature space. \\
+\(\mathbf{a}_i\in\mathbb{R}^{P}\) & Player effect for player \(i\). \\
+\(\mathbf{b}_j\in\mathbb{R}^{P}\) & Season effect for season \(j\). \\
+\(\boldsymbol{\epsilon}_n\in\mathbb{R}^{P}\) & Residual player-season effect for row \(n\). \\
+\(\boldsymbol{\Sigma}_a\) & Player-effect covariance matrix. \\
+\(\boldsymbol{\Sigma}_b\) & Season-effect covariance matrix. \\
+\(\boldsymbol{\Sigma}_{\epsilon}\) & Residual covariance matrix. \\
+\(\boldsymbol{\Lambda}_a,\boldsymbol{\Lambda}_b\) & Player and season low-rank loading matrices. \\
+\(\boldsymbol{\Psi}_a,\boldsymbol{\Psi}_b\) & Player and season uniqueness variance vectors. \\
+\end{longtable}
+
+The response vector is
+\begin{equation}
+  \mathbf{y}_n = (y_{n1},\ldots,y_{nP})^\top ,
+\end{equation}
+where each column has been standardized before modelling. Standardization makes
+variance components comparable across heterogeneous football features such as
+shots per 90 minutes, pass rates, recoveries, and card counts.
+
+\subsection{Model Components}
+
+\begin{longtable}{L{0.22\textwidth}L{0.68\textwidth}}
+\caption{Model components and their interpretation.}
+\label{tab:model-components}\\
+\toprule
+Component & Interpretation \\
+\midrule
+\endfirsthead
+\toprule
+Component & Interpretation \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\(\boldsymbol{\mu}\) & Population-level average scaled football profile. \\
+\(\mathbf{a}_i\) & Stable player-specific deviation from the population profile. \\
+\(\mathbf{b}_j\) & Common season-specific deviation shared across observed rows. \\
+\(\boldsymbol{\epsilon}_n\) & Remaining row-level variation after player and season effects. \\
+\(\sigma_{a,p}\) & Player-effect standard deviation for feature \(p\). \\
+\(\sigma_{b,p}\) & Season-effect standard deviation for feature \(p\). \\
+\(\sigma_{\epsilon,p}\) & Residual standard deviation for feature \(p\). \\
+\(\operatorname{diag}(\boldsymbol{\sigma}^2)\) & Diagonal covariance matrix with one variance per feature. \\
+\(\boldsymbol{\Lambda}\boldsymbol{\Lambda}^{\top}\) & Low-rank covariance contribution from latent factors. \\
+\(\boldsymbol{\Psi}\) & Feature-specific uniqueness variance not explained by common factors. \\
+\end{longtable}
+
+\subsection{Estimands}
+
+For each feature \(p\), the real diagonal additive model estimates
+\begin{align}
+  V_{\mathrm{player},p} &= \sigma_{a,p}^{2}, \\
+  V_{\mathrm{season},p} &= \sigma_{b,p}^{2}, \\
+  V_{\mathrm{residual},p} &= \sigma_{\epsilon,p}^{2}.
+\end{align}
+
+The proportional variance decomposition is
+\begin{align}
+  \pi_{\mathrm{player},p}
+    &= \frac{V_{\mathrm{player},p}}
+            {V_{\mathrm{player},p}+V_{\mathrm{season},p}+V_{\mathrm{residual},p}}, \\
+  \pi_{\mathrm{season},p}
+    &= \frac{V_{\mathrm{season},p}}
+            {V_{\mathrm{player},p}+V_{\mathrm{season},p}+V_{\mathrm{residual},p}}, \\
+  \pi_{\mathrm{residual},p}
+    &= \frac{V_{\mathrm{residual},p}}
+            {V_{\mathrm{player},p}+V_{\mathrm{season},p}+V_{\mathrm{residual},p}}.
+\end{align}
+
+These proportions are the most interpretable thesis outputs. They answer how
+much of each feature's variation is stable across players, how much is shared
+by seasons, and how much remains row-specific after accounting for player and
+season. They are model-based variance components, not causal effects.
+
+\section{Real Diagonal Additive Model}
+
+The primary real-data model is
+\begin{equation}
+  \mathbf{y}_n =
+  \boldsymbol{\mu} + \mathbf{a}_{i[n]} + \mathbf{b}_{j[n]} +
+  \boldsymbol{\epsilon}_n .
+  \label{eq:additive}
+\end{equation}
+
+The diagonal covariance assumptions are
+\begin{align}
+  \mathbf{a}_i &\sim \mathcal{N}\!\left(
+    \mathbf{0},\operatorname{diag}(\boldsymbol{\sigma}_a^2)\right), \\
+  \mathbf{b}_j &\sim \mathcal{N}\!\left(
+    \mathbf{0},\operatorname{diag}(\boldsymbol{\sigma}_b^2)\right), \\
+  \boldsymbol{\epsilon}_n &\sim \mathcal{N}\!\left(
+    \mathbf{0},\operatorname{diag}(\boldsymbol{\sigma}_{\epsilon}^2)\right).
+\end{align}
+
+The player and season effects are non-centered and column-centered in the
+pipeline so that \(\boldsymbol{\mu}\) remains identifiable. The model is a
+deliberate first-order variance decomposition. Its strength is interpretability:
+each feature receives a player, season, and residual variance share. It is not
+intended to answer the separate question of latent cross-feature covariance
+structure.
+
+\section{Simulation Design}
+
+The simulation uses the same row count, feature count, player mapping, and
+season mapping as the observed panel.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Simulation design summary.}
+\label{tab:simulation-summary}
+\begin{tabular}{L{0.58\textwidth}R{0.20\textwidth}}
+\toprule
+Quantity & Value \\
+\midrule
+Simulation seed & 20260913 \\
+Rows & 4,944 \\
+Features & 53 \\
+Players & 1,650 \\
+Seasons & 12 \\
+Player low-rank dimension & 2 \\
+Season low-rank dimension & 1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The simulated data are generated from known low-rank plus diagonal player and
+season covariance components. This creates two validation exercises. First, the
+diagonal additive model is fitted to knowingly misspecified low-rank data to
+test whether diagonal variance components are still recovered. Second, a
+low-rank model is fitted to evaluate whether the known loadings, uniquenesses,
+and covariance diagonals can be recovered.
+
+\section{Low-Rank Recovery Model}
+
+The low-rank recovery model uses
+\begin{align}
+  \boldsymbol{\Sigma}_a
+    &= \boldsymbol{\Lambda}_a\boldsymbol{\Lambda}_a^\top
+       + \operatorname{diag}(\boldsymbol{\Psi}_a), \\
+  \boldsymbol{\Sigma}_b
+    &= \boldsymbol{\Lambda}_b\boldsymbol{\Lambda}_b^\top
+       + \operatorname{diag}(\boldsymbol{\Psi}_b), \\
+  \boldsymbol{\Sigma}_{\epsilon}
+    &= \operatorname{diag}(\boldsymbol{\sigma}_{\epsilon}^{2}).
+\end{align}
+
+The model estimates player loadings \(\boldsymbol{\Lambda}_a\), season loadings
+\(\boldsymbol{\Lambda}_b\), player uniqueness scales, season uniqueness scales,
+residual scales, and the implied covariance diagonals. It uses pure-anchor
+constraints: selected anchor variables have positive own-factor loadings and
+zero off-factor loadings. These constraints reduce rotation and sign ambiguity,
+but the results show that they do not fully solve practical identifiability.
+
+\section{Diagnostics and Posterior Health}
+
+\subsection{Diagnostic Definitions}
+
+\begin{longtable}{L{0.23\textwidth}L{0.67\textwidth}}
+\caption{Diagnostics and validation metrics.}
+\label{tab:diagnostics-definitions}\\
+\toprule
+Diagnostic & Interpretation \\
+\midrule
+\endfirsthead
+\toprule
+Diagnostic & Interpretation \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\(\widehat{R}\) & Chain convergence diagnostic. Values close to 1 are good; values above 1.01 indicate possible mixing issues. \\
+Bulk ESS & Effective sample size for the central part of the posterior. \\
+Tail ESS & Effective sample size for posterior tails. \\
+Divergence & HMC warning that trajectories had difficulty following posterior geometry. \\
+Treedepth hit & NUTS reached the configured maximum tree depth. \\
+E-BFMI & Energy Bayesian Fraction of Missing Information; low values indicate poor energy exploration. \\
+PSIS-LOO & Pareto-smoothed importance-sampling approximation to leave-one-out cross-validation. \\
+Pareto-\(k\) & Stability diagnostic for PSIS weights; \(k>0.7\) is problematic and \(k>1\) is severe. \\
+MAE & Mean absolute error between posterior estimate and simulation truth. \\
+RMSE & Root mean squared error between posterior estimate and simulation truth. \\
+Coverage & Proportion of true values inside the central 90\% posterior interval. \\
+\end{longtable}
+
+Posterior diagnostics are part of the scientific argument. Parameters with
+clean \(\widehat{R}\) and adequate ESS can be interpreted normally. Parameters
+with mild warnings should be interpreted cautiously. Parameters with severe
+warnings should not be used for substantive conclusions.
+
+\subsection{Sampler Geometry}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Sampler geometry summary for the three fitted models.}
+\label{tab:sampler-geometry}
+\begin{tabular}{L{0.23\textwidth}R{0.09\textwidth}R{0.08\textwidth}R{0.09\textwidth}R{0.10\textwidth}R{0.11\textwidth}R{0.11\textwidth}}
+\toprule
+Model & Draws & Div. & Max TD & TD hits & Min E-BFMI & Mean accept \\
+\midrule
+Real diagonal & 4,000 & 0 & 8 & 0 & 0.561 & 0.953 \\
+Simulated diagonal & 4,000 & 0 & 8 & 0 & 0.551 & 0.951 \\
+Simulated low-rank & 4,000 & 0 & 8 & 0 & 0.586 & 0.951 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+All three models have clean HMC geometry: no divergences, no treedepth
+saturations at the configured limit of 12, E-BFMI above common warning
+thresholds, and average acceptance rates close to the target
+\(\texttt{adapt\_delta}=0.95\). The main problems are therefore not HMC
+geometry problems. They are posterior mixing, identifiability, and predictive
+validation diagnostics.
+
+\subsection{Posterior Health}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Posterior summary diagnostics.}
+\label{tab:posterior-health}
+\begin{tabular}{L{0.21\textwidth}R{0.12\textwidth}R{0.09\textwidth}R{0.08\textwidth}R{0.08\textwidth}R{0.11\textwidth}R{0.11\textwidth}}
+\toprule
+Model & Parameters & Max \(\widehat{R}\) & \(>1.01\) & \(>1.05\) & Min bulk ESS & Min tail ESS \\
+\midrule
+Real diagonal & 531 & 1.035 & 13 & 0 & 159 & 175 \\
+Simulated diagonal & 531 & 1.010 & 3 & 0 & 779 & 1,412 \\
+Simulated low-rank & 688 & 1.739 & 233 & 208 & 6 & 107 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The real diagonal model is mostly usable, with mild mixing warnings in a small
+number of player variance parameters. The simulated diagonal model is healthy.
+The simulated low-rank model is not healthy for loading interpretation.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Worst real diagonal posterior diagnostics.}
+\label{tab:real-worst-diagnostics}
+\begin{tabular}{L{0.17\textwidth}L{0.28\textwidth}R{0.08\textwidth}R{0.07\textwidth}R{0.08\textwidth}R{0.09\textwidth}R{0.09\textwidth}}
+\toprule
+Parameter & Feature & Mean & SD & \(\widehat{R}\) & Bulk ESS & Tail ESS \\
+\midrule
+\code{var_a[11]} & \code{per90_forward_passes} & 0.827 & 0.032 & 1.035 & 159 & 290 \\
+\code{sigma_a[11]} & \code{per90_forward_passes} & 0.909 & 0.018 & 1.035 & 159 & 290 \\
+\code{prop_e[11]} & \code{per90_forward_passes} & 0.150 & 0.006 & 1.028 & 202 & 642 \\
+\code{prop_a[11]} & \code{per90_forward_passes} & 0.846 & 0.006 & 1.027 & 179 & 376 \\
+\code{var_a[44]} & \code{per90_sliding_tackles} & 0.652 & 0.029 & 1.016 & 894 & 1,643 \\
+\code{var_a[16]} & \code{per90_progressive_passes} & 0.752 & 0.029 & 1.015 & 509 & 1,746 \\
+\code{var_a[24]} & \code{rate_successful_crosses} & 0.022 & 0.013 & 1.012 & 197 & 177 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+No real-data \(\widehat{R}\) exceeds 1.05. For thesis reporting these
+parameters should be described as mildly under-mixed rather than perfectly
+converged.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Worst low-rank posterior diagnostics.}
+\label{tab:lowrank-worst-diagnostics}
+\begin{tabular}{L{0.43\textwidth}R{0.10\textwidth}R{0.10\textwidth}R{0.10\textwidth}R{0.12\textwidth}}
+\toprule
+Parameter & Mean & SD & \(\widehat{R}\) & Bulk ESS \\
+\midrule
+\code{lambda_b_free[37]} / \(\Lambda_b[38,1]\) & -0.010 & 0.271 & 1.739 & 6.1 \\
+\code{lambda_a_free[41]} / \(\Lambda_a[43,1]\) & 0.000 & 0.111 & 1.738 & 6.2 \\
+\code{lambda_a_free[23]} / \(\Lambda_a[25,1]\) & 0.000 & 0.210 & 1.738 & 6.1 \\
+\code{lambda_b_free[24]} / \(\Lambda_b[25,1]\) & 0.018 & 0.328 & 1.738 & 6.1 \\
+\code{psi_b[1]} & 0.332 & 0.246 & 1.737 & 6.2 \\
+\code{psi_a[1]} & 0.418 & 0.127 & 1.737 & 6.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+These values are a strong identifiability and mixing warning. Chains are not
+exploring the same posterior region for many loading and uniqueness parameters,
+even though HMC trajectories themselves are clean.
+
+\section{Real-Data Variance Decomposition}
+
+The real diagonal additive model decomposes scaled feature variance into
+player, season, and residual components. Averaged across features, the player
+component is dominant.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Mean variance shares across the 53 real-data features.}
+\label{tab:mean-variance-shares}
+\begin{tabular}{L{0.42\textwidth}R{0.18\textwidth}}
+\toprule
+Component & Mean share \\
+\midrule
+Player & 0.634 \\
+Season & 0.047 \\
+Residual & 0.319 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This means that stable player-level heterogeneity is the dominant source of
+variation in most selected features. Season-level variation exists but is much
+smaller on average. Residual variation remains important, especially for rate
+features.
+
+\subsection{Features Dominated by Player Effects}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Highest player-level variance shares.}
+\label{tab:player-dominated}
+\begin{tabular}{L{0.42\textwidth}R{0.13\textwidth}R{0.13\textwidth}R{0.13\textwidth}}
+\toprule
+Feature & Player & Season & Residual \\
+\midrule
+\code{per90_recoveries} & 0.884 & 0.016 & 0.100 \\
+\code{per90_touch_in_box} & 0.872 & 0.001 & 0.127 \\
+\code{per90_offensive_duels} & 0.869 & 0.056 & 0.075 \\
+\code{per90_shots} & 0.860 & 0.008 & 0.132 \\
+\code{per90_forward_passes} & 0.846 & 0.004 & 0.150 \\
+\code{per90_crosses} & 0.846 & 0.006 & 0.148 \\
+\code{per90_long_passes} & 0.843 & 0.005 & 0.152 \\
+\code{per90_clearances} & 0.837 & 0.034 & 0.129 \\
+\code{per90_passes} & 0.829 & 0.011 & 0.160 \\
+\code{per90_back_passes} & 0.823 & 0.008 & 0.169 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Volume and style variables are strongly player-specific. This is consistent
+with stable player roles, positions, and tactical usage.
+
+\subsection{Features With the Largest Season Effects}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Highest season-level variance shares.}
+\label{tab:season-dominated}
+\begin{tabular}{L{0.42\textwidth}R{0.13\textwidth}R{0.13\textwidth}R{0.13\textwidth}}
+\toprule
+Feature & Player & Season & Residual \\
+\midrule
+\code{per90_smart_passes} & 0.440 & 0.376 & 0.183 \\
+\code{per90_pressing_duels} & 0.455 & 0.320 & 0.225 \\
+\code{per90_accelerations} & 0.598 & 0.164 & 0.238 \\
+\code{per90_dribbles_against} & 0.693 & 0.136 & 0.171 \\
+\code{rate_defensive_duels_won} & 0.244 & 0.129 & 0.627 \\
+\code{per90_through_passes} & 0.583 & 0.121 & 0.296 \\
+\code{per90_sliding_tackles} & 0.606 & 0.119 & 0.275 \\
+\code{per90_loose_ball_duels} & 0.718 & 0.113 & 0.168 \\
+\code{per90_dribbles} & 0.800 & 0.101 & 0.100 \\
+\code{rate_successful_progressive_passes} & 0.484 & 0.084 & 0.432 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The strongest season effects occur in features that plausibly reflect changing
+tactical environments, league-wide style, event definitions, or tactical
+fashion over seasons. The most prominent examples are smart passes and pressing
+duels.
+
+\subsection{Features Dominated by Residual Effects}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Highest residual variance shares.}
+\label{tab:residual-dominated}
+\begin{tabular}{L{0.42\textwidth}R{0.13\textwidth}R{0.13\textwidth}R{0.13\textwidth}}
+\toprule
+Feature & Player & Season & Residual \\
+\midrule
+\code{rate_successful_crosses} & 0.022 & 0.003 & 0.975 \\
+\code{rate_successful_sliding_tackles} & 0.057 & 0.011 & 0.932 \\
+\code{rate_shots_on_target} & 0.167 & 0.001 & 0.832 \\
+\code{rate_goal_conversion} & 0.180 & 0.003 & 0.818 \\
+\code{rate_dribbles_against_won} & 0.184 & 0.008 & 0.808 \\
+\code{rate_successful_dribbles} & 0.231 & 0.009 & 0.760 \\
+\code{rate_defensive_duels_won} & 0.244 & 0.129 & 0.627 \\
+\code{per90_assists} & 0.391 & 0.010 & 0.599 \\
+\code{rate_offensive_duels_won} & 0.412 & 0.016 & 0.573 \\
+\code{per90_yellow_cards} & 0.441 & 0.017 & 0.542 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Rate variables and sparse outcome variables are noisy. They depend strongly on
+opportunity counts and row-level context and are much less stable than
+volume/style features.
+
+\section{Simulation Recovery Results}
+
+\subsection{Diagonal Model on Low-Rank Data}
+
+The simulated diagonal model is intentionally misspecified because the data
+were generated from low-rank plus diagonal covariance. Despite this, it recovers
+diagonal variance components well.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Recovery metrics for the simulated diagonal additive model.}
+\label{tab:sim-diagonal-recovery}
+\begin{tabular}{L{0.20\textwidth}R{0.12\textwidth}R{0.12\textwidth}R{0.12\textwidth}R{0.14\textwidth}R{0.14\textwidth}}
+\toprule
+Component & Bias & MAE & RMSE & Corr. & 90\% coverage \\
+\midrule
+Player & 0.0028 & 0.0078 & 0.0112 & 0.996 & 0.906 \\
+Residual & -0.0009 & 0.0040 & 0.0055 & 0.998 & 0.925 \\
+Season & 0.0250 & 0.0300 & 0.0468 & 0.885 & 0.868 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Player variance recovery is excellent, residual variance recovery is excellent,
+and season variance recovery is weaker but still useful. The season component
+is hardest because there are only 12 seasons, which is a small number of
+season-level units for feature-by-feature season variance estimation.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Worst season variance errors in the simulated diagonal model.}
+\label{tab:sim-diagonal-worst-season}
+\begin{tabular}{L{0.48\textwidth}R{0.16\textwidth}R{0.14\textwidth}R{0.12\textwidth}}
+\toprule
+Feature & Posterior mean & Truth & Error \\
+\midrule
+\code{rate_successful_sliding_tackles} & 0.354 & 0.139 & 0.214 \\
+\code{per90_xg_shot} & 0.221 & 0.103 & 0.118 \\
+\code{per90_goals} & 0.236 & 0.151 & 0.085 \\
+\code{per90_fouls} & 0.144 & 0.064 & 0.080 \\
+\code{per90_defensive_duels} & 0.130 & 0.057 & 0.073 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The bias is mostly upward for season variance, which is consistent with a
+diagonal model approximating low-rank seasonal covariance using feature-specific
+season variance terms.
+
+\subsection{Low-Rank Loading Recovery}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Low-rank loading recovery metrics.}
+\label{tab:lowrank-loading-recovery}
+\begin{tabular}{L{0.22\textwidth}R{0.14\textwidth}R{0.14\textwidth}R{0.16\textwidth}R{0.16\textwidth}}
+\toprule
+Parameter & MAE & RMSE & Corr. & 90\% coverage \\
+\midrule
+\(\Lambda_a\) & 0.082 & 0.131 & 0.804 & 0.840 \\
+\(\Lambda_b\) & 0.102 & 0.124 & 0.262 & 1.000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The player loading matrix has moderate correlation with truth but large errors
+and poor mixing. The season loading matrix is not recovered well: its
+correlation with truth is only 0.262, and coverage is high because intervals
+are too wide, not because estimates are precise.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Worst \(\Lambda_a\) loading errors.}
+\label{tab:lambda-a-worst}
+\begin{tabular}{L{0.39\textwidth}R{0.08\textwidth}R{0.10\textwidth}R{0.10\textwidth}R{0.10\textwidth}R{0.08\textwidth}}
+\toprule
+Feature & Factor & Mean & Truth & Error & \(\widehat{R}\) \\
+\midrule
+\code{per90_shot_assists} & 1 & -0.003 & 0.491 & -0.494 & 1.736 \\
+\code{per90_fouls} & 1 & -0.001 & 0.352 & -0.352 & 1.736 \\
+\code{per90_shots_blocked} & 1 & -0.001 & 0.340 & -0.342 & 1.735 \\
+\code{per90_opponent_half_recoveries} & 1 & 0.002 & -0.335 & 0.337 & 1.734 \\
+\code{per90_long_passes} & 1 & 0.002 & -0.289 & 0.291 & 1.735 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Worst \(\Lambda_b\) loading errors.}
+\label{tab:lambda-b-worst}
+\begin{tabular}{L{0.39\textwidth}R{0.08\textwidth}R{0.10\textwidth}R{0.10\textwidth}R{0.10\textwidth}R{0.08\textwidth}}
+\toprule
+Feature & Factor & Mean & Truth & Error & \(\widehat{R}\) \\
+\midrule
+\code{rate_successful_sliding_tackles} & 1 & -0.042 & 0.298 & -0.340 & 1.736 \\
+\code{per90_xg_shot} & 1 & -0.008 & 0.230 & -0.238 & 1.737 \\
+\code{per90_passes} & 1 & -0.003 & 0.230 & -0.233 & 1.733 \\
+\code{per90_dangerous_own_half_losses} & 1 & -0.008 & 0.206 & -0.214 & 1.735 \\
+\code{per90_through_passes} & 1 & 0.023 & -0.185 & 0.208 & 1.734 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Many free loadings have posterior means near zero, wide intervals, and very
+high \(\widehat{R}\). The current low-rank model should therefore be treated as
+a failed or incomplete loading-recovery experiment, not as a substantive
+football-factor model.
+
+\subsection{Low-Rank Variance and Scale Recovery}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Low-rank variance and scale recovery metrics.}
+\label{tab:lowrank-variance-recovery}
+\begin{tabular}{L{0.26\textwidth}R{0.13\textwidth}R{0.13\textwidth}R{0.15\textwidth}R{0.15\textwidth}}
+\toprule
+Parameter & MAE & RMSE & Corr. & 90\% coverage \\
+\midrule
+\(\operatorname{diag}(\Sigma_a)\) & 0.009 & 0.013 & 0.997 & 0.811 \\
+\(\operatorname{diag}(\Sigma_b)\) & 0.057 & 0.093 & 0.886 & 0.585 \\
+\(\psi_a\) SD & 0.011 & 0.022 & 0.941 & 0.925 \\
+\(\psi_b\) SD & 0.040 & 0.052 & 0.740 & 0.925 \\
+\(\sigma_{\epsilon}\) SD & 0.004 & 0.005 & 0.998 & 0.925 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The low-rank model recovers residual scales very well, player covariance
+diagonals very well, and player uniqueness scales reasonably well. It does not
+recover season covariance diagonals precisely, season uniqueness scales as well
+as player scales, or loading matrices reliably.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Worst \(\operatorname{diag}(\Sigma_b)\) errors in the low-rank recovery model.}
+\label{tab:sigma-b-worst}
+\begin{tabular}{L{0.43\textwidth}R{0.11\textwidth}R{0.10\textwidth}R{0.10\textwidth}R{0.09\textwidth}}
+\toprule
+Feature & Mean & Truth & Error & \(\widehat{R}\) \\
+\midrule
+\code{rate_successful_sliding_tackles} & 0.572 & 0.139 & 0.432 & 1.051 \\
+\code{per90_goals} & 0.435 & 0.151 & 0.284 & 1.029 \\
+\code{per90_xg_shot} & 0.342 & 0.103 & 0.238 & 1.009 \\
+\code{per90_through_passes} & 0.219 & 0.084 & 0.134 & 1.013 \\
+\code{per90_fouls} & 0.160 & 0.064 & 0.096 & 1.003 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Recovering a covariance diagonal is easier than recovering a loading matrix.
+Different loading configurations can imply similar total feature variance, so
+good recovery of \(\operatorname{diag}(\Sigma_a)\) does not imply good recovery
+of \(\Lambda_a\).
+
+\section{PSIS-LOO Interpretation}
+
+PSIS-LOO was computed with \code{BFA_RUN_LOO=true}. The nominal estimates are
+shown in Table~\ref{tab:loo}. The simulated low-rank model has better nominal
+predictive fit than the simulated diagonal model, with
+\(\Delta\mathrm{elpd}_{\mathrm{low-rank}-\mathrm{diagonal}}\approx 5{,}576\).
+This direction is expected because the simulated data were generated from a
+low-rank process.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{PSIS-LOO results and Pareto-\(k\) diagnostics.}
+\label{tab:loo}
+\begin{tabular}{L{0.18\textwidth}R{0.11\textwidth}R{0.08\textwidth}R{0.10\textwidth}R{0.11\textwidth}R{0.08\textwidth}R{0.08\textwidth}R{0.08\textwidth}}
+\toprule
+Model & elpd\(_{\mathrm{loo}}\) & SE & \(p_{\mathrm{loo}}\) & looic & \(k>0.7\) & \(k>1\) & Max \(k\) \\
+\midrule
+Real diagonal & -224,673.4 & 1,007.0 & 49,545.7 & 449,346.9 & 4,354 & 3,088 & 3.82 \\
+Simulated diagonal & -201,763.1 & 394.7 & 41,871.8 & 403,526.1 & 4,529 & 2,878 & 2.88 \\
+Simulated low-rank & -196,186.8 & 363.3 & 32,963.7 & 392,373.7 & 4,215 & 2,104 & 2.08 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The Pareto-\(k\) diagnostics are unacceptable: thousands of rows have
+\(k>0.7\), thousands have \(k>1\), and maximum \(k\) is far above 1 for all
+models. The LOO estimates should therefore not be used as formal model-selection
+evidence. They are better interpreted as evidence that many rows are highly
+influential under conditional leave-one-row-out scoring.
+
+This is unsurprising for a hierarchical player-season model. Many players
+appear only once, player effects can be informed heavily by a single row, and
+leaving out that row can substantially change the effective posterior. Exact
+\(K\)-fold cross-validation is preferable for real predictive validation.
+
+\section{Limitations}
+
+The main limitations are as follows.
+
+\begin{enumerate}
+\item The real diagonal model has mild mixing issues. The maximum
+\(\widehat{R}\) is 1.035, 13 summarized parameters exceed 1.01, the minimum
+bulk ESS is 159, and the minimum tail ESS is 175.
+\item The low-rank recovery model has severe loading-level non-identification.
+The maximum \(\widehat{R}\) is 1.739, many loadings have bulk ESS near 6, and
+many loading posterior means are near zero despite nonzero truth.
+\item Season effects are hard to estimate. There are only 12 seasons, and the
+simulation confirms weaker recovery for season variance and especially season
+loadings.
+\item PSIS-LOO fails Pareto-\(k\) diagnostics and should not be used as decisive
+model-selection evidence.
+\item Memory and output size constrain diagnostics. Full fit CSVs are large,
+and full draw extraction can hit R memory limits.
+\end{enumerate}
+
+\section{Proposed Fixes and Future Experiments}
+
+Several extensions follow directly from the validation evidence.
+
+\begin{enumerate}
+\item Run a longer real diagonal model with more sampling iterations to check
+whether the few weak variance parameters improve.
+\item Build exact \(K\)-fold validation. Leave-player-out folds target
+generalization to unseen players; leave-season-out folds target generalization
+to new seasons; random row folds are appropriate only if the target is another
+observed row from the same player-season process.
+\item For simulation only, initialize low-rank parameters near truth to
+distinguish poor exploration from deeper non-identifiability.
+\item Strengthen low-rank anchor constraints by lower-bounding anchor loadings,
+using stronger anchor priors, selecting higher-signal anchors, and adding
+stronger shrinkage to free loadings.
+\item Simplify the season structure. With only 12 seasons, diagonal season
+effects or a strongly pooled scalar season score may be more defensible than a
+feature-level low-rank season loading vector.
+\item Add feature sensitivity checks: remove highly correlated pass-volume
+duplicates, analyze rate-only and volume-only feature sets separately, stratify
+by position if metadata are available, and test higher minimum-minute
+thresholds.
+\item Add targeted memory-safe diagnostics that extract only a small variable
+set when trace plots or draw-level checks are needed.
+\end{enumerate}
+
+\section{Thesis-Ready Conclusions}
+
+The pipeline has succeeded for descriptive additive variance decomposition.
+The real diagonal additive model gives a defensible main result: stable player
+effects dominate many volume and style features, season effects are generally
+smaller but meaningful for selected tactical variables, and residual variation
+dominates sparse rates and conversion or success variables.
+
+The simulation validates the basic additive machinery. The diagonal model
+recovers player and residual variance components very well, and season variance
+moderately well, even when the simulated truth contains low-rank covariance.
+
+The current low-rank recovery model should be reported as a diagnostic negative
+result. It has clean sampler geometry but fails to identify loadings reliably,
+especially for season effects. Its covariance-diagonal recovery is more
+credible than its loading recovery, which reinforces the distinction between
+variance-decomposition claims and latent-factor claims.
+
+PSIS-LOO was computed but fails Pareto-\(k\) diagnostics. It should be
+mentioned only as an attempted predictive diagnostic, not as decisive
+model-selection evidence. Exact \(K\)-fold validation is the appropriate next
+step for predictive comparison.
+
+\end{document}

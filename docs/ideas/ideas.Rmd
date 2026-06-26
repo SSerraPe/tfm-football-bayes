@@ -1,0 +1,255 @@
+---
+title: "Notes on extensions of the player-season model"
+output:
+  pdf_document:
+    latex_engine: pdflatex
+fontsize: 11pt
+geometry: margin=1in
+header-includes:
+  - \usepackage{amsmath,amssymb}
+  - \DeclareMathOperator{\Var}{Var}
+  - \DeclareMathOperator{\Cov}{Cov}
+  - \DeclareMathOperator{\Corr}{Corr}
+  - \newcommand{\R}{\mathbb{R}}
+---
+
+Let
+$$
+y_{ij}\in\R^p
+$$
+denote the vector of observed variables for player $i$ in season $j$. Our additive model is
+$$
+y_{ij}=a_i+b_j+e_{ij},
+$$
+with
+$$
+a_i\sim N_p(0,\Sigma_a),\qquad
+b_j\sim N_p(0,\Sigma_b),\qquad
+e_{ij}\sim N_p(0,\Sigma_e).
+$$
+There is no explicit mean parameter. The data should therefore be centered in a meaningful way before fitting.
+
+We would like to model the player covariance $\Sigma_a$ as low-rank plus error:
+$$
+\Sigma_a=\Lambda_a\Lambda_a^\top+\Psi_a,
+$$
+where
+$$
+\Lambda_a\in\R^{p\times K_a},
+\qquad
+\Psi_a=\operatorname{diag}(\psi^2_{a,1},\dots,\psi^2_{a,p}).
+$$
+
+Equivalently,
+$$
+a_i=\Lambda_a f_i+u_i,
+\qquad
+f_i\sim N_{K_a}(0,I_{K_a}),
+\qquad
+u_i\sim N_p(0,\Psi_a).
+$$
+For the season effect, $\Sigma_b$ should probably remain diagonal at first. Then, we can think about further structure, as proposed below.
+
+# Choosing the rank
+
+In Stan, treat $K_a$ and $K_b$ as fixed tuning parameters. Do not try to sample $K$ directly.
+
+Fit a small grid:
+$$
+K_a=0,1,2,3,\dots
+$$
+starting with
+$$
+\Sigma_b,\Sigma_e\ \text{diagonal}.
+$$
+
+Compare models using:
+
+1. posterior predictive checks for cross-variable covariance;
+2. predictive validation with the relevant held-out unit;
+3. stability and interpretability of posterior summaries.
+
+Another idea is looking at the PCA decomposition of $\Lambda \Lambda'$ with large rank and see how many columns we need.
+
+# Identifiability
+
+The factorization is not unique. For any orthogonal matrix $O$,
+$$
+\Lambda_a\Lambda_a^\top
+=
+(\Lambda_a O)(\Lambda_a O)^\top.
+$$
+
+Thus $\Lambda_a$ is not identifiable without constraints. The covariance
+$$
+\Sigma_a=\Lambda_a\Lambda_a^\top+\Psi_a
+$$
+is the stable object.
+
+We can impose a lower-triangular convention:
+$$
+\lambda_{kh}=0\quad\text{for }h>k,
+\qquad
+\lambda_{kk}>0.
+$$
+
+The diagonal entries should be free positive parameters, not fixed to one, because the factor scale is already fixed by
+$$
+f_i\sim N(0,I).
+$$
+
+# Visualization
+
+For posterior draws
+$$
+a_i^{(s)},\qquad b_j^{(s)},\qquad s=1,\dots,S,
+$$
+work first with posterior means:
+$$
+\widehat a_i=\frac1S\sum_{s=1}^S a_i^{(s)},
+\qquad
+\widehat b_j=\frac1S\sum_{s=1}^S b_j^{(s)}.
+$$
+
+Useful plots:
+
+1. variance-share plot by variable;
+2. clustered heatmap of $\widehat a_i$;
+3. chronological heatmap or line plots of $\widehat b_j$;
+4. posterior correlation matrix from $\Sigma_a$;
+5. posterior uncertainty plots using posterior standard deviations or sign probabilities.
+
+For player effects, cluster rows of
+$$
+\widehat A=
+\begin{pmatrix}
+\widehat a_1^\top\\
+\vdots\\
+\widehat a_I^\top
+\end{pmatrix}.
+$$
+
+For season effects, order rows of
+$$
+\widehat B=
+\begin{pmatrix}
+\widehat b_1^\top\\
+\vdots\\
+\widehat b_J^\top
+\end{pmatrix}
+$$
+chronologically.
+
+The matrix $\Lambda$ is useful for identification during sampling, but it is not necessarily the best object for interpretation. For interpretation, we can use the eigendecomposition of the common player covariance:
+$$
+B_a=\Lambda\Lambda^\top.
+$$
+For each posterior draw,
+$$
+B_a^{(s)}=U^{(s)}D^{(s)}{U^{(s)}}^\top,
+$$
+with eigenvalues ordered decreasingly:
+$$
+d_1^{(s)}\geq d_2^{(s)}\geq\cdots.
+$$
+The PCA-oriented loadings are
+$$
+L_{\mathrm{PCA}}^{(s)}
+=
+U_K^{(s)}{D_K^{(s)}}^{1/2}.
+$$
+These loadings give orthogonal directions ordered by explained common player variance.
+
+If the positive eigenvalues are distinct (which under our model happens with probability one), the eigendirections are identifiable up to sign. The signs have no statistical meaning, so we fix them by a deterministic convention, such as requiring the entry with largest absolute value in each component to be positive, or aligning posterior draws to a reference draw. From here, we can get player scores as well.
+
+# Extensions
+
+Here I list possible extensions to the model. I ordered them in descending order of my own interest/intuition/risk-benefit assessment at the time of writing this.
+
+## Robust errors
+$$
+e_{ijk}\sim t_\nu(0,\sigma^2_{e,k}).
+$$
+This may help if there are outlying player-seasons. Put prior $\nu \sim \mathrm{Gamma}(2,0.1)$, recommended by Juárez and Steel (2010) and Stan. This is cheap (at least writing the Stan code isn't hard) and if it works better, we could add it. 
+
+
+## Dynamic season effects
+
+We could let the season effects have a low-rank plus diagonal structure. 
+
+We could use a dynamic model for season effects:
+$$
+b_j=\Phi b_{j-1}+\eta_j.
+$$
+
+A simple version is scalar persistence:
+$$
+b_j=\phi b_{j-1}+\eta_j,
+\qquad
+\eta_j\sim N_p(0,\Sigma_\eta).
+$$
+We could simply model $\Sigma_\eta$ as diagonal. 
+
+This models league-wide season effects as evolving gradually over time.
+
+## Team-season effects
+
+Let $t(i,j)$ be the team of player $i$ in season $j$. Add a team-season effect:
+$$
+y_{ij}=a_i+b_j+c_{t(i,j),j}+e_{ij}.
+$$
+A simple prior is
+$$
+c_{tj}\sim N_p(0,\Sigma_c),
+$$
+with $\Sigma_c$ diagonal. 
+
+## Groups of variables
+
+There are natural groups of variables:
+
+* Passing volume
+
+* Attacking output
+
+* Dueling
+
+* Discipline
+
+* Progressive actions
+
+* Defending
+
+* Passing quality
+
+* Shooting rates
+
+We could think about using this structure in our model. We could have different parameters for each (this would be a hierarchical model).
+
+
+
+## Model-based Clustering
+
+Start with post hoc clustering, not model-based clustering.
+
+Cluster the posterior mean player effects:
+$$
+\widehat a_1,\dots,\widehat a_I.
+$$
+
+A better uncertainty-aware version repeats clustering over posterior draws:
+$$
+a_1^{(s)},\dots,a_I^{(s)}.
+$$
+
+Only if the clusters are stable and scientifically meaningful should one consider a model-based mixture:
+$$
+a_i\mid z_i=g\sim N_p(m_g,\Sigma_g),
+\qquad
+z_i\sim \operatorname{Categorical}(\pi).
+$$
+This adds label-switching and multimodality, which can be challenging. I would not go down this route immediately, and I would only explore this if we have a lot of time. 
+
+
+
+

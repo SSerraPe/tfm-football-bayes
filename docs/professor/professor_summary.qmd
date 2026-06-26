@@ -1,0 +1,384 @@
+---
+title: "Bayesian Hierarchical Factor Model for La Liga Player Performance"
+subtitle: "Results Summary"
+author: "Sergi Serra Pericàs"
+date: "June 2026"
+format:
+  pdf:
+    geometry: "margin=2.5cm"
+    fontsize: 11pt
+    toc: true
+    number-sections: true
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup}
+library(ggplot2)
+library(dplyr)
+library(knitr)
+
+# This .qmd lives in docs/professor/; resolve the project root (two levels up)
+# so the bare relative paths below (outputs/figures, outputs/tables) still work.
+knitr::opts_knit$set(
+  root.dir = normalizePath(file.path(dirname(knitr::current_input(dir = TRUE)), "..", ".."))
+)
+```
+
+# Executive Summary
+
+This document summarises results from a hierarchical Bayesian factor model applied to La Liga
+player-season data. The analysis covers all items requested after the initial model fit:
+
+- **Factor structure validated** vs diagonal baseline via LOO-CV ($\Delta\text{ELPD}=+3{,}724$, 20 SE).
+- **Latent factors interpreted** via PCA of $\hat{\Lambda}\hat{\Lambda}^\top$: attacking output (PC1, 65\% of common variance) vs physical/defensive contribution (PC2, 35\%).
+- **Player archetypes identified** from posterior means $\hat{a}_i$: clear separation by position group in factor score space.
+- **Season effects** $\hat{b}_j$ show coherent temporal structure across the 12 seasons.
+- **Explained variability** quantified per feature: player ICC $> 80\%$ for most volume metrics.
+- **Factor rank not saturated**: 5-fold CV-ELPD increases monotonically through $K=4$; no elbow visible.
+- **Student-$t$ residuals** strongly preferred ($\Delta\text{ELPD}=+11{,}668$, 21 SE); fitted $\hat{\nu}\approx 2.95$.
+- **Posterior predictive checks** confirm the model reproduces observed cross-feature correlations well.
+
+---
+
+# Data and Model
+
+## Data
+
+The dataset contains **4,944 player-season observations** from La Liga seasons 2011--2023:
+1,650 unique players, 12 seasons, 53 performance features (all Z-scaled to mean 0, SD 1 within
+season). Players with at least one qualifying season are included; 1,045 appear in more than one
+season.
+
+## Model
+
+The model decomposes each player-season observation into additive effects:
+$$
+y_n = a_{i[n]} + b_{j[n]} + \varepsilon_n, \qquad n=1,\ldots,N
+$$
+where $a_i \in \mathbb{R}^P$ is a player effect, $b_j \in \mathbb{R}^P$ a season effect, and
+$\varepsilon_n \in \mathbb{R}^P$ a residual. The covariance structures are:
+$$
+\Sigma_a = \Lambda\Lambda^\top + \Psi_a \quad (\text{low-rank} + \text{diagonal}), \qquad
+\Sigma_b = \text{diag}(\sigma_b^2), \qquad \Sigma_e = \text{diag}(\sigma_e^2)
+$$
+The factor matrix $\Lambda \in \mathbb{R}^{P\times K}$ (fitted with $K=2$) is identified via
+lower-triangular constraints. The final model uses Student-$t$ residuals
+$\varepsilon_{np} \sim t(\nu,\,0,\,\sigma_{e,p})$ with $\nu\sim\text{Gamma}(2,0.1)$.
+
+All inference uses NUTS via CmdStan (4 chains $\times$ 1,000 post-warmup draws, stage 10).
+
+---
+
+# Comparison: Low-rank vs Diagonal $\Sigma_a$ {#sec-diag}
+
+**TODO addressed:** *Fit model with $\Sigma_a$ and $\Sigma_b$ diagonal with the same priors.
+Compare via LOO-CV and ICC.*
+
+To test whether the low-rank player covariance is warranted, we fit a diagonal baseline where
+$\Sigma_a = \text{diag}(\sigma_a^2)$ (no shared factor structure, $K=0$) with matching priors,
+and compare using LOO-CV.
+
+```{r loo-diag-table}
+loo_diag <- read.csv("outputs/tables/20_loo_diagonal_vs_lowrank.csv",
+                     row.names = 1, check.names = FALSE)
+rownames(loo_diag) <- c("Low-rank ($K=2$)", "Diagonal ($K=0$)")
+show <- loo_diag[, c("elpd_loo", "se_elpd_loo", "elpd_diff", "se_diff")]
+colnames(show) <- c("ELPD", "SE", "$\\Delta$ELPD", "SE($\\Delta$)")
+show[] <- lapply(show, function(x) format(round(x, 0), big.mark = ","))
+show["Low-rank ($K=2$)", c("$\\Delta$ELPD", "SE($\\Delta$)")] <- "---"
+kable(show, booktabs = TRUE, escape = FALSE,
+      caption = "LOO-CV: low-rank ($K=2$) vs diagonal ($K=0$) player covariance. Best model listed first.")
+```
+
+The low-rank model is preferred by $\Delta\text{ELPD} = 3{,}724$ (SE 187, 20 SE improvement).
+This confirms genuine latent structure shared across performance variables in player effects.
+
+```{r}
+#| label: fig-icc-scatter
+#| fig-cap: "ICC per feature under low-rank $K=2$ (x-axis) vs diagonal $K=0$ (y-axis). Points above the diagonal indicate features where the factor structure raises the estimated player-level signal."
+#| out-width: "68%"
+knitr::include_graphics("outputs/figures/20_icc_diagonal_vs_lowrank.png")
+```
+
+The ICC comparison (Figure 1) shows that for most features, the low-rank model attributes more
+variance to stable player identity. The factor structure is particularly beneficial for the
+features that load strongly on the two latent dimensions.
+
+---
+
+# Factor Rank Selection {#sec-rank}
+
+**TODO addressed:** *Start thinking about how to choose $K$.*
+
+We evaluate ranks $K\in\{0,1,2,3,4\}$ using 5-fold cross-validation on (player, variable)
+pairs. Each fold holds out all observed seasons for a subset of player-variable pairs; ELPD
+sums log predictive densities on held-out values.
+
+```{r}
+#| label: fig-elpd-rank
+#| fig-cap: "CV-ELPD per held-out value for $K=0,\\ldots,4$. Higher is better. The curve is monotonically increasing with no elbow, suggesting $K\\geq 5$ may improve further."
+#| fig-width: 5.5
+#| fig-height: 3.2
+elpd <- read.csv("outputs/rank_selection/real_data_elpd.csv")
+ggplot(elpd, aes(x = rank, y = elpd_per_value)) +
+  geom_line(colour = "#2166ac", linewidth = 0.8) +
+  geom_point(size = 3, colour = "#2166ac") +
+  geom_text(aes(label = sprintf("%.3f", elpd_per_value)),
+            vjust = -1.0, size = 3.1) +
+  scale_x_continuous(breaks = 0:4) +
+  expand_limits(y = max(elpd$elpd_per_value) + 0.04) +
+  labs(x = "Factor rank K", y = "ELPD per held-out value") +
+  theme_bw(base_size = 11) +
+  theme(panel.grid.minor = element_blank())
+```
+
+```{r elpd-table}
+et <- elpd[, c("rank", "elpd", "elpd_per_value")]
+et$elpd           <- format(round(et$elpd, 0), big.mark = ",")
+et$elpd_per_value <- round(et$elpd_per_value, 4)
+et$delta          <- c("---", format(round(diff(elpd$elpd), 0), big.mark = ","))
+colnames(et) <- c("K", "ELPD (total)", "ELPD / held-out", "$\\Delta$ vs $K-1$")
+kable(et, booktabs = TRUE, escape = FALSE, row.names = FALSE,
+      caption = "CV-ELPD by factor rank (5-fold, 262,032 held-out values per fold).")
+```
+
+Each additional factor yields a consistent large improvement. The $K=3\to 4$ gain ($+16{,}257$)
+is comparable in magnitude to the $K=2\to 3$ gain ($+19{,}487$): no sign of levelling off.
+The current production fit uses $K=2$, which is a valid proof of concept but leaves substantial
+predictive accuracy on the table.
+
+*Note:* These ELPD values use the professor's cross-validation Stan models (a separate,
+simpler model family) and are not directly comparable to the LOO values in Sections 3 and 5.
+
+---
+
+# Heavy-Tailed Residuals {#sec-tails}
+
+**TODO addressed:** *Try out $t$ errors and see if that helps.*
+
+We replace the Gaussian likelihood with Student-$t$ errors: $\varepsilon_{np}\sim
+t(\nu,\,0,\,\sigma_{e,p})$ with prior $\nu\sim\text{Gamma}(2,0.1)$. The degrees-of-freedom
+parameter $\nu$ governs tail weight; $\nu\to\infty$ recovers Gaussian; $\nu=3$ gives very
+heavy tails (variance $= 3\,\sigma_e^2$; $\nu<4$ means infinite kurtosis).
+
+The posterior concentrates near the lower bound:
+$$
+\hat{\nu} = 2.95 \quad \bigl(95\%\ \text{CI}:\ [2.91,\ 2.99]\bigr)
+$$
+This is near the theoretical minimum of 2, indicating that the data are overwhelmingly
+consistent with extremely heavy-tailed residuals. Breakout seasons, injury returns, and
+unusual tactical deployments generate observations that a Gaussian model systematically
+under-weights.
+
+```{r loo-t-table}
+loo_t <- read.csv("outputs/tables/18_loo_normal_vs_t.csv",
+                  row.names = 1, check.names = FALSE)
+rownames(loo_t) <- c("Student-$t$ ($\\hat{\\nu}\\approx 3$)", "Gaussian")
+show_t <- loo_t[, c("elpd_loo", "se_elpd_loo", "elpd_diff", "se_diff")]
+colnames(show_t) <- c("ELPD", "SE", "$\\Delta$ELPD", "SE($\\Delta$)")
+show_t[] <- lapply(show_t, function(x) format(round(x, 0), big.mark = ","))
+show_t["Student-$t$ ($\\hat{\\nu}\\approx 3$)", c("$\\Delta$ELPD", "SE($\\Delta$)")] <- "---"
+kable(show_t, booktabs = TRUE, escape = FALSE,
+      caption = "LOO-CV: Student-$t$ vs Gaussian residuals (both $K=2$ low-rank). Best model listed first.")
+```
+
+The Student-$t$ model is preferred by $\Delta\text{ELPD} = 11{,}668$ (SE 554, 21 SE
+improvement). **Student-$t$ residuals should be the default for all future fits.**
+
+*Caveat:* Both models show high Pareto-$k$ values ($> 70\%$ "very bad" observations), so LOO
+relies on importance-sampling extrapolation. The direction and magnitude of the comparison are
+reliable; absolute ELPD values should be interpreted with caution.
+
+---
+
+# Latent Factor Interpretation {#sec-interp}
+
+**TODO addressed:** *Interpretation of latent factors through PCA of $\Lambda\Lambda'$;
+interpretation of $a_i$ and $b_j$ through posterior means.*
+
+## Factor loadings and PCA of $\hat{\Lambda}\hat{\Lambda}^\top$
+
+The $K=2$ factor loadings $\Lambda\in\mathbb{R}^{53\times 2}$ are identified only up to
+orthogonal rotation. We apply PCA to the common variance matrix
+$\hat{\Lambda}\hat{\Lambda}^\top$ (posterior mean) to obtain a canonical, interpretable
+rotation. Two principal factors explain 100\% of the common variance by construction (since
+$K=2$), but the split tells us how dominant each direction is:
+
+- **PC1:** median 65.4\% of common variance (95\% CI: 63.5\%--67.5\%)
+- **PC2:** median 34.6\% of common variance (95\% CI: 32.5\%--36.5\%)
+
+PC1 is the dominant direction; PC2 is a clearly present secondary dimension.
+
+```{r}
+#| label: fig-loading-heatmap
+#| fig-cap: "Posterior mean factor loadings $\\hat{\\Lambda}$ (raw, before PCA rotation). Rows are the 53 performance features grouped by category; columns are the two latent factors."
+#| out-width: "88%"
+knitr::include_graphics("outputs/figures/11_real_lambda_a_heatmap.png")
+```
+
+```{r}
+#| label: fig-factor-radar
+#| fig-cap: "PCA-rotated factor loadings averaged by feature group (radar chart). PC1 (blue) loads on attacking groups; PC2 (orange) loads on defensive/physical groups."
+#| out-width: "72%"
+knitr::include_graphics("outputs/figures/12_real_factor_group_radar.png")
+```
+
+**PC1 --- Attacking output:** high loadings on goals, shots, xG, touches in box, offensive duels,
+crosses. Corresponds to forwards and attacking midfielders.
+
+**PC2 --- Physical / defensive contribution:** high loadings on recoveries, clearances, aerial
+duels, defensive duels, pressing intensity. Corresponds to central defenders and defensive
+midfielders.
+
+## Player archetypes from $\hat{a}_i$ (posterior means)
+
+Posterior means $\hat{a}_i$ give each player's estimated latent position averaged over all their
+observed seasons. Projecting onto the PCA-rotated factor scores produces an archetype map.
+
+```{r}
+#| label: fig-player-scatter
+#| fig-cap: "Player archetypes in PCA factor score space (PC1 vs PC2). Each point is a player-season; colour indicates position group. The four quadrants correspond to recognisable football archetypes: attackers (top-right), playmakers (bottom-right), defensive midfielders (bottom-left), and defenders (top-left)."
+#| out-width: "82%"
+knitr::include_graphics("outputs/figures/13_real_pca_player_scores_scatter.png")
+```
+
+```{r}
+#| label: fig-player-heatmap
+#| fig-cap: "Posterior mean player effect $\\hat{a}_i$ for a sample of players (rows), ordered by PC1 score. Columns are the 53 features grouped by category. Colour encodes the Z-scaled effect (blue = below average, red = above average)."
+#| out-width: "90%"
+knitr::include_graphics("outputs/figures/14_player_profile_heatmap.png")
+```
+
+The scatter (Figure \ref{fig-player-scatter}) shows clear separation by position. The player
+heatmap (Figure \ref{fig-player-heatmap}) confirms that high-PC1 players have systematically
+elevated attacking metrics across all subcategories, while high-PC2 players are elevated on
+defensive volume.
+
+## Season profiles from $\hat{b}_j$ (posterior means)
+
+Season effects $\hat{b}_j$ capture year-specific deviations from the overall mean that are
+shared across all players in a given season (e.g.\ rule changes, tactical trends,
+fixture density effects).
+
+```{r}
+#| label: fig-season-profiles
+#| fig-cap: "Posterior mean season effects $\\hat{b}_j$ for each of the 12 La Liga seasons (2011--2023). Each panel shows the effect profile across all 53 features. Seasons cluster into distinct tactical eras."
+#| out-width: "90%"
+knitr::include_graphics("outputs/figures/15_season_profiles_grid.png")
+```
+
+Season effects are notably smaller in magnitude than player effects (consistent with ICC results
+below), but show interpretable temporal patterns: seasons after 2018 tend to show elevated
+pressing-intensity metrics, while earlier seasons show relatively higher long-pass and clearance
+values.
+
+---
+
+# Explained Variability (ICC) {#sec-icc}
+
+**TODO addressed:** *Explained variability by $\Sigma_a + \Sigma_b$ over $\Sigma_a + \Sigma_b + \Sigma_e$.*
+
+For each feature $p$, the intra-class correlation (ICC) decomposes total variance into three
+sources:
+$$
+\underbrace{\frac{\Sigma_{a,pp}}{\Sigma_{a,pp} + \Sigma_{b,pp} + \Sigma_{e,pp}}}_{\text{ICC}_\text{player}} +
+\underbrace{\frac{\Sigma_{b,pp}}{\Sigma_{a,pp} + \Sigma_{b,pp} + \Sigma_{e,pp}}}_{\text{ICC}_\text{season}} +
+\underbrace{\frac{\Sigma_{e,pp}}{\Sigma_{a,pp} + \Sigma_{b,pp} + \Sigma_{e,pp}}}_{\text{ICC}_\text{residual}} = 1
+$$
+where $\Sigma_{a,pp} = \Lambda_{p\cdot}\Lambda_{p\cdot}^\top + \psi_{a,p}^2$,
+$\Sigma_{b,pp} = \sigma_{b,p}^2$, and $\Sigma_{e,pp} = \sigma_{e,p}^2$.
+The fraction $(\Sigma_{a,pp} + \Sigma_{b,pp}) / (\Sigma_{a,pp} + \Sigma_{b,pp} + \Sigma_{e,pp})$
+is the total model-explained variability (player $+$ season effects).
+
+```{r}
+#| label: fig-icc-barchart
+#| fig-cap: "ICC decomposition for all 53 features, ranked by player ICC. Blue = player, orange = season, grey = residual. Most features are dominated by stable player-level effects."
+#| out-width: "96%"
+knitr::include_graphics("outputs/figures/16_icc_ranked_barchart.png")
+```
+
+```{r icc-top-table}
+icc <- read.csv("outputs/tables/16_icc_summary.csv")
+icc_top <- icc[order(-icc$icc_player),
+               c("feature", "icc_player", "icc_season", "icc_residual")]
+# clean feature names
+icc_top$feature <- gsub("^per90_|^rate_", "", icc_top$feature)
+icc_top$feature <- gsub("_", " ", icc_top$feature)
+icc_top$explained <- round((icc_top$icc_player + icc_top$icc_season) * 100, 1)
+icc_top$icc_player   <- round(icc_top$icc_player * 100, 1)
+icc_top$icc_season   <- round(icc_top$icc_season * 100, 1)
+icc_top$icc_residual <- round(icc_top$icc_residual * 100, 1)
+colnames(icc_top) <- c("Feature", "Player", "Season", "Residual", "Total explained")
+kable(head(icc_top, 10), booktabs = TRUE, escape = FALSE, row.names = FALSE,
+      caption = "Top 10 features by player ICC (percentage of total variance). ``Total explained'' = player + season ICC, i.e.\\ the variance attributable to the model's systematic effects.")
+```
+
+The most stable player traits are volume metrics: recoveries (89\%), passes (85\%), shots (86\%).
+Season effects are small ($< 5\%$) for most features, confirming that year-to-year variation in
+individual output is driven primarily by stable player identity rather than league-wide trends.
+Total model-explained variability exceeds 85\% for the top 10 features, meaning the model
+accounts for the overwhelming majority of observed variance for these metrics.
+
+---
+
+# Posterior Predictive Checks {#sec-ppc}
+
+**TODO addressed:** *Posterior predictive checks for the model with $\Sigma_a$ low-rank $+$ diagonal
+and $\Sigma_b$ diagonal.*
+
+Posterior predictive checks (PPCs) assess whether the fitted model generates data that resemble
+the observed dataset. We focus on the cross-feature correlation structure: if the model correctly
+captures the covariance among features, predicted feature-pair correlations should match observed
+ones.
+
+For each posterior draw $s$, we simulate replicated observations
+$y^{(s)}_n \sim t\!\left(\nu^{(s)},\, a^{(s)}_{i[n]}+b^{(s)}_{j[n]},\, \sigma_e^{(s)}\right)$
+and compute the correlation matrix of $y^{(s)}$. The plot below compares observed correlations
+with the posterior mean predicted correlations.
+
+```{r}
+#| label: fig-ppc-scatter
+#| fig-cap: "PPC: each point is a (feature $i$, feature $j$) pair. Predicted correlations (y-axis) closely track observed (x-axis). Points off the diagonal represent cross-feature structure not fully captured by $K=2$ factors, consistent with rank selection evidence."
+#| out-width: "72%"
+knitr::include_graphics("outputs/figures/19_correlation_ppc_scatter.png")
+```
+
+The model reproduces the bulk of the cross-feature correlation structure. The scatter around
+the diagonal is informative: most off-diagonal residuals correspond to pairs that share a
+specific sub-role (e.g.\ pairs within the defensive group for fullbacks vs central defenders),
+which $K=2$ factors blend together. Increasing to $K=4$ is expected to tighten this alignment.
+
+---
+
+# Next Steps {#sec-next}
+
+Based on all results, the following extensions are recommended in order of priority:
+
+1. **Refit with $K=4$ factors.** Rank selection CV shows strong, monotonic ELPD gains through
+   $K=4$; the PPC scatter shows residual correlation not captured by $K=2$. This is the most
+   impactful near-term step and will separate wide defenders, playmakers, and goalkeepers from
+   the currently blended archetypes.
+
+2. **Explore $K=5$--$6$.** No elbow is visible at $K=4$; extending the rank grid will identify
+   the saturation point.
+
+3. **Student-$t$ residuals as default.** With $\hat{\nu}\approx 3$, the Gaussian assumption is
+   clearly inappropriate. All future fits should use the $t$-errors Stan model.
+
+4. **Resolve LOO reliability (high Pareto-$k$).** More than 70\% of data points have "very bad"
+   Pareto-$k$ in both models. Options: moment-matching LOO, exact LOO for flagged observations,
+   or $K$-fold CV as a more robust predictive criterion.
+
+5. **Add team-season effects.** The current model has no team-level structure. A team-season
+   effect $c_{t[n]}\in\mathbb{R}^P$ would separate manager and tactical system effects from
+   stable individual traits.
+
+6. **Temporal structure for season effects.** Season effects $b_j$ are currently exchangeable.
+   A random walk or Gaussian process over time would capture league-wide temporal trends.
+
+7. **Variable group structure.** The 53 features fall into interpretable groups (attacking,
+   passing, defending, etc.). A structured prior on $\Lambda$ by feature group could improve
+   both interpretability and regularisation of the factor loadings.

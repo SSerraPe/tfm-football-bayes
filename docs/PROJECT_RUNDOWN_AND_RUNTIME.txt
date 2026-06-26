@@ -1,0 +1,362 @@
+================================================================================
+TFM FOOTBALL ANALYTICS — PROJECT RUNDOWN & RUNTIME WORKING DOCUMENT
+Plain-language companion to CLAUDE.md. Written 2026-06-26.
+Purpose: a standalone doc to chat about solutions/improvements, with a heavy
+focus on the model's RUNTIME problem. Nothing here has been implemented yet —
+this session was documentation-only.
+================================================================================
+
+
+--------------------------------------------------------------------------------
+PART A — THE WHOLE PROCESS, IN PLAIN LANGUAGE (HOW WE GOT HERE)
+--------------------------------------------------------------------------------
+
+The goal is to take La Liga player data and split each player's per-season
+numbers into three pieces:
+
+    observed number = (who the player is) + (what the season was like) + (noise)
+
+i.e.  y = a_player + b_season + error, for 53 different performance metrics at
+once. We want two things out of this: (1) a clean "explained variability"
+story — how much of a metric is stable player identity vs season vs noise —
+and (2) a small number of latent "archetype" axes that describe players.
+
+Here is the journey, step by step.
+
+STEP 1 — Data preparation (stages 00–02).
+We start from Wyscout match-level data, roll it up to one row per player-season,
+engineer per-90 and success-rate features, and keep players with enough minutes.
+The result is a matrix Y of 4,944 rows (player-seasons) × 53 features. Every
+feature is Z-scaled (mean 0, SD 1) within season, so the model does not need a
+global mean. We also store index vectors telling the model which player and
+which season each row belongs to (1,650 players, 12 seasons).
+
+STEP 2 — A simple baseline (stage 03).
+First we fit the easy version: player and season effects, but with NO shared
+structure between features (everything diagonal). This is the "K=0" model. It
+works but it treats all 53 metrics as unrelated, which is clearly wrong —
+goals, shots and xG obviously move together.
+
+STEP 3 — Prove the machinery on fake data (stages 04–09).
+Before trusting anything on real data, we simulate data from a KNOWN low-rank
+structure and check the model can recover it. This is where we nailed down the
+identification trick: a factor model is only unique up to rotation, so we force
+the loading matrix Λ to be lower-triangular with a positive diagonal. The
+simulations confirmed the model recovers the truth once that constraint is in.
+
+STEP 4 — The real low-rank fit (stage 10). THIS IS THE WORKHORSE.
+We fit the real data with player covariance = a low-rank factor part PLUS a
+diagonal "uniqueness" part:
+
+        Σ_a = Λ Λ'  +  Ψ_a
+
+Λ is 53×K (we used K=2). Λ captures the shared axes; Ψ_a mops up the per-metric
+leftover. Season covariance stays diagonal. This is the model everything
+downstream reads from. To help the sampler, we DON'T start the chains from
+random noise — we warm-start them from a classical factor-analysis solution of
+the player means (build_pca_init). That was a professor suggestion and it
+genuinely helps convergence.
+
+STEP 5 — Make the factors interpretable (stages 11–13).
+The lower-triangular Λ is good for identification but ugly for interpretation
+(it's an arbitrary rotation). So for each posterior draw we take Λ Λ', do a PCA
+/ eigendecomposition, and read off canonical loadings and player scores. PC1
+came out as an "attacking output" axis (~65% of the common variance) and PC2 as
+a "passing / possession / physical" axis (~35%).
+
+STEP 6 — Describe players and seasons (stages 14–16).
+- Player profiles: heatmaps and a PC1-vs-PC2 scatter that should separate
+  attackers, playmakers, defenders, etc.
+- Season profiles: how each season deviates from average (Fig 7).
+- ICC: per metric, how much variance is player vs season vs noise. Volume
+  metrics (recoveries, passes, shots) are ~85–89% "player" — very stable.
+  Season effects are small (<5% for most metrics).
+
+STEP 7 — How many factors? (stage 17).
+We held out (player, metric) pairs and measured predictive accuracy (CV-ELPD)
+for K = 0,1,2,3,4. The curve goes UP at every step and never flattens:
+
+        K:        0       1       2       3       4
+        ELPD/val: -1.415  -1.256  -1.137  -1.062  -1.000
+
+No elbow. Each extra factor still helps a lot. K=2 was only ever a proof of
+concept. (We've decided to extend this sweep to K=5–8 before picking a final K —
+see Part C.)
+
+STEP 8 — Heavy tails (stage 18).
+We swapped the Normal noise for a Student-t (which has fatter tails, so it
+tolerates the occasional wild player-season). The data wanted VERY heavy tails:
+the degrees-of-freedom parameter ν came out ≈ 2.95 (basically the minimum), and
+predictive accuracy jumped a lot (ΔELPD ≈ +11,668). So t-errors are clearly
+preferred over Normal.
+
+STEP 9 — Sanity checks and comparisons (stages 19–20).
+- Posterior predictive checks: simulate fake datasets from the fitted model and
+  confirm they reproduce the real cross-metric correlations. They mostly do; the
+  misses point at structure that K=2 can't capture (consistent with Step 7).
+- Low-rank vs diagonal: low-rank wins on LOO by ΔELPD ≈ +3,724 (~20 SE).
+
+WHERE WE ARE NOW.
+The "best" current model is low-rank K=2 with Student-t errors. We know we want
+more factors and we know runtime is the wall stopping us. A K=4 t-fit script
+(stage 21) exists but isn't finalised. The open questions are all in Part C.
+
+
+--------------------------------------------------------------------------------
+PART B — THE RUNTIME PROBLEM (THE MAIN EVENT)
+--------------------------------------------------------------------------------
+
+B.1  WHAT WE ACTUALLY MEASURED (from logs/)
+- Student-t, K=2 (stage 18): ~8,032–8,258 seconds PER CHAIN. With 4 chains in
+  parallel that's ~2.3 hours of wall time for ONE fit (1000 warmup + 500
+  sampling in that run).
+- Rank selection (stage 17): each block of sampling ran ~6,300 s, and the stage
+  fits on the order of ~25 models (K=0..4 × 5 folds). That stage is a
+  multi-hour-to-overnight job on its own.
+- The Normal K=2 fit (stage 10) is faster than the t-version but still the
+  second-heaviest thing in the pipeline.
+
+Takeaway: the cost is dominated by the big real-data NUTS fits. Everything else
+(analysis stages 11–16, 19–20) reuses fits and runs in minutes.
+
+B.2  WHY IT'S SLOW (the three real causes)
+
+CAUSE 1 — A giant latent matrix: the uniqueness block.
+The model samples per-player uniqueness scores z_a_raw, which is an
+I × P = 1,650 × 53 ≈ 87,450-parameter matrix, PLUS the factor scores
+eta_a_raw (I × K). NUTS cost scales with the number of parameters and with how
+correlated/awkward their geometry is. 87k+ tightly-coupled latent parameters is
+the single biggest driver. (Note: ψ_a ⊙ z_a is exactly the part that K-factors
+are trying to replace — there's tension between "add factors" and "keep a full
+diagonal uniqueness".)
+
+CAUSE 2 — The heavy-tailed geometry.
+With ν ≈ 3 the Student-t posterior is funnel-like and stiff. That's WHY the
+t-model (8,200 s) is noticeably slower than the Normal one: NUTS needs more
+leapfrog steps (bigger tree depth) per iteration to move through that geometry.
+Heavy tails buy accuracy but cost time.
+
+CAUSE 3 — Warmup dominates, and we pay N twice.
+Warmup (adapting the step size and mass matrix) is the bulk of the time on a
+problem this size. Separately, the model loops over all N=4944 observations for
+the likelihood AND again in generated quantities to compute log_lik for LOO —
+the second loop is pure overhead if you don't need LOO that run.
+
+B.3  RANKED OPTIONS TO SPEED IT UP (with risk / payoff)
+Ordered roughly best-first. None implemented yet — these are for us to discuss.
+
+OPTION 1 — Cheap sampler/warmup tuning. RISK: low. PAYOFF: small–medium.
+We already warm-start from PCA (build_pca_init). Lean on it harder:
+  - Shorten warmup (e.g. 1000 → 500–700) since chains don't start cold.
+  - Only compute log_lik / generated quantities on the FINAL fit you'll compare,
+    not on every exploratory run (gate it behind a flag). This alone removes a
+    full N-loop per draw.
+  - Tune adapt_delta down slightly (0.95 → 0.9) IF divergences allow — fewer,
+    cheaper leapfrog steps.
+These don't change the model's meaning, so they're safe to try first.
+
+OPTION 2 — Rethink the uniqueness block Ψ_a. RISK: medium. PAYOFF: medium–large.
+The 87k-param uniqueness matrix is the cost centre. Two angles:
+  (a) As K grows, the factors explain more, so Ψ_a should shrink. Consider a
+      tighter prior on ψ_a (more aggressive shrinkage) so those 87k parameters
+      are easier to sample, or
+  (b) Question whether you need a FULL per-feature uniqueness at all once K is
+      larger — a smaller/shared uniqueness would cut the geometry's difficulty.
+  This changes the model slightly, so it needs a recovery re-check on sim data.
+
+OPTION 3 — Marginalize the Gaussian effects analytically. RISK: higher.
+PAYOFF: potentially the biggest win — but Normal-only.
+For the NORMAL model you can integrate out a_i and b_j in closed form, because
+y for a given player is multivariate-normal with a known structured covariance.
+That removes the huge latent matrices entirely and leaves only the covariance
+parameters (Λ, ψ_a, σ_b, σ_e) — orders of magnitude fewer parameters, much
+faster, much better-conditioned. The catch: it does NOT extend cleanly to
+Student-t residuals (the marginal isn't tractable). Strategy worth discussing:
+do fast K-selection and exploration on the marginalized Normal model, then run
+the Student-t version only for the final chosen K. This is the highest-leverage
+idea on the table.
+
+OPTION 4 — Approximate inference for exploration. RISK: low (if used carefully).
+PAYOFF: large for iteration speed.
+Use CmdStan's Pathfinder or variational/ADVI to get a fast approximate fit for
+exploring K=5–8 and screening ideas in minutes, then confirm the final model
+with full NUTS. Great for the rank sweep where you only need a rough ELPD trend.
+
+OPTION 5 — Reduce the LOO burden. RISK: low. PAYOFF: small.
+The log_lik generated-quantities loop and the high-Pareto-k PSIS-LOO are both
+expensive/unreliable. Prefer K-fold CV (already have the machinery in
+`rank comparison/`) or compute log_lik only when a comparison is actually needed.
+
+OPTION 6 — Student-t reparameterization. RISK: medium. PAYOFF: medium for the
+t-model specifically. Represent the t as a scale-mixture of normals (per-obs
+latent scale with an inverse-gamma), which sometimes samples better than the raw
+student_t and can be combined with marginalization of the normal part. Worth a
+test if we stay on Student-t at larger K.
+
+SUGGESTED SEQUENCE TO DISCUSS:
+1. Do Option 1 immediately (free, safe).
+2. Prototype Option 3 (marginalized Normal) — if it works, it reshapes the whole
+   runtime story and makes the K=5–8 sweep (Option 4) cheap.
+3. Keep Student-t only for the final chosen K, with Option 2/6 if still slow.
+
+
+--------------------------------------------------------------------------------
+PART C — THE OPEN ISSUES (symptom → cause → fix → where)
+--------------------------------------------------------------------------------
+Each is diagnosed and ready to implement later. File:line references verified
+2026-06-26.
+
+ISSUE 1 — Player IDs instead of names on plots.
+  Symptom : every player-level plot shows numeric player_id, not names.
+  Cause   : data/processed/player_map.csv has only columns
+            [player_index, player_id] — there is NO player_name column.
+            scripts/12 and scripts/13 left_join player_map and then use
+            player_name "if present" (e.g. scripts/12 line ~171, scripts/13
+            line ~288). Since the column never exists, they silently fall back
+            to player_id. The raw Wyscout file DOES contain player_name
+            (column 262).
+  Fix     : rebuild player_map.csv to include player_name, keyed by player_id,
+            in stage 00 or 02 (where player_map is created). Then EVERY existing
+            plot picks names up automatically — no plot code changes needed.
+  Bonus   : season_map.csv stores numeric Wyscout season_id (8504, 9630, ...),
+            not human years. Map those to "2011-12" style labels too, so Fig 7
+            x-axis reads sensibly.
+
+ISSUE 2 — Figure 4 (group radar): "PC1 isn't showing".
+  Symptom : the by-group radar/bar chart (12_real_factor_group_radar.png) seems
+            to show only one factor.
+  Cause   : the auto-labeler in scripts/12 (factor_labels block, lines ~54–70)
+            classifies a factor as "Attacking / Creative" if ≥3 of its top-5
+            loadings fall in attacking-ish groups. On real data BOTH factors hit
+            that rule (Factor_1 top groups: Dueling/Attacking/Attacking/Passing/
+            Defending; Factor_2: all Passing volume), so BOTH get the identical
+            label "Attacking / Creative". plot_radar_by_group()
+            (src/loading_visualization.R:209) sets fill = group = factor_label;
+            two identical labels collapse into a single dodged series, so one
+            factor visually disappears. Separately, this chart feeds RAW Λ, but
+            the professor_summary caption calls it "PCA-rotated" — a mismatch.
+  Fix     : (a) give the factors DISTINCT labels (or just keep "PC1"/"PC2"); and
+            (b) feed the PCA-rotated loadings from stage 13
+            (13_real_pca_loading_summary.csv) instead of raw Λ, to match the
+            caption and the rest of the interpretation.
+
+ISSUE 3 — Figure 7 (season effects) hard to read; group meaningfully.
+  Symptom : 15_season_profiles_grid.png is an arbitrary 3-column grid of the top
+            12 features by ICC_season.
+  Cause   : scripts/15 selects top-12 by prop_b and facets ncol=3 with no
+            football logic (lines ~115–174).
+  Fix     : facet by FOOTBALL GROUP using the existing feature_group_lookup()
+            (src/loading_visualization.R:3) — e.g. one panel per group
+            (Attacking output / Passing / Defending / Dueling / Discipline),
+            rather than a flat grid. The group lookup and colours already exist,
+            so this is mostly a change to how plot_df is faceted.
+
+ISSUE 4 — PCA on Σ_a instead of Λ Λ'.
+  Symptom : professor says PCA should arguably be on Σ_a, not Λ Λ'.
+  Cause   : scripts/13 pca_from_B() (lines ~35–40) eigendecomposes B = Λ Λ'
+            (the COMMON variance only); it ignores the uniqueness Ψ_a.
+  Fix     : optionally eigendecompose Σ_a = Λ Λ' + diag(ψ_a²) instead (add the
+            diagonal before eigen()). Interpretive consequence: Λ Λ' answers
+            "what are the shared latent axes" (cleaner for archetypes), while
+            Σ_a answers "what does the TOTAL player covariance look like"
+            (includes idiosyncratic per-metric variance). Worth producing BOTH
+            and discussing which the thesis should foreground. Cheap change —
+            re-reads the existing fit, no resampling.
+
+ISSUE 5 — Factor rank K (no elbow).
+  Symptom : CV-ELPD rises monotonically through K=4; pro experience suggests ~10.
+  Decision: don't commit yet. Extend the scree sweep to K=5–8 first (reuse
+            `rank comparison/rank_selection.R` / run_on_real_data.R), then pick a
+            compromise rank balancing the ELPD trend against runtime. Pair this
+            with the runtime work (Part B Option 3/4) so the sweep is affordable.
+
+ISSUE 6 — Low-rank vs diagonal: better comparison metrics.
+  Symptom : ELPD/SE/Δ alone don't give a crisp verdict (low-rank is "probably"
+            better).
+  Fix     : add metrics that target the structural question, e.g.:
+            - residual cross-correlation matrix distance (Frobenius / max-abs)
+              between observed and model-implied correlations, low-rank vs diag;
+            - PPC correlation-recovery RMSE per model (extend stage 19);
+            - per-feature predictive interval coverage on held-out data;
+            - ICC stability / shifts between the two specs (stage 20 already
+              compares ICC — quantify it);
+            - WAIC or K-fold CV instead of PSIS-LOO (Pareto-k is unreliable here).
+
+ISSUE 7 — Student-t residuals: ν ≈ 3, but verdict unclear.
+  Symptom : ν pinned near its lower bound (2.95, CI 2.91–2.99); big ELPD gain but
+            Pareto-k "very bad" for 58% of points.
+  Reading : ν hitting the floor is a FLAG, not a clean result. It can mean
+            (a) genuinely heavy-tailed noise, (b) a handful of extreme outlier
+            player-seasons dragging ν down, or (c) a misspecified MEAN (missing
+            structure — e.g. too few factors, or a needed variable transform)
+            that the t is absorbing as "tail". This ties directly into Issue 8.
+  Next    : redo the comparison with K-fold (not PSIS-LOO), and check whether ν
+            rises once K is larger and/or skewed variables are transformed. If ν
+            climbs with better mean structure, the heavy tail was partly
+            misspecification, not pure noise.
+
+ISSUE 8 — Outliers & variable transformation (professor's request).
+  Symptom : "find where the model fails / where the outliers are, and consider
+            transforming variables."  No analysis exists yet.
+  Plan    : from the stage-18 t-fit, extract residuals ε_n = y_n − (a + b),
+            standardize, and rank them to find the worst-fit (player-season,
+            feature) cells and which FEATURES carry the heaviest tails. Cross
+            them against player names (Issue 1) to sanity-check (breakout
+            seasons, injury returns, role changes). Then test transforms on the
+            skewed count-rate features (many per90_* are right-skewed counts):
+            log1p / sqrt / asinh before Z-scaling, and re-examine whether ν rises
+            and Pareto-k improves. This is the highest-value MODELLING task and
+            connects Issues 5, 6 and 7.
+
+ISSUE 9 — Chain initialisation (confirm it's still there). RESOLVED.
+  Finding : build_pca_init() (src/stan_helpers.R:179) IS wired in — stage 10
+            (line 39), stage 18 (line 40), stage 21 (line 56). t-models strip mu
+            and seed nu=30. The efficient warm-start is in place. ✓
+
+ISSUE 10 — LOO reliability.
+  Symptom : >58% of points are Pareto-k "very bad" in both Normal and t models.
+  Fix     : stop relying on PSIS-LOO for the headline comparison; use K-fold CV
+            (machinery exists in `rank comparison/`) or moment-matching LOO.
+            Keep the DIRECTION of existing comparisons (they're large), but
+            present K-fold numbers as the defensible ones in the thesis.
+
+
+--------------------------------------------------------------------------------
+PART D — FILES TO UPLOAD INTO A CLAUDE PROJECT (Deliverable 3)
+--------------------------------------------------------------------------------
+Two angles. Upload the small/text files; do NOT upload large CSVs or the .rds
+fits (too big and not needed for discussion).
+
+CODING / IMPLEMENTATION ANGLE (how the model is built and run):
+  - CLAUDE.md                                  ← context anchor, upload first
+  - PROJECT_RUNDOWN_AND_RUNTIME.txt            ← this file
+  - stan/additive_lowrank_a_diag_b.stan        ← main Normal model
+  - stan/additive_lowrank_a_diag_b_t.stan      ← Student-t model
+  - src/stan_helpers.R                         ← stan_data builders + build_pca_init + fit IO
+  - src/config.R                               ← BFA_* env vars, feature list, paths
+  - src/loading_visualization.R                ← feature groups, colours, loading plots
+  - run_pipeline.R                             ← stage runner / pipeline map
+  - scripts/02_prepare_model_objects.R         ← where Y, indices and player_map are built
+  - scripts/10_fit_real_lowrank_a_diag_b.R     ← production Normal fit
+  - scripts/12_football_interpretation.R       ← Fig 4 + labels live here
+  - scripts/13_pca_postprocessing.R            ← PCA of ΛΛ' (Issue 4)
+  - scripts/15_season_profiles.R               ← Fig 7 (Issue 3)
+  - scripts/17_rank_selection_real.R           ← rank sweep (Issue 5)
+  - scripts/18_fit_real_t_errors.R             ← Student-t fit (Issues 7/8)
+
+RESEARCH / STATISTICAL ANGLE (what the results mean, for the thesis):
+  - professor_summary.qmd                      ← results narrative + figure map
+  - pipeline_journal.qmd                       ← full decision log (Entries 1–4)
+  - reports/thesis_technical_document.qmd      ← formal write-up
+  - rank comparison/methodology_report.Rmd     ← CV-ELPD rank methodology
+  - outputs/tables/16_icc_summary.csv          ← ICC per feature
+  - outputs/tables/13_real_pca_common_variance_prop.csv  ← PC1/PC2 split
+  - outputs/tables/11_real_lambda_a_loading_table.csv    ← raw loadings
+  - outputs/rank_selection/real_data_elpd.csv  ← the scree numbers
+
+Tip: keep CLAUDE.md + this .txt at the top so any new chat recovers the full
+state in two files, then add the specific script/table you want to work on.
+
+================================================================================
+END
+================================================================================

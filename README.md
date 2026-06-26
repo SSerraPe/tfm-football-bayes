@@ -117,9 +117,11 @@ model/
 │   ├── tables/       # CSV result tables
 │   ├── figures/      # PNG plots
 │   ├── diagnostics/  # Sampler and posterior health
-│   └── notes/        # Markdown documents
-├── reports/          # Compiled thesis document (Quarto)
-├── docs/             # Technical model documentation
+│   └── notes/        # Generated stage notes (script output)
+├── docs/             # ALL written documentation (journal, professor summary, thesis,
+│                     #   model docs, ideas, analysis notes) + PROJECT_RUNDOWN_AND_RUNTIME.txt
+├── archive/          # Legacy/historical material (not active)
+├── rank comparison/  # Standalone CV-ELPD rank-selection methodology
 ├── notebooks/        # R Markdown exploratory notebooks
 └── run_pipeline.R    # Pipeline entry point
 ```
@@ -155,9 +157,11 @@ Lightweight fit pointers in `fits/*.rds` allow reconstruction via `cmdstanr::as_
 
 <!-- CLAUDE: PIPELINE JOURNAL AUTO-UPDATE INSTRUCTIONS
 
-FILE:    pipeline_journal.qmd  (model root, same directory as run_pipeline.R)
-RENDER:  quarto render pipeline_journal.qmd   (run from model root)
-OUTPUT:  pipeline_journal.pdf  (appears in model root alongside the .qmd)
+FILE:    docs/journal/pipeline_journal.qmd  (moved here 2026-06-26)
+RENDER:  quarto render docs/journal/pipeline_journal.qmd
+OUTPUT:  docs/journal/pipeline_journal.pdf  (gitignored; regenerated on demand)
+NOTE:    the .qmd sets its knit root two levels up to the project root, so all
+         outputs/... paths resolve when rendered from anywhere.
 
 TRIGGER: Append a new entry whenever any of the following appear:
   - new files in outputs/diagnostics/  (e.g. *_diagnostic_summary.csv, *_sampler_diagnostics.csv)
@@ -171,8 +175,8 @@ HOW TO ADD AN ENTRY — step by step:
   4. Append a new section following the "Entry Template" at the bottom of that file.
      Use the next sequential entry number and today's date.
   5. NEVER delete or edit any previous entry — all entries are permanent journal records.
-  6. Run:  quarto render pipeline_journal.qmd
-     to produce the updated pipeline_journal.pdf.
+  6. Run:  quarto render docs/journal/pipeline_journal.qmd
+     to produce the updated docs/journal/pipeline_journal.pdf.
 
 ENTRY CONTENT CHECKLIST (fill each subsection from the files listed):
   [ ] Configuration table     — seed, chains, iter_warmup, iter_sampling, adapt_delta, max_treedepth
