@@ -153,6 +153,8 @@ model/
 │  ├─ stan_helpers.R         # stan_data builders, build_pca_init(), fit load/persist
 │  ├─ loading_visualization.R# feature_group_lookup(), group colours, loading plots
 │  ├─ data_helpers.R / feature_helpers.R / diagnostics_helpers.R / simulation_helpers.R
+│  ├─ large_fit_helpers.R    # extract_stan_csv_params() — column-pass for 12GB stage-18 CSVs
+│  ├─ extract_stan_csv_params.py  # Python column-pass script (called by large_fit_helpers.R)
 │  └─ bootstrap.R            # sources config + helpers, check_packages()
 ├─ stan/                     # Stan model files
 │  ├─ additive_diagonal.stan
@@ -195,7 +197,8 @@ the fit, with fallback discovery if stored paths are stale (e.g. after moving th
 - **`docs/journal/pipeline_journal.qmd`** — the canonical narrative log. Entry 1 (stages 03–12
   baseline → low-rank), Entry 2 (professor feedback: PCA post-proc, profiles, ICC, init), Entry 3
   (LT identification confirmed; stage 10 re-fit), Entry 4 (rank selection, t-errors, PPC, model
-  comparison). **Always read the latest entry when resuming.**
+  comparison), Entry 5 (diagnostics, screening, transforms, runtime hardening), Entry 6 (GK
+  discovery, residual calibration, Lambda_a mixing check, feature decision). **Always read the latest entry when resuming.**
 - **`docs/professor/professor_summary.qmd`** — polished results doc; section per professor TODO.
   Figure numbering used by the professor maps to: Fig 1 = ICC scatter, Fig 2 = ELPD-rank,
   Fig 3 = loading heatmap, **Fig 4 = group radar (`12_real_factor_group_radar.png`)**,
@@ -219,7 +222,7 @@ sampler settings: 500 warmup + 1000 sampling, delta=0.9, max_depth=10). Rank sel
 (stage 17) shows CV-ELPD rising monotonically through K=4 with no elbow. A K=4 t-fit
 script (stage 21) exists but the fit has not been finalised/registered.
 
-**Implemented this session (2026-06-30):**
+**Implemented Session 5 (2026-06-30):**
 - `log_lik` gating: both Stan models gate the N-loop behind `BFA_COMPUTE_LOG_LIK` (default 0).
   Set to 1 for any fit where LOO will be run afterwards.
 - Pathfinder mode added to rank-selection: `BFA_RANK_METHOD=pathfinder BFA_RANK_MAX=8` runs
@@ -230,6 +233,23 @@ script (stage 21) exists but the fit has not been finalised/registered.
   1450/1550, Rhat < 1.003). 167 params with Rhat > 1.01 (vs 156 in stage-10).
 - Feature analysis: stage 22 (residuals + ICC screen), stage 23 (transform recommendations),
   stage 24 (Frobenius, K-fold ELPD, ICC shift, Pareto-k reliability note).
+
+**Implemented Session 6 (2026-06-30, this session):**
+- GK player exclusion confirmed missing from pipeline (only GK-specific *column* names were
+  filtered in stage 01; GK player *rows* remained). Confirmed 358 GK rows / 121 GK players
+  via `total_gk_saves > 0` join from raw Wyscout CSV. Fix goes in stage 01's eligibility step.
+- Large-fit extraction utility: `src/extract_stan_csv_params.py` (Python column-pass) +
+  `src/large_fit_helpers.R` (R wrapper `extract_stan_csv_params()`). Resolves the 45-min
+  cmdstanr bottleneck for the 12GB stage-18 CSVs going forward.
+- Lambda_a Lambda_a' mixing check (Task S): ESCALATED with partial rotation-artifact improvement.
+  Diagonal ESS=104, Rhat=1.056; off-diagonal ESS=24, Rhat=1.130. 5.5× improvement vs. raw
+  Lambda_a (rotation-labeling contribution) but still below thresholds. GK bimodal structure is
+  the leading geometry hypothesis. Task O blocked pending Task K.
+- Feature keep/drop decision (Task J): drop 5 rate_* features (icc_player < 0.20); keep
+  `rate_defensive_duels_won` (outfield-only icc_outfield=0.389, keep-tier after GK fix);
+  keep `rate_successful_dribbles` (borderline, p99 unremarkable). 48 features retained for rebuild.
+- p99 calibration (Task I): expected p99 under t(2.95) = 3.37. Only 6 of 53 features genuinely
+  exceed this; 47 are relative leaders among well-behaved residuals.
 
 **Known issues (diagnosed; fixes deferred — full notes in `PROJECT_RUNDOWN_AND_RUNTIME.txt`):**
 
@@ -254,20 +274,27 @@ script (stage 21) exists but the fit has not been finalised/registered.
 7. **Low-rank vs diagonal: better metrics added.** Frobenius distance = 4.54, K-fold Δ = +72,881
    (see stage 24). Remaining issue: correlation structure misses key defensive blocs (K=2 too low).
 8. **Student-t** ν pinned near its lower bound (≈3). Transform analysis (stage 23) identified 5
-   log1p + 18 sqrt candidates. Whether transforms move ν requires a refit (gate: professor approval).
-9. **Feature screen identified drop candidates.** 5 rate_* features with icc_player < 0.20:
-   `rate_successful_crosses` (0.026), `rate_successful_sliding_tackles` (0.049),
-   `rate_dribbles_against_won` (0.155), `rate_shots_on_target` (0.161), `rate_goal_conversion`
-   (0.177). Action gate: dropping requires stage 02+ rebuild; confirm with professor first.
+   log1p + 18 sqrt candidates. Whether transforms move ν requires a refit (gate: go-ahead for
+   Task K rebuild which bundles GK exclusion + feature drops + transforms).
+9. **GK players not yet excluded.** Present in the panel as rows; GK feature columns were excluded
+   in stage 01, but player rows were not. Fix: `total_gk_saves == 0 | is.na(total_gk_saves)` filter
+   in stage 01 before the `eligible` step. Goes into Task K's rebuild bundle.
 10. **LOO reliability.** Pareto-k "very bad" for >58% of points. Use K-fold ELPD (already
     computed, Δ = +72,881) as primary metric; PSIS-LOO as secondary with explicit Pareto-k caveat.
-11. **Lambda_a convergence (stage-18).** Min ESS_bulk = 19, max Rhat = 1.185; 94/108 loading
-    params above Rhat 1.01. Derived quantities (Sigma_a_diag, prop_a) adequate for ICC analysis
-    but individual loading values are uncertain. Fix for publication: warmup ≥ 1000 + delta = 0.95.
+11. **Lambda_a convergence — mixing problem escalated.** Raw Lambda_a: min ESS_bulk=19, max
+    Rhat=1.185. Lambda_a Lambda_a' (rotation-invariant): diagonal ESS=104, Rhat=1.056;
+    off-diagonal ESS=24, Rhat=1.130. 5.5× ESS improvement (rotation-labeling contribution)
+    but still below thresholds. GK bimodal structure is the leading hypothesis. Priority: run
+    Task K (GK exclusion + rebuild) and check whether ESS improves before proceeding to Task O.
 12. **Two-component mixture (Issue 12).** Proposed alternative to Student-t:
     ε ~ π·N(0,σ₁²) + (1-π)·N(0,σ₂²) with σ₁ < σ₂. More interpretable than t for football
     (discrete outlier fraction vs smooth heavy tail). Requires simulation-recovery check before
     fitting real data.
+
+**Next required go-ahead:** Task K (stage 01+ rebuild: GK exclusion + 5 feature drops + 23
+feature transforms; then refit stages 10 and 18). Optional: run GK-only ablation fit (stage 18
+with only GK exclusion applied, ~2.3h extra) before the full bundle, for clean attribution of
+which change moved ν and improved Lambda_a Lambda_a' ESS.
 
 **Chain initialisation — confirmed in place:** `build_pca_init()` (`src/stan_helpers.R:179`) is
 wired into stages 10, 18 and 21.

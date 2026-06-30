@@ -1686,6 +1686,174 @@ standalone diagnostic scripts run directly via `Rscript`.
 
 ---
 
+## Entry 6 — 2026-06-30 — GK discovery, residual calibration, mixing check, feature decision
+
+### Decision table
+
+| Decision | Rationale |
+|---|---|
+| Goalkeeper players are in the model data (not excluded) | Stage 01 filtered GK feature *columns* (`gk_|goal_kicks` prefix); it never filtered GK player *rows*. Confirmed via `total_gk_saves > 0` join from the raw Wyscout CSV. 358 rows / 121 players (7.2% of N). |
+| Feature keep/drop uses outfield-only ICC (not model-based all-player ICC) | GK rows structurally distort ICC in both directions: inflating ICC for GK-natural features (defensive duels, back passes) and deflating it for features where GKs cluster far from the outfield distribution. |
+| `rate_defensive_duels_won` → **keep** (not drop) | icc_player_model=0.220 (borderline) is GK-confounded. Data-driven icc_outfield=0.389 (keep-tier, above 0.35 threshold). Decision reverses from the preliminary classification. |
+| `rate_successful_dribbles` → **keep** | icc_outfield=0.245 (borderline); p99 well below model expectation (2.68 vs. 3.37 expected); no GK confounding. |
+| Lambda_a mixing: ESCALATED (with partial rotation-artifact) | `Lambda_a Lambda_a'` diagonal ESS=104, Rhat=1.056; off-diagonal ESS=24, Rhat=1.130. 5.5× diagonal ESS improvement over raw Lambda_a (some rotation-labeling contribution) but still below acceptable thresholds. GK bimodal structure is leading geometry hypothesis. Task O blocked pending Task K. |
+| p99 calibration: most features are unremarkable | Expected p99 of `|eps_std|` under t(ν=2.95) is 3.37. Only 6 of 53 features genuinely exceed it; 47 are relative leaders among residuals that behave as the model predicts. `per90_smart_passes` is a relative leader (p99=3.25 < 3.37), not a genuine underfitter — its extreme cells are season-driven (season 8504 clusters 12 of 17 extreme cells). |
+| GK exclusion bundled into Task K rebuild | Adding a row-filter (`total_gk_saves == 0 | is.na(total_gk_saves)`) to stage 01 before the `eligible` step is the correct fix location. Bundled with feature drops and transforms in one rebuild to avoid multiple stage-02 runs, with explicit trade-off (attribution of GK-only effect on ν and Lambda_a requires optional ablation fit). |
+
+---
+
+### Task R — Large-fit extraction utility
+
+Added `src/extract_stan_csv_params.py` (Python column-pass, reads CmdStan CSVs line-by-line
+without parsing all 276,606 columns) and `src/large_fit_helpers.R` (R wrapper
+`extract_stan_csv_params(model_id, param_col_map)`). Verified on stage-18 chain 1 CSV:
+extracted nu, sigma_e, Lambda_a correctly from the documented 0-indexed column positions.
+
+Pre-built column maps (`STAGE18_NU_MAP`, `STAGE18_SIGMA_E_MAP`, `STAGE18_LAMBDA_A_MAP`,
+etc.) and helper builders (`build_col_range()`, `build_col_range_2d()`) are defined in
+`src/large_fit_helpers.R`. Column re-derivation after a new fit: parse CmdStan header
+(first non-`#` line ≈ line 48) and subtract 1 from 1-indexed positions.
+
+---
+
+### Task I2 — GK player impact across all 53 features
+
+**Script:** `scripts/25_gk_icc_analysis.R`
+**Output:** `outputs/tables/25_gk_icc_comparison.csv`, `outputs/notes/note_goalkeeper_check.md`
+
+**GK flag:** `total_gk_saves > 0` aggregated from the raw Wyscout CSV by player_id/season_id.
+358 GK player-season rows (7.2% of N=4944) across 121 distinct GK players.
+
+**Method:** data-driven one-way ICC (ANOVA decomposition of Z-scaled Y) computed separately
+for all-player rows and outfield-only rows. The numbers differ from the model-based ICC in
+`16_icc_summary.csv` (posterior variance components from stage-10 Normal fit), but the
+`icc_all – icc_outfield` delta is apples-to-apples and reliable for identifying which
+features are GK-confounded.
+
+**Key findings (29 features with |delta| > 0.02):**
+
+Top 5 most confounded features:
+
+| Feature | icc_all | icc_outfield | delta | Direction |
+|---|---|---|---|---|
+| `rate_defensive_duels_won` | 0.243 | 0.389 | −0.146 | GKs deflate ICC (cluster at near-zero) |
+| `per90_own_half_losses` | 0.671 | 0.528 | +0.143 | GKs inflate ICC (always in own half) |
+| `per90_defensive_duels` | 0.815 | 0.709 | +0.106 | GKs inflate ICC |
+| `per90_loose_ball_duels` | 0.771 | 0.677 | +0.095 | GKs inflate ICC |
+| `rate_aerial_duels_won` | 0.768 | 0.673 | +0.095 | GKs inflate ICC |
+
+**Impact on borderline features:**
+- `rate_defensive_duels_won`: icc_outfield=0.389 → **keep** (was borderline at 0.220 model-based; the pre-GK number is confounded).
+- `rate_successful_dribbles`: icc_outfield=0.245 → still borderline but no GK confounding; p99 unremarkable → **keep**.
+
+**Recommended fix location:** stage 01's eligibility step, using `total_gk_saves` which is
+already in the longitudinal panel produced by stage 00:
+```r
+eligible <- panel |>
+  filter(minutes >= pipeline$minimum_minutes_model,
+         total_gk_saves == 0 | is.na(total_gk_saves))
+```
+
+---
+
+### Task I — Residual-skew triangulation
+
+**Script:** `scripts/25b_residual_skew_triangulation.R`
+**Output:** `outputs/tables/25_residual_skew_triangulation.csv`
+
+**Calibration:** expected p99 of `|eps_std|` under t(ν=2.95) is **3.371**
+(= qt(0.995, df=2.95) / √(ν/(ν−2)) = 5.93 / 1.762).
+
+Only 6 of 53 features genuinely exceed this threshold:
+
+| Feature | p99 | Excess | max_abs | icc_player | Verdict |
+|---|---|---|---|---|---|
+| `rate_offensive_duels_won` | 3.707 | +0.34 | 7.01 | 0.409 | **contamination-driven** (keep-tier; real player signal + outliers) |
+| `rate_successful_crosses` | 3.679 | +0.31 | 4.00 | 0.026 | drop candidate (rate feature, icc < 0.20) |
+| `rate_dribbles_against_won` | 3.494 | +0.12 | 4.38 | 0.155 | drop candidate |
+| `rate_goal_conversion` | 3.469 | +0.10 | 9.08 | 0.177 | drop candidate |
+| `rate_defensive_duels_won` | 3.453 | +0.08 | 12.24 | 0.220 | **GK-contaminated** (resolved by Task K) |
+| `per90_xg_shot` | 3.413 | +0.04 | 7.00 | 0.809 | **contamination-driven** (keep-tier) |
+
+The remaining 47 features have p99 at or below 3.37 — they are relative leaders among
+residuals that behave as the model predicts. The p99 ranking alone should not be used to
+select problematic features.
+
+**Note on `per90_smart_passes`:** p99=3.25 (below model expectation of 3.37, verdict
+"unremarkable_p99"). Its max_abs_std=14.4 (Reyes/season-8504) is an isolated extreme, but
+12 of the 17 extreme cells (|eps_std| > 2) for this feature cluster in season 8504 (2013-14
+La Liga). This is season-driven signal — the model's season effect $b_j$ may not be
+capturing a league-wide tactical shift in smart-pass usage in that season. Not a residual
+contamination issue; belongs with the season-effect interpretation (Figure 7 discussion).
+
+---
+
+### Task J — Feature keep/drop decision
+
+**Script:** inline R (output: `outputs/tables/25_feature_decision_final.csv`)
+
+Based on outfield-only ICC from Task I2 and p99 calibration from Task I:
+
+**Drop (5 features):** `rate_successful_crosses` (0.026), `rate_successful_sliding_tackles`
+(0.049), `rate_dribbles_against_won` (0.155), `rate_shots_on_target` (0.161),
+`rate_goal_conversion` (0.177). All have icc_player_model < 0.20; outfield-only ICC only
+makes these numbers lower.
+
+**Keep (2 borderline features):**
+- `rate_defensive_duels_won`: keep — icc_outfield=0.389 (keep-tier after GK fix).
+- `rate_successful_dribbles`: keep — icc_outfield=0.245 (borderline, but p99 unremarkable
+  and no strong GK confounding).
+
+**Result:** 48 features retained (53 − 5 drops) for Task K's rebuild.
+
+---
+
+### Task S — Lambda_a vs. Lambda_a Lambda_a' mixing check
+
+**Script:** `scripts/25c_lambda_mixing_check.R`
+**Output:** `outputs/notes/note_lambda_identification_check.md`
+
+**Method:** computed `(Lambda_a Lambda_a')_{pp} = L[p,1]^2 + L[p,2]^2` (diagonal, P=53)
+and selected off-diagonal pairs from 4000 draws. ESS_bulk and Rhat via
+`posterior::summarise_draws()`.
+
+**Results:**
+
+| Quantity | min ESS_bulk | max Rhat | Comment |
+|---|---|---|---|
+| Raw `Lambda_a` (Task F) | **19** | **1.185** | Individual loading values |
+| `Lambda_a Lambda_a'` diagonal (P=53) | **104** | **1.056** | 5.5× ESS improvement |
+| `Lambda_a Lambda_a'` off-diagonal (7 pairs) | **24** | **1.130** | Minimal improvement |
+
+**Verdict: ESCALATED (with partial rotation-artifact improvement)**
+
+The 5.5× ESS improvement on the diagonal confirms that rotation-labeling is a *contributing*
+factor to the poor Lambda_a mixing — removing it helps. But both diagonal (ESS=104) and
+off-diagonal (ESS=24) remain well below acceptable thresholds (>200 ESS, <1.05 Rhat).
+The posterior geometry itself has mixing difficulty, not attributable to labeling alone.
+
+**Leading hypothesis:** the bimodal GK/outfield subgroup creates a structural heterogeneity
+in the loading space that impedes exploration. Removing GK rows (Task K) is the priority
+experiment. If GK exclusion does not substantially improve `Lambda_a Lambda_a'` ESS, the
+next steps are a tighter prior on `lambda_a_free` entries or Option 3 marginalization.
+
+**Consequence for Task O:** do not run the full NUTS confirmation fit until Task K is
+complete and GK exclusion's effect on mixing is assessed.
+
+---
+
+### New pipeline scripts registered this session
+
+| Script | Purpose |
+|---|---|
+| `src/extract_stan_csv_params.py` | Python column-pass extractor for large CmdStan CSVs |
+| `src/large_fit_helpers.R` | R wrapper + column map constants for column-pass extraction |
+| `scripts/25_gk_icc_analysis.R` | Task I2: GK impact across all 53 features |
+| `scripts/25b_residual_skew_triangulation.R` | Task I: p99 calibration + residual-skew classification |
+| `scripts/25c_lambda_mixing_check.R` | Task S: Lambda_a vs. Lambda_a Lambda_a' mixing |
+
+---
+
 # Entry Template (Reference for Future Updates)
 
 The following template should be used for each new journal entry appended to this document.
