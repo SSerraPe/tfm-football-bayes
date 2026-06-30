@@ -1,0 +1,7 @@
+metric,value
+frobenius_distance,4.5402
+correlation_rmse,0.1223
+max_abs_error,0.6859
+coverage_90pct_ci,0.2808
+n_pairs,1378
+n_pairs_err_gt_0.1,364

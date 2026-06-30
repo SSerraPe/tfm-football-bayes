@@ -71,9 +71,15 @@ message(
   dataset$P, " variables, ", dataset$N_obs, " observations."
 )
 
+# Rank range and inference method can be overridden via env vars:
+#   BFA_RANK_MAX    — highest K to evaluate (default 4)
+#   BFA_RANK_METHOD — "sample" (full NUTS, default) or "pathfinder" (fast approx)
+rank_max    <- as.integer(Sys.getenv("BFA_RANK_MAX",    unset = "4"))
+rank_method <- Sys.getenv("BFA_RANK_METHOD", unset = "sample")
+
 comparison <- run_rank_selection(
   dataset          = dataset,
-  ranks            = 0:4,
+  ranks            = 0:rank_max,
   n_folds          = 5,
   fold_seed        = 11,
   fit_seed         = 1000,
@@ -82,7 +88,8 @@ comparison <- run_rank_selection(
   iter_warmup      = 500,
   iter_sampling    = 500,
   adapt_delta      = 0.98,
-  refresh          = 250
+  refresh          = 250,
+  method           = rank_method
 )
 
 # ---- Save outputs (return to original wd first) ------------------------------

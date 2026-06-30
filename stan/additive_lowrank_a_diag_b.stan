@@ -26,6 +26,9 @@ data {
   array[N] int<lower=1, upper=I> player_index;
   array[N] int<lower=1, upper=S> season_index;
   real<lower=0> sigma_floor;
+  // Set to 1 to compute log_lik for LOO; 0 skips the N-loop in generated quantities
+  // (saves ~N×P likelihood evaluations per draw on exploratory runs).
+  int<lower=0, upper=1> compute_log_lik;
 }
 
 parameters {
@@ -119,17 +122,21 @@ generated quantities {
     prop_e[p] = var_e[p]         / total_var;
   }
 
-  for (n in 1:N) {
-    real lp = 0;
-    for (p in 1:P) {
-      real mean_np = mu[p]
-        + psi_a[p] * (z_a_raw[player_index[n], p] - z_a_bar[p])
-        + sigma_b[p] * (z_b[season_index[n], p] - z_b_bar[p]);
-      for (q in 1:Q_a) {
-        mean_np += Lambda_a[p, q] * (eta_a_raw[player_index[n], q] - eta_a_bar[q]);
+  if (compute_log_lik) {
+    for (n in 1:N) {
+      real lp = 0;
+      for (p in 1:P) {
+        real mean_np = mu[p]
+          + psi_a[p] * (z_a_raw[player_index[n], p] - z_a_bar[p])
+          + sigma_b[p] * (z_b[season_index[n], p] - z_b_bar[p]);
+        for (q in 1:Q_a) {
+          mean_np += Lambda_a[p, q] * (eta_a_raw[player_index[n], q] - eta_a_bar[q]);
+        }
+        lp += normal_lpdf(Y[n, p] | mean_np, sigma_e[p]);
       }
-      lp += normal_lpdf(Y[n, p] | mean_np, sigma_e[p]);
+      log_lik[n] = lp;
     }
-    log_lik[n] = lp;
+  } else {
+    log_lik = rep_vector(0, N);
   }
 }

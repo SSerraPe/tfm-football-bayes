@@ -45,7 +45,8 @@ build_lowrank_a_diag_b_stan_data <- function(model_objects, Y, rank_a) {
     Y = unname(Y),
     player_index = as.integer(model_objects$player_index),
     season_index = as.integer(model_objects$season_index),
-    sigma_floor = pipeline$sigma_floor
+    sigma_floor = pipeline$sigma_floor,
+    compute_log_lik = sampler$compute_log_lik
   )
 }
 

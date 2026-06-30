@@ -1353,6 +1353,339 @@ quarto render pipeline_journal.qmd
 
 ---
 
+## Entry 5 — 2026-06-30 — Diagnostics, screening, transforms, and runtime hardening
+
+### Overview
+
+This entry covers a batch of read-only diagnostic work and infrastructure improvements
+following the 2026-06-26 documentation reorganisation. No new Stan fits were run. Five
+new scripts were written and executed against the existing stage-18 fit and already-computed
+output CSVs. The session also added two code-level improvements to the Stan pipeline
+(log-lik gating; Pathfinder screening mode) and produced a written two-component mixture
+model proposal (Issue 11) for future evaluation.
+
+**Scripts run this session:** 22 (residuals + ICC screen), 23 (transform analysis),
+24 (metrics beyond ELPD), 11b (stage-18 ESS diagnostics).
+**Scripts modified:** `stan/additive_lowrank_a_diag_b.stan`,
+`stan/additive_lowrank_a_diag_b_t.stan`, `src/config.R`, `src/stan_helpers.R`,
+`rank comparison/rank_selection.R`, `scripts/17_rank_selection_real.R`.
+
+---
+
+### Decision table
+
+| Decision | Rationale |
+|---|---|
+| Pull σ_e / ν from stage-18 fit directly, not from `16_icc_summary.csv` | The ICC table uses the stage-10 Normal fit (no ν); var_e = σ_e² × ν/(ν-2) requires the t-model's own posteriors. |
+| Confirmed stage-18 ran at **500 warmup + 1000 sampling** | CmdStan config JSON (`num_warmup=500, num_samples=1000, delta=0.9, max_depth=10`) is authoritative; `PROJECT_RUNDOWN_AND_RUNTIME.txt` Part B.1 had the numbers reversed. |
+| Gated `log_lik` behind `BFA_COMPUTE_LOG_LIK` (default 0) | The N=4,944 log-lik loop ran on every draw in all exploratory fits; skipping it saves N×P ≈ 262,032 evaluations per draw at no cost to inference. |
+| Pathfinder added to rank-selection as `method = "pathfinder"` option | Allows fast (~minutes vs hours) ELPD screening for K=5–8 before committing to a full NUTS sweep. Treat as directional signal, not final numbers. |
+| ICC feature screen is analysis only — no features dropped | Removing features changes P in `Y_scaled.csv` and requires a full rebuild from stage 02; present findings to professor first. |
+| Transforms (log1p / sqrt) are analysis only — no refit yet | Same rebuild gate as above; transform effect on ν is secondary and uncertain (`note: any runtime benefit here is secondary and uncertain`). |
+| Two-component mixture proposal written (Issue 11) — not fit to real data | Requires simulation-recovery check first (same standard as Λ_a lower-triangular identification, Entry 3); label-switching risk with `σ₁ < σ₂` must be confirmed sufficient. |
+| Report K-fold ELPD as primary metric, PSIS-LOO as secondary | Pareto-k "very bad" for >58% of observations means individual LOO estimates have very high variance and the aggregate SE is understated. K-fold CV uses no IS and gives a larger Δ in the same direction — more defensible for the thesis. |
+
+---
+
+### Task A + B — Residual extraction and ICC feature screen
+
+**Stage 22** (`scripts/22_residual_analysis.R`) uses the stage-14/15 posterior-mean player/season
+effects as an approximation for A and B, and σ_e / ν extracted directly from the stage-18 CSV
+columns (Python pass, to avoid loading the full 12GB draw matrix via cmdstanr). Computes
+ε_std[n,p] = ε[n,p] / √(σ_e,p² × ν/(ν-2)) and ranks worst cells.
+
+σ_e range: [0.179, 0.689]; ν = 2.9508 → t-scaled SD range: [0.315, 1.214].
+
+Outputs: `outputs/tables/22_residual_worst_cells.csv` (top 200 cells by |ε_std|),
+`outputs/tables/22_residual_feature_summary.csv` (per-feature p90/p95/p99 of |ε_std|),
+`outputs/tables/22_icc_screen_summary.csv`.
+
+```{r entry5-residual-summary}
+res_path <- file.path("outputs", "tables", "22_residual_feature_summary.csv")
+if (file.exists(res_path)) {
+  df <- read.csv(res_path)
+  knitr::kable(head(df, 15), caption = "Top 15 features by p99 standardised residual (stage-22)",
+               digits = 3, format = "pipe")
+} else {
+  cat("*Stage 22 output not found.*")
+}
+```
+
+**Top 10 features by p99 |ε_std|** (heaviest standardised tails):
+
+| Feature | p99 |ε_std| | Max |ε_std| | Notes |
+|---|---|---|---|
+| `rate_offensive_duels_won` | 3.71 | 7.01 | Structural: goalkeepers' near-zero rate vs outfield norm |
+| `rate_successful_crosses` | 3.68 | 4.00 | Sparse count denominator makes rates unstable |
+| `rate_dribbles_against_won` | 3.49 | 4.38 | |
+| `rate_goal_conversion` | 3.47 | 9.08 | Shot sample size varies widely |
+| `rate_defensive_duels_won` | 3.45 | 12.24 | See goalkeeper cluster below |
+| `per90_xg_shot` | 3.41 | 7.00 | |
+| `per90_head_shots` | 3.34 | 7.16 | |
+| `rate_shots_on_target` | 3.28 | 3.91 | |
+| `per90_smart_passes` | 3.25 | 14.43 | |
+| `per90_goals` | 3.04 | 6.23 | |
+
+**Worst-fitting cells** (top 20): dominated by two patterns:
+1. **Goalkeepers in `rate_defensive_duels_won`** (Aitor Fernández, Sergio Álvarez, Fernando Pacheco, … — Rhat 9.5–12.2σ): goalkeepers essentially never make defensive duels, so their rate is structurally zero while outfield players have rates ~0.4–0.7. The player factor model has no goalkeeper-specific component, making these structurally extreme.
+2. **`rate_goal_conversion`** anomalies: players with unusual shooting samples (very few shots, all on target, or very high conversion seasons) — S. Savić and Omar Mascarell appear at 9.1σ and 8.9σ.
+3. **José Antonio Reyes season 8504** (`per90_smart_passes`, 14.4σ): single-season outlier in creative passing volume.
+
+These patterns confirm the football interpretation of ν ≈ 3: a discrete set of structurally different player-roles (goalkeepers, specialist markers) and rare extreme seasons that a single shared scale cannot accommodate.
+
+**ICC screen (Task B)** from `outputs/tables/16_icc_summary.csv` (stage-10 Normal fit,
+no resampling required):
+
+| Verdict | Rate features (icc_player) |
+|---|---|
+| Drop candidate (< 0.20) | `rate_successful_crosses` (0.026), `rate_successful_sliding_tackles` (0.049), `rate_dribbles_against_won` (0.155), `rate_shots_on_target` (0.161), `rate_goal_conversion` (0.177) |
+| Borderline (0.20–0.35) | `rate_defensive_duels_won` (0.220), `rate_successful_dribbles` (0.229) |
+| Keep (≥ 0.35) | `rate_offensive_duels_won` (0.409), `rate_successful_progressive_passes` (0.466), `rate_successful_passes` (0.748), `rate_aerial_duels_won` (0.771) |
+
+Notable per90_* below 0.50 icc_player: `per90_assists` (0.382), `per90_yellow_cards` (0.441),
+`per90_smart_passes` (0.440; icc_season = 0.368 — notably season-driven),
+`per90_pressing_duels` (0.465; icc_season = 0.305).
+
+**Action gate:** Dropping features requires a full stage 02+ rebuild. Present this screen
+to the professor before removing anything.
+
+---
+
+### Task C — Transform analysis
+
+**Stage 23** (`scripts/23_transform_analysis.R`) computed skewness and excess kurtosis for
+all 53 features from `model_objects$Y_raw` (pre-scaling). Mechanism: per90_* count features
+follow Poisson-like or zero-inflated distributions. When Z-scaled, their right tail becomes
+large positive values that the model absorbs with heavy-tailed ε or large loadings. A
+variance-stabilising transform applied before Z-scaling compresses this tail.
+
+```{r entry5-skewness}
+sk_path <- file.path("outputs", "tables", "23_feature_skewness.csv")
+if (file.exists(sk_path)) {
+  df <- read.csv(sk_path)
+  knitr::kable(df |> head(25), caption = "Feature skewness and recommended transform (stage 23)",
+               digits = 3, format = "pipe")
+} else {
+  cat("*Stage 23 not yet run.*")
+}
+```
+
+**Summary:** 5 features warrant **log1p** (skewness > 2): `per90_smart_passes` (3.13),
+`per90_through_passes` (2.66), `rate_goal_conversion` (2.37), `per90_head_shots` (2.33),
+`per90_goals` (2.29). 18 features warrant **sqrt** (skewness 1–2): most per90_* counting
+and duel-rate features. 30 features are already near-symmetric (no transform needed).
+
+Note on `rate_goal_conversion` (skew 2.37, icc_player 0.177): it is both a high-skew
+feature and a drop candidate on ICC grounds — particularly weak information content.
+
+**Refit gate:** Applying transforms requires re-running stages 01+ (feature engineering)
+with transforms before Z-scaling. This changes `Y_scaled.csv` and all downstream stages.
+Confirm with professor before rebuilding. The effect on ν is secondary and uncertain
+(cannot be measured without a refit); variance stabilisation is the primary rationale.
+
+See `outputs/figures/23_transform_examples.png` for before/after distributions.
+
+---
+
+### Task D — Pathfinder integration for rank screening
+
+Added `method = "pathfinder"` parameter to `fit_one_rank()` in
+`rank comparison/rank_selection.R`. When `method = "pathfinder"`, the function calls
+`model$pathfinder(data=..., seed=..., num_paths=max(chains,4), draws=iter_sampling)`
+instead of `model$sample(...)`. The `score_fit()` function is unchanged since both
+NUTS and Pathfinder outputs expose `fit$draws()`.
+
+Added to `scripts/17_rank_selection_real.R`:
+```r
+rank_max    <- as.integer(Sys.getenv("BFA_RANK_MAX",    unset = "4"))
+rank_method <- Sys.getenv("BFA_RANK_METHOD", unset = "sample")
+```
+
+**Usage for K=5–8 screening:**
+```bash
+BFA_RANK_MAX=8 BFA_RANK_METHOD=pathfinder \
+  nohup Rscript scripts/17_rank_selection_real.R > logs/17_pathfinder.log 2>&1 &
+```
+
+**Limitation:** approximation quality with ~87k+ parameters is uncertain; treat Pathfinder
+ELPD values as a trend signal (direction / rough ordering), not final numbers. Run full
+NUTS only on the rank(s) that Pathfinder identifies as most promising.
+
+Recommended sequence: Pathfinder for K=5–8 → if ELPD still rising monotonically with
+no elbow, extend further; if elbow appears, target full NUTS there.
+
+---
+
+### Task E — log-lik gating
+
+Added `int<lower=0, upper=1> compute_log_lik` to the `data` block of both Stan models.
+When 0, the generated-quantities log-lik loop is replaced by `rep_vector(0, N)`.
+
+In `src/config.R`:
+```r
+compute_log_lik = as.integer(Sys.getenv("BFA_COMPUTE_LOG_LIK", unset = "0"))
+```
+
+In `src/stan_helpers.R` (`build_lowrank_a_diag_b_stan_data()`):
+```r
+compute_log_lik = sampler$compute_log_lik
+```
+
+**Effect:** exploratory fits no longer compute N × P ≈ 262,032 likelihood evaluations per
+draw. Set `BFA_COMPUTE_LOG_LIK=1` for any fit where LOO will be run afterwards.
+This gate requires model recompilation but no data or architecture change.
+
+---
+
+### Task F — Stage-18 posterior diagnostics (ESS)
+
+**Stage 11b / diagnostic pass.** The full stage-18 CmdStan CSVs are ~12GB (4 × 2.9GB per chain);
+cmdstanr's `as_cmdstan_fit()` parses all 276,606 columns including the large A matrix. To avoid
+a 45+ minute load, draws for the 587 small parameters (nu, Lambda_a, psi_a, sigma_b, sigma_e,
+prop, Sigma_a_diag, var_b, var_e) were extracted via a targeted Python column-pass and
+summarised using `posterior::summarise_draws()`.
+
+```{r entry5-ess}
+ess_path <- file.path("outputs", "diagnostics", "18_posterior_health.csv")
+if (file.exists(ess_path)) {
+  df <- read.csv(ess_path)
+  knitr::kable(df, caption = "Stage-18 ESS by parameter group",
+               digits = 1, format = "pipe")
+} else {
+  cat("*18_posterior_health.csv not found.*")
+}
+```
+
+**Key findings:**
+
+| Parameter group | Min ESS_bulk | Max Rhat | n Rhat > 1.01 |
+|---|---|---|---|
+| Lambda_a (loadings) | **19** | **1.185** | **94 / 108** |
+| Sigma_a_diag | 124 | 1.040 | 28 / 53 |
+| psi_a (uniqueness) | 261 | 1.018 | 8 / 53 |
+| prop (variance fractions) | 277 | 1.020 | 35 / 159 |
+| sigma_b (season scale) | 703 | 1.012 | 1 / 53 |
+| sigma_e (residual scale) | **1551** | 1.003 | **0 / 53** |
+| nu | **1450** | 1.001 | **0 / 1** |
+
+**Interpretation:** nu, sigma_e, and sigma_b are well-converged. Lambda_a (the loadings
+matrix) shows ESS ≈ 19–25 for the worst elements and Rhat up to 1.185 — meaningful
+non-convergence for specific loading values. This is worse than stage-10 (min ESS_bulk = 66.5,
+167 vs 156 parameters with Rhat > 1.01), driven by (a) fewer warmup iterations (500 vs 1000 for
+stage-10) and (b) the harder posterior geometry with ν ≈ 3.
+
+**Consequence for inference:** derived covariance quantities (Sigma_a_diag) are more stable
+than individual loadings (Lambda_a). The ICC and variance-decomposition results (stages 15–16)
+rely on Sigma_a_diag and prop_a/b/e which have reasonable ESS (120–700+). The factor loading
+heatmap (stage 12) and PCA scores (stage 13) should be interpreted cautiously for individual
+loading values given the limited ESS in Lambda_a.
+
+**Recommendation:** for any final publication fit, increase warmup to 1000+ and adapt_delta to
+0.95 to improve Lambda_a mixing. The current fit is adequate for exploratory analysis.
+
+Note: thinning does not help — it only reduces ESS further and has zero effect on warmup or
+sampling cost. Runtime improvements must come from model restructuring (see Issue 1 in CLAUDE.md).
+
+---
+
+### Task G — Metrics beyond ELPD
+
+**Stage 24** (`scripts/24_metrics_beyond_elpd.R`) extracts four complementary metrics
+from existing output CSVs (no resampling):
+
+**G1/G2 — Correlation recovery** (from `19_correlation_ppc.csv`, Normal K=2 fit):
+
+| Metric | Value |
+|---|---|
+| Frobenius distance (‖C_obs − C_pred‖_F) | 4.54 |
+| Correlation RMSE | 0.122 |
+| 90% CI coverage | 28.1% |
+| Max absolute error | 0.686 |
+| Pairs with error > 0.10 | 364 / 1378 |
+
+The model misses several high defensive-action correlations: the worst miss is
+`per90_dribbles_against` vs `per90_defensive_duels` (obs 0.891, pred 0.206). This
+pattern is consistent with K=2 being too low a rank to capture both the
+attacking and the defensive correlation blocs simultaneously.
+
+**G3 — ICC shift** (from `20_icc_diagonal_vs_lowrank.csv`):
+Mean |ICC_player shift| (low-rank minus diagonal): 0.006. The shift is small: 1 feature
+rises > 0.02 (`per90_passes`), 3 fall > 0.02 (`rate_dribbles_against_won`,
+`rate_defensive_duels_won`, `per90_dangerous_opponent_half_recoveries`). The low-rank
+model redistributes variance but does not dramatically change the player stability picture.
+
+**G3b — K-fold ELPD** (from `outputs/rank_selection/real_data_elpd.csv`):
+
+| Model | K-fold ELPD | Per value |
+|---|---|---|
+| Diagonal (K=0) | −370,699 | −1.415 |
+| Low-rank (K=2) | −297,818 | −1.137 |
+| Δ (K=2 − K=0) | **+72,881** | +0.278 |
+
+**G4 — Why the ELPD direction is trustworthy despite bad Pareto-k:**
+Pareto-k > 0.7 means individual PSIS-LOO estimates have very high variance and the
+aggregate SE is understated. This does NOT imply the sign is wrong. Two independent
+lines of evidence agree:
+
+1. PSIS-LOO Δ = −3,724 (~20 SE). Even if the true SE is 3× understated, the signal
+   is ~7 true SE — still decisive.
+2. K-fold CV (no importance sampling) gives Δ = +72,881 in the same direction.
+
+**For the thesis:** report K-fold as primary metric with K-fold Δ / per-value Δ.
+PSIS-LOO is a secondary check, with an explicit Pareto-k caveat and a note that
+both agree directionally.
+
+---
+
+### Task H — Two-component mixture proposal (Issue 11)
+
+**Trigger:** pursue only if applying transforms does not move ν upward in a refit.
+This is a proposal, not implemented code.
+
+**Formulation:** replace `student_t_lpdf` with a log-mixture of two Normals:
+
+$$\varepsilon_{n,p} \sim \pi \cdot \mathcal{N}(0, \sigma_{1,p}^2) + (1-\pi) \cdot \mathcal{N}(0, \sigma_{2,p}^2), \quad \sigma_{1,p} < \sigma_{2,p}$$
+
+In Stan: `target += log_mix(pi_mix, normal_lpdf(..., sigma1), normal_lpdf(..., sigma2))`.
+The ordering constraint $\sigma_1 < \sigma_2$ separates the "normal" and "outlier"
+components and prevents label-switching. Enforce via `sigma2 = sigma1 * exp(delta)` with
+`delta ~ normal(0, 1)` (positive by construction).
+
+**Interpretive difference from Student-t:** the t-distribution is a smooth infinite
+scale-mixture. The 2-component mixture is discrete — a fraction π of player-seasons
+come from a high-variance process (breakout season, injury return, tactical anomaly).
+More interpretable for football use-cases.
+
+**Required before fitting real data:** simulation recovery check with known (π, σ₁, σ₂);
+label-switching verification. Same standard as the Λ_a lower-triangular identification
+work (Entry 3).
+
+---
+
+### Factual correction: stage-18 sampler settings
+
+`docs/PROJECT_RUNDOWN_AND_RUNTIME.txt` Part B.1 previously stated "1000 warmup + 500
+sampling" for stage 18. The actual CmdStan config JSON
+(`fits/csv/18_real_lowrank_a_diag_b_t/20260607_230711/18_real_lowrank_a_diag_b_t-1_config.json`)
+records: `num_warmup=500, num_samples=1000, delta=0.9, max_depth=10`. The text is corrected
+in the next update to `PROJECT_RUNDOWN_AND_RUNTIME.txt`.
+
+---
+
+### New pipeline stages registered this session
+
+| Stage | Script | Purpose |
+|---|---|---|
+| 11b | `11b_stage18_diagnostics.R` | Stage-18 ESS/Rhat by group; write_fit_outputs for t-model |
+| 22 | `22_residual_analysis.R` | Residual extraction, worst cells, feature tail stats, ICC screen |
+| 23 | `23_transform_analysis.R` | Skewness + recommended transforms for raw features |
+| 24 | `24_metrics_beyond_elpd.R` | Frobenius, RMSE, K-fold Δ, ICC shift, Pareto-k reliability note |
+
+Note: none of these stages are registered in `run_pipeline.R`'s `stage_map` — they are
+standalone diagnostic scripts run directly via `Rscript`.
+
+---
+
 # Entry Template (Reference for Future Updates)
 
 The following template should be used for each new journal entry appended to this document.

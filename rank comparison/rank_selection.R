@@ -302,7 +302,8 @@ fit_one_rank = function(
     iter_warmup,
     iter_sampling,
     adapt_delta,
-    refresh) {
+    refresh,
+    method = "sample") {
   if (rank == 0) {
     model = models$diagonal
     initial_values = function(chain_id = 1) {
@@ -315,17 +316,36 @@ fit_one_rank = function(
     }
   }
 
-  model$sample(
-    data = make_stan_data(dataset, split, rank),
-    seed = seed,
-    init = initial_values,
-    chains = chains,
-    parallel_chains = parallel_chains,
-    iter_warmup = iter_warmup,
-    iter_sampling = iter_sampling,
-    adapt_delta = adapt_delta,
-    refresh = refresh
-  )
+  stan_data = make_stan_data(dataset, split, rank)
+
+  if (method == "pathfinder") {
+    # Pathfinder: fast approximate inference via normalizing flows.
+    # Returns approximate posterior draws in minutes rather than hours.
+    # Use for K-range screening only; confirm promising ranks with full NUTS.
+    # num_paths=4 gives 4 independent runs (analogous to chains); draws per path
+    # are aggregated. Note: Pathfinder quality degrades for very high-dimensional
+    # posteriors; treat results as directional, not definitive.
+    model$pathfinder(
+      data       = stan_data,
+      seed       = seed,
+      num_paths  = max(chains, 4),
+      draws      = iter_sampling,
+      refresh    = refresh,
+      init       = initial_values
+    )
+  } else {
+    model$sample(
+      data            = stan_data,
+      seed            = seed,
+      init            = initial_values,
+      chains          = chains,
+      parallel_chains = parallel_chains,
+      iter_warmup     = iter_warmup,
+      iter_sampling   = iter_sampling,
+      adapt_delta     = adapt_delta,
+      refresh         = refresh
+    )
+  }
 }
 
 # -------------------------------------------------------------------------
@@ -380,7 +400,8 @@ run_rank_selection = function(
     iter_warmup = 500,
     iter_sampling = 500,
     adapt_delta = 0.98,
-    refresh = 250) {
+    refresh = 250,
+    method = "sample") {
   if (any(ranks != as.integer(ranks)) || any(ranks < 0) ||
       any(ranks > dataset$P)) {
     stop("ranks must be integers between 0 and the number of variables.")
@@ -404,7 +425,8 @@ run_rank_selection = function(
         iter_warmup = iter_warmup,
         iter_sampling = iter_sampling,
         adapt_delta = adapt_delta,
-        refresh = refresh
+        refresh = refresh,
+        method = method
       )
       scores[[position]] = score_fit(fit, split, rank, fold)
       position = position + 1

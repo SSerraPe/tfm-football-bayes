@@ -41,6 +41,9 @@ data {
   array[N] int<lower=1, upper=I> player_index;
   array[N] int<lower=1, upper=S> season_index;
   real<lower=0> sigma_floor;
+  // Set to 1 to compute log_lik for LOO; 0 skips the N-loop in generated quantities
+  // (saves ~N×P likelihood evaluations per draw on exploratory runs).
+  int<lower=0, upper=1> compute_log_lik;
 }
 
 parameters {
@@ -131,8 +134,12 @@ generated quantities {
     prop_e[p] = var_e[p]         / total_var;
   }
 
-  for (n in 1:N) {
-    vector[P] mean_n = to_vector(A[player_index[n]] + B[season_index[n]]);
-    log_lik[n] = student_t_lpdf(Y[n]' | nu, mean_n, sigma_e);
+  if (compute_log_lik) {
+    for (n in 1:N) {
+      vector[P] mean_n = to_vector(A[player_index[n]] + B[season_index[n]]);
+      log_lik[n] = student_t_lpdf(Y[n]' | nu, mean_n, sigma_e);
+    }
+  } else {
+    log_lik = rep_vector(0, N);
   }
 }

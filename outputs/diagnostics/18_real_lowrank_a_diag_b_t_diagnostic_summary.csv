@@ -1,0 +1,2 @@
+model_id,max_rhat,min_ess_bulk,min_ess_tail,n_rhat_over_101
+18_real_lowrank_a_diag_b_t,1.1847,19,57.1,167

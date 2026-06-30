@@ -108,8 +108,8 @@ PART B — THE RUNTIME PROBLEM (THE MAIN EVENT)
 
 B.1  WHAT WE ACTUALLY MEASURED (from logs/)
 - Student-t, K=2 (stage 18): ~8,032–8,258 seconds PER CHAIN. With 4 chains in
-  parallel that's ~2.3 hours of wall time for ONE fit (1000 warmup + 500
-  sampling in that run).
+  parallel that's ~2.3 hours of wall time for ONE fit (500 warmup + 1000
+  sampling in that run; confirmed from CmdStan config JSON).
 - Rank selection (stage 17): each block of sampling ran ~6,300 s, and the stage
   fits on the order of ~25 models (K=0..4 × 5 folds). That stage is a
   multi-hour-to-overnight job on its own.

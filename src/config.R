@@ -42,7 +42,11 @@ sampler <- list(
   iter_sampling = as.integer(Sys.getenv("BFA_ITER_SAMPLING", unset = "1000")),
   adapt_delta = as.numeric(Sys.getenv("BFA_ADAPT_DELTA", unset = "0.95")),
   max_treedepth = as.integer(Sys.getenv("BFA_MAX_TREEDEPTH", unset = "12")),
-  refresh = as.integer(Sys.getenv("BFA_REFRESH", unset = "100"))
+  refresh = as.integer(Sys.getenv("BFA_REFRESH", unset = "100")),
+  # Compute log_lik in generated quantities (needed for LOO comparison).
+  # Default 0: skip the N-loop on exploratory runs to save ~N×P evaluations/draw.
+  # Set BFA_COMPUTE_LOG_LIK=1 for any fit where LOO will be run afterwards.
+  compute_log_lik = as.integer(Sys.getenv("BFA_COMPUTE_LOG_LIK", unset = "0"))
 )
 
 curated_feature_variables <- c(

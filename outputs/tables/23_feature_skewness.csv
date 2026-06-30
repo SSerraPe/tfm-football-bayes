@@ -1,0 +1,54 @@
+feature,feature_type,skewness,kurtosis,min_val,max_val,recommended_transform,mechanism
+per90_smart_passes,per90,3.130602606645216,17.301676097748278,0,11.58953722334004,log1p,"Sparse count; log1p compresses right tail, equidistances small counts"
+per90_through_passes,per90,2.664161340432361,13.993175910672708,0,6.971830985915493,log1p,"Sparse count; log1p compresses right tail, equidistances small counts"
+rate_goal_conversion,rate,2.3702373844377678,12.020656379215346,0,1,log1p,"Sparse count; log1p compresses right tail, equidistances small counts"
+per90_head_shots,per90,2.3274789159976117,6.963142170335026,0,1.6523867809057529,log1p,"Sparse count; log1p compresses right tail, equidistances small counts"
+per90_goals,per90,2.293489375295159,6.913663157148015,0,1.2518628912071534,log1p,"Sparse count; log1p compresses right tail, equidistances small counts"
+rate_defensive_duels_won,rate,1.9667647618742357,15.444116537932,0,1,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+per90_aerial_duels,per90,1.9451529938625691,6.200156508816249,0,23.71841155234657,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+per90_xg_shot,per90,1.8697431121864365,4.01709184357655,0,0.992200674536256,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+per90_sliding_tackles,per90,1.840125282112188,5.32728089097164,0,3.616692426584235,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+per90_progressive_run,per90,1.721921134646274,4.860790309832302,0,7.912087912087912,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+per90_accelerations,per90,1.71294788261713,3.881642727583258,0,4.156820622986037,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+per90_assists,per90,1.7091669543404868,3.7482158556830685,0,0.7262945527908541,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+per90_dribbles,per90,1.613770029357501,3.197101921923098,0,16.62130637636081,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+per90_pressing_duels,per90,1.4729726046083258,1.725210300397551,0,13.346007604562738,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+per90_shots_blocked,per90,1.454527670316798,2.2796156953248508,0,1.55005382131324,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+per90_xg_assist,per90,1.3593801936391243,2.2116945341415173,0,0.4950907868190988,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+per90_touch_in_box,per90,1.2288450200885601,1.1274748334135518,0,7.740303541315345,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+per90_shots,per90,1.2075213356861263,1.8523838699054833,0,6.450252951096122,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+per90_crosses,per90,1.2018043088269952,1.0648126797484538,0,9.054640069384217,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+per90_clearances,per90,1.1796773173063395,0.9863636914620675,0,7.659574468085107,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+per90_key_passes,per90,1.1747730249082382,1.44377246907625,0,1.592920353982301,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+rate_successful_crosses,rate,1.1367900478001751,3.8918771111267167,0,1,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+per90_shot_assists,per90,1.081264264466122,1.1166474675330473,0,3.4005037783375314,sqrt,Moderate count skew; sqrt is variance-stabilising for Poisson-like distributions
+per90_lateral_passes,per90,0.9820692601858554,1.022983453115292,1.2189616252821671,41.77142857142857,none,Distribution already near-symmetric; no transform needed
+per90_received_pass,per90,0.909200771432259,0.9753446757866517,3.8334946757018393,78.94508670520231,none,Distribution already near-symmetric; no transform needed
+per90_passes_to_final_third,per90,0.8773152324211305,0.96452208989363,0.1329394387001477,17.82101167315175,none,Distribution already near-symmetric; no transform needed
+per90_long_passes,per90,0.8763484978827446,0.934342236355151,0,17.156398104265403,none,Distribution already near-symmetric; no transform needed
+per90_offensive_duels,per90,0.8758238921247132,0.5008658178304741,0,27.061503416856493,none,Distribution already near-symmetric; no transform needed
+per90_fouls_suffered,per90,0.8594738998418555,0.8816270081594086,0,4.652087475149106,none,Distribution already near-symmetric; no transform needed
+per90_dangerous_own_half_losses,per90,0.8561595111749498,1.168747218682447,0,1.9020172910662825,none,Distribution already near-symmetric; no transform needed
+per90_yellow_cards,per90,0.8533236685033699,1.214899942444326,0,1.007121057985758,none,Distribution already near-symmetric; no transform needed
+rate_offensive_duels_won,rate,0.7530749149013002,3.461985447601431,0,1,none,Distribution already near-symmetric; no transform needed
+per90_dangerous_opponent_half_recoveries,per90,0.7267699940621233,0.6241083154985119,0,1.2755905511811023,none,Distribution already near-symmetric; no transform needed
+per90_loose_ball_duels,per90,0.6556265282913809,2.0470462038492956,0,10.83629893238434,none,Distribution already near-symmetric; no transform needed
+rate_aerial_duels_won,rate,0.5928982540039834,0.927257560502968,0,1,none,Distribution already near-symmetric; no transform needed
+per90_passes,per90,0.5502622487113626,0.2685185334823297,8.363988383349467,93.2514450867052,none,Distribution already near-symmetric; no transform needed
+per90_fouls,per90,0.5235155725581069,0.6306489636239521,0,4.784810126582278,none,Distribution already near-symmetric; no transform needed
+rate_shots_on_target,rate,0.46817059876086997,1.7588526059363625,0,1,none,Distribution already near-symmetric; no transform needed
+per90_dribbles_against,per90,0.326762913237217,-0.20075796665818535,0,8.224789915966387,none,Distribution already near-symmetric; no transform needed
+per90_opponent_half_recoveries,per90,0.3197576854378654,0.3984445253087552,0,6.805939226519337,none,Distribution already near-symmetric; no transform needed
+per90_interceptions,per90,0.31102630665506814,-0.5897527749044102,0.2803738317757009,11.386704789135097,none,Distribution already near-symmetric; no transform needed
+per90_back_passes,per90,0.2993609653957574,0.079763653896602,0,18.03435114503817,none,Distribution already near-symmetric; no transform needed
+per90_forward_passes,per90,0.2443144338509335,-0.20977801708766286,0.7667731629392971,34.833625218914186,none,Distribution already near-symmetric; no transform needed
+per90_progressive_passes,per90,0.23289670773686572,-0.13175227121903443,0.10989010989010987,17.65323992994746,none,Distribution already near-symmetric; no transform needed
+per90_recoveries,per90,0.21237442122482478,-0.9758129271945379,0.54,17.692307692307693,none,Distribution already near-symmetric; no transform needed
+rate_successful_sliding_tackles,rate,0.1644954936968359,0.13455437433465312,0,1,none,Distribution already near-symmetric; no transform needed
+rate_dribbles_against_won,rate,0.1530795118826627,3.169443650655868,0,1,none,Distribution already near-symmetric; no transform needed
+per90_losses,per90,0.015392746507480825,0.3526202427090581,1.30779392338177,23.231046931407946,none,Distribution already near-symmetric; no transform needed
+per90_own_half_losses,per90,-0.1931101231539692,0.15239677412647268,0.17408123791102514,7.215189873417722,none,Distribution already near-symmetric; no transform needed
+per90_defensive_duels,per90,-0.2645869726139634,0.07716671414627818,0,14.500665778961384,none,Distribution already near-symmetric; no transform needed
+rate_successful_dribbles,rate,-0.5426430196450888,3.112005611924414,0,1,none,Distribution already near-symmetric; no transform needed
+rate_successful_passes,rate,-0.5456087312442423,0.6371574533743232,0.3333333333333333,0.9644572526416908,none,Distribution already near-symmetric; no transform needed
+rate_successful_progressive_passes,rate,-1.018050902473135,3.4862809756047746,0,1,none,Distribution already near-symmetric; no transform needed

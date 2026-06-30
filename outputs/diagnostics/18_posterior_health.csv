@@ -1,0 +1,10 @@
+param_group,n_params,min_ess_bulk,med_ess_bulk,min_ess_tail,med_ess_tail,max_rhat,n_rhat_gt_101
+Lambda_a (loadings),108,19,67.3,57.1,359.3,1.1847,94
+Sigma_a_diag,53,123.9,367.9,454.7,950.1,1.0402,28
+psi_a (uniqueness),53,260.7,690.9,434.9,1506.8,1.0179,8
+prop (variance fractions),159,277.4,792.2,715.1,1613.5,1.02,35
+lp__,1,506.6,506.6,666,666,1.0089,0
+sigma_b (season scale),53,703.2,1069.2,719.3,1797.8,1.0121,1
+variance comps,106,703.2,1474.9,719.3,2399,1.0121,1
+nu,1,1449.9,1449.9,2707.1,2707.1,1.0012,0
+sigma_e (residual scale),53,1550.7,2509.5,2272.1,2799.6,1.0033,0

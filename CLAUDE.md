@@ -212,21 +212,36 @@ the fit, with fallback discovery if stored paths are stale (e.g. after moving th
 
 ---
 
-## 8. Current state & known issues (as of 2026-06-26)
+## 8. Current state & known issues (as of 2026-06-30)
 
-**State:** production fits are stage 10 (Normal, K=2) and stage 18 (Student-t, K=2). Rank
-selection (stage 17) shows CV-ELPD rising monotonically through K=4 with no elbow. A K=4 t-fit
+**State:** production fits are stage 10 (Normal, K=2) and stage 18 (Student-t, K=2; actual
+sampler settings: 500 warmup + 1000 sampling, delta=0.9, max_depth=10). Rank selection
+(stage 17) shows CV-ELPD rising monotonically through K=4 with no elbow. A K=4 t-fit
 script (stage 21) exists but the fit has not been finalised/registered.
+
+**Implemented this session (2026-06-30):**
+- `log_lik` gating: both Stan models gate the N-loop behind `BFA_COMPUTE_LOG_LIK` (default 0).
+  Set to 1 for any fit where LOO will be run afterwards.
+- Pathfinder mode added to rank-selection: `BFA_RANK_METHOD=pathfinder BFA_RANK_MAX=8` runs
+  fast approximate screening for K=5–8 before committing to a full NUTS sweep.
+- Stage-18 diagnostics: Python-extracted draws (587 small params, col-pass over 12GB CSV) +
+  `posterior::summarise_draws()`; written to `18_posterior_health.csv`. Key finding: Lambda_a
+  loadings have ESS ≈ 19 (worst) and Rhat up to 1.185. nu and sigma_e are well-converged (ESS
+  1450/1550, Rhat < 1.003). 167 params with Rhat > 1.01 (vs 156 in stage-10).
+- Feature analysis: stage 22 (residuals + ICC screen), stage 23 (transform recommendations),
+  stage 24 (Frobenius, K-fold ELPD, ICC shift, Pareto-k reliability note).
 
 **Known issues (diagnosed; fixes deferred — full notes in `PROJECT_RUNDOWN_AND_RUNTIME.txt`):**
 
 1. **Runtime is excessive.** K=2 t-model ≈ 8,200 s/chain (~2.3 h wall). Dominant cost is the
    `z_a_raw` uniqueness block (`I×P ≈ 87,450` non-centred params) plus the ν≈3 heavy-tail
-   geometry; warmup dominates.
+   geometry; warmup dominates. Option: marginalize Normal effects (Option 3) — not yet
+   prototyped; needs go-ahead.
 2. **Player IDs instead of names.** `data/processed/player_map.csv` has only
    `player_index, player_id` — no `player_name`. Plot scripts (12, 13) join then use
    `player_name` *if present*, so they silently fall back to IDs. Fix: rebuild `player_map.csv`
-   with names (raw data has `player_name`).
+   with names (raw data has `player_name`). Note: `model_objects$metadata$player_name` exists
+   and is used by the residual-analysis script (stage 22).
 3. **Figure 4 ("PC1 not showing").** The auto-labeler in `12_football_interpretation.R` gives
    **both** factors the same label, so `plot_radar_by_group()` collapses them into one dodged
    series. It also plots raw `Λ`, not the PCA-rotated loadings the caption claims.
@@ -234,12 +249,25 @@ script (stage 21) exists but the fit has not been finalised/registered.
    grouped in a football-meaningful way (reuse `feature_group_lookup()`).
 5. **PCA on `Σ_a` vs `ΛΛ'`.** Stage 13 eigendecomposes `ΛΛ'` (common variance only); professor
    suggests `Σ_a = ΛΛ' + Ψ_a`.
-6. **Rank K.** No elbow through K=4; plan to extend the scree sweep to K=5–8 before committing.
-   (Decided not to fix K this session.)
-7. **Low-rank vs diagonal needs better metrics** than ELPD/SE alone.
-8. **Student-t** ν pinned near its lower bound (≈3) — a flag tied to the outlier/transform task.
-9. **Outliers / variable transforms** — professor's request; no analysis done yet.
-10. **LOO reliability** — Pareto-k "very bad" for >58% of points in both models.
+6. **Rank K.** No elbow through K=4; Pathfinder screening for K=5–8 is now ready to run
+   (`BFA_RANK_METHOD=pathfinder BFA_RANK_MAX=8`); full NUTS to follow on promising ranks.
+7. **Low-rank vs diagonal: better metrics added.** Frobenius distance = 4.54, K-fold Δ = +72,881
+   (see stage 24). Remaining issue: correlation structure misses key defensive blocs (K=2 too low).
+8. **Student-t** ν pinned near its lower bound (≈3). Transform analysis (stage 23) identified 5
+   log1p + 18 sqrt candidates. Whether transforms move ν requires a refit (gate: professor approval).
+9. **Feature screen identified drop candidates.** 5 rate_* features with icc_player < 0.20:
+   `rate_successful_crosses` (0.026), `rate_successful_sliding_tackles` (0.049),
+   `rate_dribbles_against_won` (0.155), `rate_shots_on_target` (0.161), `rate_goal_conversion`
+   (0.177). Action gate: dropping requires stage 02+ rebuild; confirm with professor first.
+10. **LOO reliability.** Pareto-k "very bad" for >58% of points. Use K-fold ELPD (already
+    computed, Δ = +72,881) as primary metric; PSIS-LOO as secondary with explicit Pareto-k caveat.
+11. **Lambda_a convergence (stage-18).** Min ESS_bulk = 19, max Rhat = 1.185; 94/108 loading
+    params above Rhat 1.01. Derived quantities (Sigma_a_diag, prop_a) adequate for ICC analysis
+    but individual loading values are uncertain. Fix for publication: warmup ≥ 1000 + delta = 0.95.
+12. **Two-component mixture (Issue 12).** Proposed alternative to Student-t:
+    ε ~ π·N(0,σ₁²) + (1-π)·N(0,σ₂²) with σ₁ < σ₂. More interpretable than t for football
+    (discrete outlier fraction vs smooth heavy tail). Requires simulation-recovery check before
+    fitting real data.
 
 **Chain initialisation — confirmed in place:** `build_pca_init()` (`src/stan_helpers.R:179`) is
 wired into stages 10, 18 and 21.
