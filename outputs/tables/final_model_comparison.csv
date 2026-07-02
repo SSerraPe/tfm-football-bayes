@@ -1,0 +1,6 @@
+comparison,delta_elpd,se_delta,n_se,source,notes
+Low-rank K=2 vs diagonal K=0,72881,NA,NA,K-fold Pathfinder (old P=53),Stage 24; Pareto-k unreliable — K-fold is primary
+"t-model vs Normal, K=2 (old data)",3724,NA,>20,PSIS-LOO old data,Stage 18 vs stage 10; pre-rebuild N=4944/P=53
+Low-rank K=3 vs K=2 (Pathfinder),12125,NA,NA,Pathfinder K=0-4 (rebuilt P=48),Stage 17 rebuilt; Reversal at K=4 → K*=3
+Low-rank K=3 vs K=2 (PSIS-LOO),1244.5,1270.8,0.98,"PSIS-LOO rebuilt P=48, t-model",C_loo_k2_vs_k3.csv; 99.4% Pareto-k>0.5 — directional only
+Low-rank K=3 vs diagonal K=0,NA,NA,NA,Stage 20,PENDING — Block E (Stage 03 diagonal refit still running)

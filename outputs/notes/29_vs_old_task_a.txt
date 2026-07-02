@@ -1,0 +1,10 @@
+=== Old Task A vs Stage 28 comparison ===
+  Old tau99 (nu=2.95): 3.3709
+  New tau99 (nu=4.9023): 3.1345
+  Lighter tails (higher nu) → lower threshold → model more surprised by extremes
+
+  rate_defensive_duels_won frac > tau99: 0.0037 (old: GK-contaminated, should be lower)
+  Reyes 2013/14 per90_smart_passes: not found in rebuilt data (old: 14.4σ)
+  Total (n,p) cells > tau99: 1702 / 220128 (0.77%)
+  Expected under t(nu): ~2.65%
+

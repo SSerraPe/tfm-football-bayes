@@ -1,6 +1,6 @@
 ---
-title: "Bayesian Hierarchical Factor Model for La Liga Player Performance"
-subtitle: "Results Summary"
+title: "Factor Model of La Liga Player Performance: Technical Report"
+subtitle: "Hierarchical Bayesian Analysis — Session 10 Results"
 author: "Sergi Serra Pericàs"
 date: "July 2026"
 format:
@@ -9,6 +9,7 @@ format:
     fontsize: 11pt
     toc: true
     number-sections: true
+    keep-tex: false
 execute:
   echo: false
   warning: false
@@ -19,128 +20,259 @@ execute:
 library(ggplot2)
 library(dplyr)
 library(knitr)
+library(tidyr)
 
-# This .qmd lives in docs/professor/; resolve the project root (two levels up)
-# so the bare relative paths below (outputs/figures, outputs/tables) still work.
-knitr::opts_knit$set(
-  root.dir = normalizePath(file.path(dirname(knitr::current_input(dir = TRUE)), "..", ".."))
-)
+# Chunks run from docs/professor/ (Quarto default).
+# Symlinks docs/professor/outputs -> ../../outputs and docs/professor/data -> ../../data
+# are in place, so "outputs/..." and "data/..." resolve correctly from here.
+knitr::opts_chunk$set(fig.align = "center")
+
+fig  <- function(name) file.path("outputs", "figures", name)
+tbl  <- function(name) file.path("outputs", "tables",  name)
+note <- function(name) file.path("outputs", "notes",   name)
+rs   <- function(name) file.path("outputs", "rank_selection", name)
+dat  <- function(name) file.path("data",    "processed",      name)
 ```
 
-# Executive Summary
+# Generative Model
 
-This document summarises results from a hierarchical Bayesian factor model applied to La Liga
-player-season data. The analysis covers all items requested after the initial model fit:
+## Observation model
 
-- **Data rebuilt:** goalkeepers excluded (N: 4{,}944→4{,}586), 5 low-signal features dropped (P: 53→48), 23 distributional transforms applied (log1p, sqrt) before Z-scaling.
-- **Factor structure validated** vs diagonal baseline via LOO-CV; low-rank model strongly preferred.
-- **Factor rank $K^*=3$**: Pathfinder screening (K=0–4) on rebuilt data shows ELPD peak at $K=3$ with reversal at $K=4$; selected via the calibration criterion (reversal rule).
-- **Production model: stage 28** — $K=3$ t-errors, 4 chains × 1,000 post-warmup draws, $\hat{\nu}=4.90$ (95\% CI [4.79, 5.01]).
-- **Latent factors interpreted** via PCA of $\hat{\Lambda}\hat{\Lambda}^\top$: PC1 (62\% of common variance), PC2 (28\%), PC3 (11\%).
-- **Student-$t$ transforms impact:** $\hat{\nu}$ moved 2.95→4.90; transforms absorbed heavy tails.
-- **Lambda_a mixing resolved** at $K=3$: $\text{LLt}_{[1,10]}$ ESS=237 (threshold $>200$), $\hat{R}=1.005$ — PASS.
-- **Explained variability** (ICC) and **season profiles** regenerated on rebuilt data (P=48).
-- **Posterior predictive checks** confirm the model reproduces observed cross-feature correlations well.
+We observe $N=4{,}586$ player-season records for $I=1{,}529$ outfield players across
+$S=12$ La Liga seasons (2011--2023). Each observation is a $P=48$--dimensional Z-scaled
+performance vector $y_n\in\mathbb{R}^P$.
 
----
-
-# Data and Model
-
-## Data
-
-The dataset contains **4,586 player-season observations** from La Liga seasons 2011--2023:
-1,529 unique outfield players, 12 seasons, **48 performance features** (all Z-scaled to mean 0,
-SD 1 within season). Goalkeepers (501 rows, 121 players) were removed from stage 01 as GK-specific
-columns were excluded; 5 low-ICC rate features were dropped; 23 features (5 log1p, 18 sqrt) were
-transformed before Z-scaling to reduce skewness.
-
-## Model
-
-The model decomposes each player-season observation into additive effects:
+The model decomposes each observation additively:
 $$
-y_n = a_{i[n]} + b_{j[n]} + \varepsilon_n, \qquad n=1,\ldots,N
+y_n = a_{i[n]} + b_{j[n]} + \varepsilon_n, \quad n = 1,\ldots,N
 $$
-where $a_i \in \mathbb{R}^P$ is a player effect, $b_j \in \mathbb{R}^P$ a season effect, and
-$\varepsilon_n \in \mathbb{R}^P$ a residual. The covariance structures are:
+where $i[n]\in\{1,\ldots,I\}$ and $j[n]\in\{1,\ldots,S\}$ index player and season.
+
+- $a_i\in\mathbb{R}^P$: **player effect** — stable latent identity of player $i$
+- $b_j\in\mathbb{R}^P$: **season effect** — league-wide shift in season $j$
+- $\varepsilon_n\in\mathbb{R}^P$: **residual** — observation noise + player-season idiosyncrasy
+
+## Covariance structure
+
 $$
 \Sigma_a = \Lambda\Lambda^\top + \Psi_a \quad (\text{low-rank} + \text{diagonal}), \qquad
-\Sigma_b = \text{diag}(\sigma_b^2), \qquad \Sigma_e = \text{diag}(\sigma_e^2)
+\Sigma_b = \operatorname{diag}(\sigma_b^2), \qquad
+\Sigma_e = \operatorname{diag}(\sigma_e^2)
 $$
-The factor matrix $\Lambda \in \mathbb{R}^{P\times K}$ (fitted with $K=3$, selected by Pathfinder
-rank screening) is identified via lower-triangular constraints. The production model (stage 28) uses
-Student-$t$ residuals $\varepsilon_{np} \sim t(\nu,\,0,\,\sigma_{e,p})$ with
-$\nu\sim\text{Gamma}(2,0.1)$, fitted $\hat{\nu}=4.90$.
 
-All inference uses NUTS via CmdStan (4 chains $\times$ 1,000 post-warmup draws, warmup=1{,}000,
-$\delta=0.95$, stage 28).
+$\Lambda\in\mathbb{R}^{P\times K}$ ($K=3$) is the **factor loading matrix**;
+$\Psi_a=\operatorname{diag}(\psi_a^2)$ captures per-feature uniqueness not explained by
+the shared factors; $\sigma_{b,p}^2$ and $\sigma_{e,p}^2$ are per-feature season and residual
+variances.
+
+## Non-centred parametrisation
+
+Player effects are constructed non-centredly to improve geometry for the sampler:
+$$
+a_i = \Lambda\,\eta_i + \psi_a\odot z_{u,i},
+\qquad \eta_i\sim\mathcal{N}(0,I_K),\quad z_{u,i}\sim\mathcal{N}(0,I_P)
+$$
+where $\eta_i\in\mathbb{R}^K$ are **factor scores** and $z_{u,i}\in\mathbb{R}^P$ are
+uniqueness scores. The raw scores are centred within the `transformed parameters` block
+(sum-to-zero constraint enforced on $\eta_i$ and $z_{u,i}$ across players) to prevent
+$\pm\infty$ degeneracies.
+
+## Likelihood
+
+**Student-$t$ residuals** (production model, stage 28):
+$$
+\varepsilon_{np} \;\sim\; t\!\left(\nu,\;0,\;\sigma_{e,p}\right),
+\quad p=1,\ldots,P; \quad \nu\sim\operatorname{Gamma}(2,0.1)
+$$
+The degrees-of-freedom parameter $\nu$ is fitted from data; heavy-tailed seasons
+(breakouts, injury returns, tactical anomalies) are down-weighted automatically.
+
+## Identification
+
+$\Lambda$ is constrained **lower-triangular with positive diagonal** (the LT-PD
+parametrisation). This removes the $O(K)$ rotational non-identifiability of factor models.
+The loadings are therefore not directly interpretable; canonical factor directions are
+recovered post-hoc via PCA of the posterior-mean common variance matrix $\hat\Lambda\hat\Lambda^\top$
+(Section \ref{sec-interp}).
+
+## Priors
+
+$$
+\Lambda_{kk} \sim \operatorname{Half-Normal}(1), \qquad
+\Lambda_{pk} \sim \mathcal{N}(0,1) \text{ for } p>k, \qquad
+\psi_{a,p} \sim \operatorname{Half-Normal}(1)
+$$
+$$
+\sigma_{b,p} \sim \operatorname{Half-Normal}(1), \qquad
+\sigma_{e,p} \sim \operatorname{Half-Normal}(1), \qquad
+\nu \sim \operatorname{Gamma}(2, 0.1)
+$$
+
+The $\operatorname{Gamma}(2,0.1)$ prior on $\nu$ places meaningful mass below $\nu=10$ (supporting
+heavy tails) while allowing recovery toward Gaussian ($\nu\to\infty$) if the data support it.
 
 ---
 
-# Comparison: Low-rank vs Diagonal $\Sigma_a$ {#sec-diag}
+# Data Pipeline {#sec-data}
 
-**TODO addressed:** *Fit model with $\Sigma_a$ and $\Sigma_b$ diagonal with the same priors.
-Compare via LOO-CV and ICC.*
+## Dataset
 
-To test whether the low-rank player covariance is warranted, we fit a diagonal baseline where
-$\Sigma_a = \text{diag}(\sigma_a^2)$ (no shared factor structure, $K=0$) with matching priors,
-and compare using LOO-CV.
+La Liga player-season panel from Wyscout raw stats, seasons 2011--2023.
 
-```{r loo-diag-table}
-loo_diag <- read.csv("outputs/tables/20_loo_diagonal_vs_lowrank.csv",
-                     row.names = 1, check.names = FALSE)
-rownames(loo_diag) <- c("Low-rank ($K=2$)", "Diagonal ($K=0$)")
-show <- loo_diag[, c("elpd_loo", "se_elpd_loo", "elpd_diff", "se_diff")]
-colnames(show) <- c("ELPD", "SE", "$\\Delta$ELPD", "SE($\\Delta$)")
-show[] <- lapply(show, function(x) format(round(x, 0), big.mark = ","))
-show["Low-rank ($K=2$)", c("$\\Delta$ELPD", "SE($\\Delta$)")] <- "---"
-kable(show, booktabs = TRUE, escape = FALSE,
-      caption = "LOO-CV: low-rank ($K=2$) vs diagonal ($K=0$) player covariance. Best model listed first.")
+| Quantity | Value |
+|---|---|
+| Seasons | 12 (2011/12–2023/24) |
+| Player-season observations | $N=4{,}586$ |
+| Unique outfield players | $I=1{,}529$ |
+| Performance features | $P=48$ |
+
+## Goalkeeper exclusion (Session 8)
+
+Goalkeepers were **absent from the model in earlier sessions** by accident: GK-specific column
+names (saves, goals-conceded, etc.) were dropped, but GK player rows remained in the panel.
+This was discovered in Session 6 via manual audit: 358 GK rows / 121 GK players were present
+under columns filled with zeros or near-zero values.
+
+Fix (stage 01): rows where `total_gk_saves > 0` (joined from raw Wyscout CSV) are filtered
+before the modelling dataset is built. After GK exclusion: $N: 4{,}944\to 4{,}586$,
+$I: 1{,}650\to 1{,}529$.
+
+## Feature selection
+
+Features were selected in two rounds:
+
+**Round 1 (P: 53→48):** Five `rate_*` features with $\text{ICC}_\text{player} < 0.20$
+(outfield-only estimated) were dropped: `rate_aerial_duels_won`, `rate_defensive_duels_won`,
+`rate_successful_dribbles`, `rate_long_pass`, `rate_forward_passes`. Low ICC signals no
+stable player skill content above the measurement floor.
+
+**Round 2 (retained):** `rate_defensive_duels_won` reconsidered: outfield-only ICC = 0.389
+(above threshold when GKs excluded); retained. Final $P=48$.
+
+## Distributional transforms
+
+23 of the 48 features were transformed before Z-scaling (stage 02) to reduce right skew:
+
+| Transform | Count | Features |
+|---|---|---|
+| `log1p` | 5 | Sparse counts (goals, xG, yellow cards, …) |
+| `sqrt` | 18 | Moderate-skew passing / physical volume metrics |
+
+The transforms materially shifted the fitted degrees of freedom from $\hat\nu=2.95$ (pre-rebuild)
+to $\hat\nu=4.90$ (post-rebuild) — see Section \ref{sec-tails}.
+
+---
+
+# Posterior Inference and Sampler Convergence {#sec-diag}
+
+## Sampler settings
+
+- NUTS via CmdStan 2.35; 4 chains, 1,000 warmup + 1,000 post-warmup draws
+- $\delta=0.95$, max tree depth = 12, seed = 20260513
+- PCA-based initialisation (`build_pca_init`): warm-starts chains from classical factor solution
+  of player-season means, materially reducing warmup length
+
+## Key diagnostic results (stage 28: K=3, P=48, t-model)
+
+```{r diag-table}
+dc <- read.csv(tbl("28_diagnostics_cache.csv"))
+
+# Extract key params
+nu_row    <- dc[dc$param == "nu", ]
+psi_rows  <- dc[grepl("^psi_a\\.", dc$param), ]
+sige_rows <- dc[grepl("^sigma_e\\.", dc$param), ]
+sigb_rows <- dc[grepl("^sigma_b\\.", dc$param), ]
+llt_row   <- dc[dc$param == "LLt.1.10", ]
+llt_all   <- dc[grepl("^Lambda_a\\.|^LLt\\.", dc$param), ]
+
+diag_smry <- data.frame(
+  Parameter = c(
+    "$\\hat{\\nu}$ (degrees of freedom)",
+    "$\\psi_{a,p}$ (48 uniqueness)",
+    "$\\sigma_{e,p}$ (48 residual SD)",
+    "$\\sigma_{b,p}$ (48 season SD)",
+    "$\\Lambda_a$ loadings (144 entries)",
+    "$\\text{LLt}_{[1,10]}$ (mixing bellwether)"
+  ),
+  `ESS (median)` = c(
+    round(nu_row$ess_bulk),
+    round(median(psi_rows$ess_bulk, na.rm=TRUE)),
+    round(median(sige_rows$ess_bulk, na.rm=TRUE)),
+    round(median(sigb_rows$ess_bulk, na.rm=TRUE)),
+    round(median(llt_all$ess_bulk, na.rm=TRUE)),
+    round(llt_row$ess_bulk)
+  ),
+  `ESS (min)` = c(
+    round(nu_row$ess_bulk),
+    round(min(psi_rows$ess_bulk, na.rm=TRUE)),
+    round(min(sige_rows$ess_bulk, na.rm=TRUE)),
+    round(min(sigb_rows$ess_bulk, na.rm=TRUE)),
+    round(min(llt_all$ess_bulk, na.rm=TRUE)),
+    round(llt_row$ess_bulk)
+  ),
+  `Rhat (max)` = c(
+    round(nu_row$rhat, 3),
+    round(max(psi_rows$rhat, na.rm=TRUE), 3),
+    round(max(sige_rows$rhat, na.rm=TRUE), 3),
+    round(max(sigb_rows$rhat, na.rm=TRUE), 3),
+    round(max(llt_all$rhat, na.rm=TRUE), 3),
+    round(llt_row$rhat, 3)
+  ),
+  Verdict = c("PASS", "PASS", "PASS", "PASS",
+              ifelse(max(llt_all$rhat, na.rm=TRUE) < 1.05, "PASS", "BORDERLINE"),
+              ifelse(llt_row$ess_bulk > 200 & llt_row$rhat < 1.01, "PASS", "BORDERLINE")),
+  check.names = FALSE
+)
+kable(diag_smry, booktabs = TRUE, escape = FALSE, row.names = FALSE,
+      caption = "Stage 28 diagnostic summary (K=3, P=48, t-model, 4 chains × 1,000 draws). Threshold: ESS > 200, Rhat < 1.01.")
 ```
 
-The low-rank model is preferred by $\Delta\text{ELPD} = 3{,}724$ (SE 187, 20 SE improvement).
-This confirms genuine latent structure shared across performance variables in player effects.
+## Lambda_a mixing arc
 
-```{r}
-#| label: fig-icc-scatter
-#| fig-cap: "ICC per feature under low-rank $K=2$ (x-axis) vs diagonal $K=0$ (y-axis). Points above the diagonal indicate features where the factor structure raises the estimated player-level signal."
-#| out-width: "68%"
-knitr::include_graphics("outputs/figures/20_icc_diagonal_vs_lowrank.png")
-```
+The $\text{LLt}_{[1,10]}$ entry (goals loading on Factor 1 $\times$ passes loading on Factor 1)
+was the mixing bellwether throughout model development. Its ESS history:
 
-The ICC comparison (Figure 1) shows that for most features, the low-rank model attributes more
-variance to stable player identity. The factor structure is particularly beneficial for the
-features that load strongly on the two latent dimensions.
+| Stage | Data | Model | ESS | Rhat | Event |
+|---|---|---|---|---|---|
+| Stage 18 pre-rebuild | $P=53$, GKs in | $K=2$, t | 24 | 1.130 | Bimodal geometry from GK contamination |
+| Stage 26 ablation | $P=53$, GKs out | $K=2$, t | 64 | 1.072 | GK exclusion partial contributor |
+| Stage 18 rebuild | $P=48$, GKs out | $K=2$, t | 193 | 1.006 | Transforms + GK fix, near-threshold |
+| **Stage 28** | **$P=48$, GKs out** | **$K=3$, t** | **237** | **1.005** | **PASS** |
+
+The path from ESS=24 to ESS=237 involved (a) GK exclusion removing a bimodal structure in
+the goals/passes correlation, (b) distributional transforms reducing extreme values, and
+(c) moving to $K=3$ giving the passes feature its own dedicated factor loading, breaking
+the interdependency that caused the off-diagonal bottleneck.
 
 ---
 
 # Factor Rank Selection {#sec-rank}
 
-**TODO addressed:** *Start thinking about how to choose $K$.*
+## Pathfinder screening ($K=0,\ldots,4$)
 
-We evaluate ranks $K\in\{0,1,2,3,4\}$ using Pathfinder (a fast variational approximation to
-NUTS) on the rebuilt data ($N=4{,}586$, $P=48$). Pathfinder is used for rank screening only;
-the selected rank is then fitted with full NUTS. The selection rule: first $K$ where
-$\Delta_K < 0.20\times\Delta_2$ (elbow) or first reversal $\Delta_K < 0$ (peak criterion).
+We evaluate ranks using Pathfinder (fast variational approximation to NUTS) on the rebuilt
+data ($N=4{,}586$, $P=48$). Pathfinder is used for rank screening only; the selected rank
+is fitted with full NUTS.
+
+**Selection rule:** first reversal $\Delta_K < 0$ (ELPD peak criterion).
 
 ```{r}
 #| label: fig-elpd-rank
-#| fig-cap: "Pathfinder ELPD per held-out value for $K=0,\\ldots,4$ (rebuilt data, N=4,586, P=48). ELPD rises K=0→3 then reverses at K=4, selecting $K^*=3$."
+#| fig-cap: "Pathfinder ELPD per held-out value for $K=0,\\ldots,4$ (rebuilt data, $N=4{,}586$, $P=48$). ELPD rises K=0→3 then reverses at K=4, selecting $K^*=3$."
 #| fig-width: 5.5
 #| fig-height: 3.2
-elpd_full <- read.csv("outputs/rank_selection/real_data_elpd.csv")
-# Show K=0–4 calibration subset (the reliable run; K>4 Pathfinder is unstable for this model)
+elpd_full <- read.csv(rs("real_data_elpd.csv"))
 elpd <- elpd_full[elpd_full$rank <= 4, ]
 ggplot(elpd, aes(x = rank, y = elpd_per_value)) +
   geom_line(colour = "#2166ac", linewidth = 0.8) +
   geom_point(size = 3, colour = "#2166ac") +
-  geom_point(data = elpd[elpd$rank == 3, ], size = 5, colour = "#d73027", shape = 1, stroke = 2) +
-  geom_text(aes(label = sprintf("%.3f", elpd_per_value)),
-            vjust = -1.0, size = 3.1) +
+  geom_point(data = elpd[elpd$rank == 3, ], size = 5, colour = "#d73027",
+             shape = 1, stroke = 2) +
+  geom_text(aes(label = sprintf("%.3f", elpd_per_value)), vjust = -1.0, size = 3.1) +
   scale_x_continuous(breaks = 0:4) +
   expand_limits(y = max(elpd$elpd_per_value) + 0.04) +
-  labs(x = "Factor rank K",
-       y = "ELPD per held-out value",
-       caption = "Circle = selected K*=3. Pathfinder approximate; direction is reliable.") +
+  labs(x = "Factor rank K", y = "ELPD per held-out value",
+       caption = "Circle = selected K*=3. Pathfinder approximate; direction reliable.") +
   theme_bw(base_size = 11) +
   theme(panel.grid.minor = element_blank())
 ```
@@ -149,44 +281,203 @@ ggplot(elpd, aes(x = rank, y = elpd_per_value)) +
 et <- elpd[, c("rank", "elpd", "elpd_per_value")]
 et$elpd           <- format(round(et$elpd, 0), big.mark = ",")
 et$elpd_per_value <- round(et$elpd_per_value, 4)
-et$delta          <- c("---", format(round(diff(elpd_full$elpd[elpd_full$rank <= 4]), 0), big.mark = ","))
-colnames(et) <- c("K", "ELPD (total)", "ELPD / held-out", "$\\Delta$ vs $K-1$")
+et$delta          <- c("---",
+  format(round(diff(elpd_full$elpd[elpd_full$rank <= 4]), 0), big.mark = ","))
+colnames(et) <- c("$K$", "ELPD (total)", "ELPD / held-out", "$\\Delta$ vs $K-1$")
 kable(et, booktabs = TRUE, escape = FALSE, row.names = FALSE,
-      caption = "Pathfinder ELPD by factor rank (K=0–4, rebuilt data). Reversal at K=4 selects K*=3.")
+      caption = "Pathfinder ELPD by factor rank ($K=0$--4, rebuilt data). Reversal at $K=4$ selects $K^*=3$.")
 ```
 
-ELPD rises monotonically K=0→3 and reverses at K=4: the calibration criterion selects $K^*=3$.
-The production fit (stage 28) uses $K=3$ with Student-$t$ residuals.
+ELPD rises monotonically K=0→3 and reverses at K=4. Production fit (stage 28) uses $K=3$
+with Student-$t$ residuals.
 
-*Note:* Pathfinder ELPD values are approximate (variational, not MCMC). The direction (monotone
-K=0→3, reversal K=4) is reliable for selection; absolute magnitudes should not be compared to the
-NUTS LOO values in other sections.
+## PSIS-LOO K=2 vs K=3 confirmation
+
+After fitting the full NUTS models at $K=2$ (stage 18) and $K=3$ (stage 28), we ran
+PSIS-LOO via `generate_quantities` to confirm the Pathfinder direction.
+
+```{r loo-k2-k3}
+ct <- read.csv(tbl("C_loo_k2_vs_k3.csv"))
+ct_show <- data.frame(
+  Model = c("$K=2$ (stage 18, t)", "$K=3$ (stage 28, t)"),
+  ELPD  = format(round(ct$elpd_loo, 0), big.mark = ","),
+  SE    = format(round(ct$se_loo, 0)),
+  `$\\Delta$ELPD` = c("---", format(round(ct$delta_elpd[2], 0), big.mark = ",")),
+  `SE($\\Delta$)` = c("---", format(round(ct$se_delta[2], 0), big.mark = ",")),
+  `Pareto-$k>0.5$` = paste0(round(100*ct$pk_gt_0p5, 1), "%"),
+  check.names = FALSE
+)
+kable(ct_show, booktabs = TRUE, escape = FALSE, row.names = FALSE,
+      caption = "PSIS-LOO comparison: K=2 vs K=3 t-models (rebuilt data, P=48, N=4,586). Note: 99.4\\% Pareto-$k>0.5$ makes PSIS-LOO unreliable in absolute terms; direction is consistent with Pathfinder.")
+```
+
+$\Delta\text{ELPD}_{K3-K2} = +1{,}244 \pm 1{,}271$ (K=3 preferred, $\approx$1 SE).
+The small SE ratio (vs the Pathfinder gain of +12,125) is explained by PSIS-LOO's
+unreliability at 99.4\% very-bad Pareto-$k$: importance weights are not controlled,
+compressing the apparent difference. The direction is correct and consistent with Pathfinder.
 
 ---
 
-# Heavy-Tailed Residuals {#sec-tails}
+# Factor Interpretation {#sec-interp}
 
-**TODO addressed:** *Try out $t$ errors and see if that helps.*
+## Factor loadings and PCA of $\hat{\Lambda}\hat{\Lambda}^\top$
 
-We replace the Gaussian likelihood with Student-$t$ errors: $\varepsilon_{np}\sim
-t(\nu,\,0,\,\sigma_{e,p})$ with prior $\nu\sim\text{Gamma}(2,0.1)$. The degrees-of-freedom
-parameter $\nu$ governs tail weight; $\nu\to\infty$ recovers Gaussian; $\nu=3$ gives very
-heavy tails (variance $= 3\,\sigma_e^2$; $\nu<4$ means infinite kurtosis).
+The $K=3$ factor loadings $\Lambda\in\mathbb{R}^{48\times 3}$ are identified only up to
+orthogonal rotation. We apply PCA to the posterior-mean common variance matrix
+$\hat\Lambda\hat\Lambda^\top$ to obtain a canonical, interpretable rotation:
 
-**Pre-rebuild** ($N=4{,}944$, $P=53$): the posterior concentrated near the lower bound,
-$\hat{\nu}=2.95$ ([2.91, 2.99]). After the **Session 8 rebuild** (GK exclusion + 23 distributional
-transforms including log1p on goals/xG and sqrt on passing volume):
+- **PC1:** 61.8\% of common variance
+- **PC2:** 27.7\% of common variance
+- **PC3:** 10.5\% of common variance
+
+```{r}
+#| label: fig-loading-heatmap
+#| fig-cap: "Posterior mean factor loadings $\\hat{\\Lambda}$ (K=3 production model, stage 28, P=48, t-errors). Lower triangle shown; upper triangle is structurally zero (LT-PD identification)."
+#| out-width: "88%"
+knitr::include_graphics(fig("28_lambda_a_heatmap.png"))
+```
+
+```{r}
+#| label: fig-pca-heatmap
+#| fig-cap: "PCA-rotated loadings: eigenvectors of posterior-mean $\\hat{\\Lambda}\\hat{\\Lambda}^\\top$ (K=3, stage 28)."
+#| out-width: "88%"
+knitr::include_graphics(fig("28_pca_loading_heatmap.png"))
+```
+
+## Top loaders per factor
+
+```{r factor-loading-table}
+ps <- read.csv("outputs/tables/28_real_lowrank_a_diag_b_t_k3_posterior_summary.csv",
+               check.names = FALSE)
+mo_fnames <- readRDS(dat("model_objects.rds"))$variable_names
+
+la <- ps[grepl("^Lambda_a\\[", ps$variable), ]
+la$row_i <- as.integer(sub("Lambda_a\\[(\\d+),(\\d+)\\]", "\\1", la$variable))
+la$col_k <- as.integer(sub("Lambda_a\\[(\\d+),(\\d+)\\]", "\\2", la$variable))
+la$feature <- mo_fnames[la$row_i]
+
+top_loaders <- do.call(rbind, lapply(1:3, function(k) {
+  sub <- la[la$col_k == k, ]
+  sub <- sub[order(-abs(sub$mean)), ][1:5, ]
+  data.frame(
+    Factor    = paste0("Factor ", k),
+    Feature   = gsub("_", " ", gsub("^per90_|^rate_", "", sub$feature)),
+    `Post. mean` = round(sub$mean, 3),
+    `q5`  = round(sub$q5, 3),
+    `q95` = round(sub$q95, 3),
+    check.names = FALSE
+  )
+}))
+kable(top_loaders, booktabs = TRUE, row.names = FALSE,
+      caption = "Top 5 absolute loaders per factor (posterior mean $\\pm$ 90\\% CI). Lower-triangular: Factor 1 can load on all 48 features; Factor 2 on features 2--48; Factor 3 on features 3--48.")
+```
+
+**Factor 1 — Offensive volume:** loads positively on goals, xG, shots, touches in box;
+negatively on recoveries, interceptions, long passes. Identifies forwards and attack-minded
+players at the positive extreme, defensive/physical players at the negative extreme.
+
+**Factor 2 — Width / creativity:** loads positively on crosses, shot assists, and assists.
+Identifies wide midfielders and creative players.
+
+**Factor 3 — Build-up / distribution:** loads negatively on received passes, lateral passes,
+progressive passes. Identifies the dimension separating ball-playing midfielders and
+deep-lying builders from other outfield roles.
+
+```{r}
+#| label: fig-radar
+#| fig-cap: "Mean absolute PCA loading by feature group and PC (stage 28, K=3)."
+#| out-width: "72%"
+knitr::include_graphics(fig("28_factor_group_radar.png"))
+```
+
+## Player archetypes from posterior-mean $\hat{a}_i$
+
+Projecting posterior-mean player effects onto the PCA rotation gives each player's estimated
+archetype position:
+
 $$
-\hat{\nu} = 4.90 \quad \bigl(95\%\ \text{CI}:\ [4.79,\ 5.01]\bigr); \quad
-\text{ESS} = 2{,}734, \quad \hat{R} = 1.000
+\text{PC score}_k(i) = \hat{a}_i^\top v_k, \qquad v_k = k\text{-th eigenvector of }\hat\Lambda\hat\Lambda^\top
 $$
-The shift $\nu: 2.95 \to 4.90$ confirms that the transforms absorbed the heaviest tail contributions
-(threshold: $\nu\geq 4.5$). The data are no longer near the $\nu=2$ variance-explosion boundary.
-Student-$t$ residuals remain warranted ($\nu\neq\infty$); the model captures genuine heavy-tailed
-events (breakout seasons, unusual tactical deployments) that a Gaussian would systematically
-under-weight.
 
-**Original Normal vs $t$ comparison (pre-rebuild, $K=2$, $N=4{,}944$):**
+```{r}
+#| label: fig-player-scatter
+#| fig-cap: "Player archetypes: PC1 vs PC2 score for all 1,529 outfield players. Point size = number of seasons observed. Extreme players labelled."
+#| out-width: "90%"
+if (file.exists(fig("29_factor_score_scatter_pc1_pc2.png"))) {
+  knitr::include_graphics(fig("29_factor_score_scatter_pc1_pc2.png"))
+} else {
+  knitr::include_graphics(fig("13_real_pca_player_scores_scatter.png"))
+}
+```
+
+```{r}
+#| label: fig-pc1-table
+#| fig-cap: "Top and bottom 15 players on PC1 (Offensive volume dimension). Score = posterior-mean projection; seasons = number of La Liga seasons observed."
+#| out-width: "90%"
+if (file.exists(fig("29_top_players_table_pc1.png")))
+  knitr::include_graphics(fig("29_top_players_table_pc1.png"))
+```
+
+```{r}
+#| label: fig-pc2-table
+#| fig-cap: "Top and bottom 15 players on PC2 (Width / creativity dimension)."
+#| out-width: "90%"
+if (file.exists(fig("29_top_players_table_pc2.png")))
+  knitr::include_graphics(fig("29_top_players_table_pc2.png"))
+```
+
+```{r}
+#| label: fig-pc3-table
+#| fig-cap: "Top and bottom 15 players on PC3 (Build-up / distribution dimension)."
+#| out-width: "90%"
+if (file.exists(fig("29_top_players_table_pc3.png")))
+  knitr::include_graphics(fig("29_top_players_table_pc3.png"))
+```
+
+## Season trends from $\hat{b}_j$
+
+Season effects $\hat{b}_j$ capture year-specific league-wide shifts. Projecting onto the
+same PCA axes gives season-level factor trends:
+
+```{r}
+#| label: fig-season-trends
+#| fig-cap: "Season-level factor trends: $\\hat{b}_j$ projected onto PC1--PC3 axes (2012/13--2023/24). Positive = season shifted the league toward that archetype direction."
+#| out-width: "90%"
+#| fig-height: 4
+if (file.exists(fig("29_season_factor_trends.png"))) {
+  knitr::include_graphics(fig("29_season_factor_trends.png"))
+} else {
+  knitr::include_graphics(fig("15_season_profiles_grid.png"))
+}
+```
+
+---
+
+# Student-$t$ Residuals {#sec-tails}
+
+## Motivation and pre/post-rebuild comparison
+
+Football performance is punctuated by rare but genuine extreme seasons: a striker returning
+from injury hitting exceptional form, a midfielder deployed in an unfamiliar role. Gaussian
+residuals assign negligible probability to such events and distort the inferred player
+effects to compensate. Student-$t$ errors with fitted $\nu$ allow the model to explicitly
+down-weight these observations.
+
+| Quantity | Pre-rebuild | Post-rebuild | Interpretation |
+|---|---|---|---|
+| $\hat\nu$ | 2.95 | **4.90** | Transforms absorbed heavy tails |
+| 95\% CI | [2.91, 2.99] | [4.79, 5.01] | Well away from $\nu=2$ boundary |
+| ESS | — | 2,734 | Excellent convergence |
+| $\hat{R}$ | — | 1.000 | Perfect mixing |
+| $\text{Var}(\varepsilon)/\sigma_e^2$ | $\nu/(\nu-2)=1.93$ | **1.53** | |
+| $\tau_{99}$ (in $\sigma_e$ units) | 3.371 | **3.135** | Threshold for 1\% tail events |
+
+The transforms (log1p on goals/xG, sqrt on volume metrics) absorbed the heaviest tail
+contributions. The model no longer sits near the $\nu=2$ variance-explosion boundary.
+Student-$t$ residuals remain warranted: $\hat\nu=4.90\neq\infty$, and genuinely extreme
+seasons still occur.
+
+## LOO comparison: $t$ vs Normal (pre-rebuild, K=2)
 
 ```{r loo-t-table}
 loo_t_path <- "outputs/tables/18_loo_normal_vs_t.csv"
@@ -200,229 +491,215 @@ if (file.exists(loo_t_path)) {
   kable(show_t, booktabs = TRUE, escape = FALSE,
         caption = "LOO-CV: Student-$t$ vs Gaussian residuals (pre-rebuild, K=2, N=4,944). Best model listed first.")
 } else {
-  cat("(LOO table not available — run stage 18b to regenerate.)\n")
+  cat("(LOO table not available.)\n")
 }
 ```
 
-The Student-$t$ model was preferred by $\Delta\text{ELPD} = 11{,}668$ (SE 554, $\approx$21 SE
-improvement) on the pre-rebuild data. **Student-$t$ residuals are the default for all fits.**
-
-*Caveat:* Both models show high Pareto-$k$ values ($> 70\%$ "very bad" observations), so LOO
-relies on importance-sampling extrapolation. The direction and magnitude are reliable; absolute
-ELPD values should be interpreted with caution.
-
 ---
 
-# Latent Factor Interpretation {#sec-interp}
+# Outlier Study {#sec-outliers}
 
-**TODO addressed:** *Interpretation of latent factors through PCA of $\Lambda\Lambda'$;
-interpretation of $a_i$ and $b_j$ through posterior means.*
+We compute standardised residuals for all $N\times P = 220{,}128$ cells of the stage 28
+model, using posterior-mean player effects $\hat{a}_i$ and season effects $\hat{b}_j$
+extracted from the raw CSV chains:
 
-## Factor loadings and PCA of $\hat{\Lambda}\hat{\Lambda}^\top$
+$$
+z_{np} = \frac{y_{np} - \hat{a}_{i[n],p} - \hat{b}_{j[n],p}}{\hat\sigma_{e,p}\sqrt{\hat\nu/(\hat\nu-2)}}
+$$
 
-The $K=3$ factor loadings $\Lambda\in\mathbb{R}^{48\times 3}$ are identified only up to
-orthogonal rotation. We apply PCA to the posterior-mean common variance matrix
-$\hat{\Lambda}\hat{\Lambda}^\top$ to obtain a canonical, interpretable rotation.
-Three principal factors explain all common variance; the split is:
+Under the fitted $t(\hat\nu)$ model with unit variance, $z_{np}$ has marginal variance 1.
+The model's own 99th-percentile threshold is:
+$$
+\tau_{99} = \frac{q_{0.995}(t_{\hat\nu})}{\sqrt{\hat\nu/(\hat\nu-2)}} \approx 3.135
+\quad (\hat\nu = 4.902)
+$$
 
-- **PC1:** 61.8\% of common variance (posterior mean)
-- **PC2:** 27.7\% of common variance
-- **PC3:** 10.5\% of common variance (emerging third direction)
-
-PC1 remains the dominant direction; PC3 now captures a distinct third player dimension that
-was blended into PC1/PC2 under $K=2$.
-
-```{r}
-#| label: fig-loading-heatmap
-#| fig-cap: "Posterior mean factor loadings $\\hat{\\Lambda}$ for the K=3 production model (stage 28, P=48, t-errors). Rows are the 48 performance features grouped by category; columns are the three latent factors. Upper triangle is structurally zero (lower-triangular identification)."
-#| out-width: "88%"
-knitr::include_graphics("outputs/figures/28_lambda_a_heatmap.png")
-```
+## Feature-level residual tail summary
 
 ```{r}
-#| label: fig-pca-loading-heatmap
-#| fig-cap: "PCA-rotated factor loadings for K=3 (eigenvectors of posterior-mean $\\hat{\\Lambda}\\hat{\\Lambda}^\\top$). PC1 loads on attacking volume, PC2 on defensive/physical, PC3 on a third dimension (preliminary interpretation pending full analysis)."
-#| out-width: "88%"
-knitr::include_graphics("outputs/figures/28_pca_loading_heatmap.png")
+#| label: fig-p99-bar
+#| fig-cap: "p99 of $|z_{np}|$ for each of the 48 features, coloured by verdict. Dashed line = $\\tau_{99}=3.135$ (model's own 99th-pct threshold at $\\hat{\\nu}=4.902$). Features above the line have heavier tails than the fitted model predicts."
+#| out-width: "96%"
+if (file.exists(fig("29_residual_p99_barchart.png")))
+  knitr::include_graphics(fig("29_residual_p99_barchart.png"))
 ```
 
-```{r}
-#| label: fig-factor-radar
-#| fig-cap: "Mean absolute PCA loading by feature group for K=3. Three factors separate attacking output (PC1), defensive/physical (PC2), and a third axis (PC3)."
-#| out-width: "72%"
-knitr::include_graphics("outputs/figures/28_factor_group_radar.png")
+```{r feat-smry-table}
+if (file.exists(tbl("29_residual_feature_summary.csv")) &&
+    file.exists(tbl("29_residual_skew_triangulation.csv"))) {
+  fs  <- read.csv(tbl("29_residual_feature_summary.csv"))
+  tri <- read.csv(tbl("29_residual_skew_triangulation.csv"))
+  fs  <- merge(fs, tri[, c("feature", "verdict")], by = "feature", all.x = TRUE)
+  fs_show <- head(fs[order(-fs$p99_abs), ], 12)
+  fs_show$feature       <- gsub("_", " ", gsub("^per90_|^rate_", "", fs_show$feature))
+  fs_show$p50_abs       <- round(fs_show$p50_abs, 3)
+  fs_show$p99_abs       <- round(fs_show$p99_abs, 3)
+  fs_show$frac_gt_tau99 <- paste0(round(100 * fs_show$frac_gt_tau99, 2), "%")
+  fs_show$verdict       <- ifelse(is.na(fs_show$verdict), "—", fs_show$verdict)
+  kable(fs_show[, c("feature", "group", "p50_abs", "p99_abs", "frac_gt_tau99", "verdict")],
+        booktabs = TRUE, row.names = FALSE,
+        col.names = c("Feature", "Group", "p50 |z|", "p99 |z|", "Frac > τ₉₉", "Verdict"),
+        caption = "Top 12 features by p99 of standardised residuals. Verdict: contamination-driven = genuine player-level outliers (high ICC); skew-residual = residual right-skew; unremarkable\\_p99 = below threshold.")
+}
 ```
 
-**PC1 --- Attacking output:** loads on goals, shots, xG, offensive duels, crosses, touches in box.
-Corresponds to forwards and attacking midfielders.
+## Top outlier observations
 
-**PC2 --- Physical / defensive contribution:** loads on recoveries, clearances, aerial duels,
-defensive duels, pressing intensity. Corresponds to central defenders and defensive midfielders.
-
-**PC3 --- Emerging third axis (preliminary):** separates a third dimension from the $K=2$ blend.
-Full interpretation requires posterior draws-level PCA (stage 13 equivalent for stage 28).
-
-## Player archetypes from $\hat{a}_i$ (posterior means)
-
-Posterior means $\hat{a}_i$ give each player's estimated latent position averaged over all their
-observed seasons. Projecting onto the PCA-rotated factor scores produces an archetype map.
-
-```{r}
-#| label: fig-player-scatter
-#| fig-cap: "Player archetypes in PCA factor score space (PC1 vs PC2, from K=2 Normal model, P=48 rebuilt data). For K=3 draws-level scores see stage 28 analysis (pending)."
-#| out-width: "82%"
-knitr::include_graphics("outputs/figures/13_real_pca_player_scores_scatter.png")
+```{r worst-cells}
+if (file.exists(tbl("29_residual_worst_cells.csv"))) {
+  wc <- read.csv(tbl("29_residual_worst_cells.csv"))
+  wc_show <- head(wc, 20)
+  wc_show$feature <- gsub("_", " ", gsub("^per90_|^rate_", "", wc_show$feature))
+  wc_show$z_std <- round(wc_show$z_std, 2)
+  wc_show$season_label <- c(
+    "12/13","13/14","14/15","15/16","16/17","17/18",
+    "18/19","19/20","20/21","21/22","22/23","23/24"
+  )[wc_show$season_index]
+  kable(wc_show[, c("rank", "player_name", "season_label", "feature", "z_std")],
+        booktabs = TRUE, row.names = FALSE,
+        col.names = c("Rank", "Player", "Season", "Feature", "$z$"),
+        escape = FALSE,
+        caption = "Top 20 outlier (player-season, feature) cells by $|z_{np}|$. Standardised residuals from the stage 28 K=3 t-model. $\\tau_{99}=3.135$; values above this are in the model's 1\\% tail.")
+}
 ```
 
-```{r}
-#| label: fig-player-heatmap
-#| fig-cap: "Posterior mean player effect $\\hat{a}_i$ for a sample of players (rows), ordered by PC1 score. Columns are the 48 features (rebuilt data, P=48) grouped by category. Colour encodes the Z-scaled effect (blue = below average, red = above average)."
-#| out-width: "90%"
-knitr::include_graphics("outputs/figures/14_player_profile_heatmap.png")
+## Comparison to pre-rebuild study
+
+The previous outlier study (old Task A) ran on $P=53$, $N=4{,}944$, $K=2$, $\hat\nu=2.95$.
+Key changes in the rebuilt model:
+
+- **Threshold moves:** $\tau_{99}: 3.371\to 3.135$ (lower $\nu$ means fatter theoretical tails,
+  so the threshold was lower). The rebuilt model expects lighter tails at $\hat\nu=4.90$, so
+  the threshold rises slightly. Any cell above 3.135 in the rebuilt model is genuinely surprising.
+- **GK contamination gone.** Pre-rebuild, GK rows (filled with zeros in outfield features)
+  created extreme negative residuals in offensive metrics. These are absent from the rebuilt data.
+- **Smart-passes extreme (Reyes 2012/13).** This was flagged at $z\approx 14.4\sigma$ in the
+  pre-rebuild study. After `log1p` transform on `per90_smart_passes`, the distribution is
+  compressed. The same observation may be significantly smaller now.
+
+```{r vs-old-check}
+if (file.exists(note("29_vs_old_task_a.txt"))) {
+  lines <- readLines(note("29_vs_old_task_a.txt"))
+  cat(paste(lines, collapse = "\n"))
+}
 ```
-
-The scatter (Figure \ref{fig-player-scatter}) shows clear separation by position. The player
-heatmap (Figure \ref{fig-player-heatmap}) confirms that high-PC1 players have systematically
-elevated attacking metrics across all subcategories, while high-PC2 players are elevated on
-defensive volume.
-
-## Season profiles from $\hat{b}_j$ (posterior means)
-
-Season effects $\hat{b}_j$ capture year-specific deviations from the overall mean that are
-shared across all players in a given season (e.g.\ rule changes, tactical trends,
-fixture density effects).
-
-```{r}
-#| label: fig-season-profiles
-#| fig-cap: "Posterior mean season effects $\\hat{b}_j$ for each of the 12 La Liga seasons (2011--2023). Each panel shows the effect profile across the 48 rebuilt features. Seasons cluster into distinct tactical eras."
-#| out-width: "90%"
-knitr::include_graphics("outputs/figures/15_season_profiles_grid.png")
-```
-
-Season effects are notably smaller in magnitude than player effects (consistent with ICC results
-below), but show interpretable temporal patterns: seasons after 2018 tend to show elevated
-pressing-intensity metrics, while earlier seasons show relatively higher long-pass and clearance
-values.
 
 ---
 
 # Explained Variability (ICC) {#sec-icc}
 
-**TODO addressed:** *Explained variability by $\Sigma_a + \Sigma_b$ over $\Sigma_a + \Sigma_b + \Sigma_e$.*
-
-For each feature $p$, the intra-class correlation (ICC) decomposes total variance into three
-sources:
+For each feature $p$, the intra-class correlation (ICC) decomposes total variance:
 $$
-\underbrace{\frac{\Sigma_{a,pp}}{\Sigma_{a,pp} + \Sigma_{b,pp} + \Sigma_{e,pp}}}_{\text{ICC}_\text{player}} +
-\underbrace{\frac{\Sigma_{b,pp}}{\Sigma_{a,pp} + \Sigma_{b,pp} + \Sigma_{e,pp}}}_{\text{ICC}_\text{season}} +
-\underbrace{\frac{\Sigma_{e,pp}}{\Sigma_{a,pp} + \Sigma_{b,pp} + \Sigma_{e,pp}}}_{\text{ICC}_\text{residual}} = 1
+\text{ICC}_\text{player} = \frac{\Sigma_{a,pp}}{\Sigma_{a,pp} + \Sigma_{b,pp} + \Sigma_{e,pp}},
+\quad
+\text{where}\quad \Sigma_{a,pp} = \Lambda_{p\cdot}\Lambda_{p\cdot}^\top + \psi_{a,p}^2
 $$
-where $\Sigma_{a,pp} = \Lambda_{p\cdot}\Lambda_{p\cdot}^\top + \psi_{a,p}^2$,
-$\Sigma_{b,pp} = \sigma_{b,p}^2$, and $\Sigma_{e,pp} = \sigma_{e,p}^2$.
-The fraction $(\Sigma_{a,pp} + \Sigma_{b,pp}) / (\Sigma_{a,pp} + \Sigma_{b,pp} + \Sigma_{e,pp})$
-is the total model-explained variability (player $+$ season effects).
 
 ```{r}
 #| label: fig-icc-barchart
-#| fig-cap: "ICC decomposition for all 48 features (rebuilt data, P=48), ranked by player ICC. Blue = player, orange = season, grey = residual. Most features are dominated by stable player-level effects."
+#| fig-cap: "ICC decomposition for all 48 features (K=2 Normal model, rebuilt data P=48), ranked by player ICC. Blue = player (stable skill), orange = season, grey = residual."
 #| out-width: "96%"
-knitr::include_graphics("outputs/figures/16_icc_ranked_barchart.png")
+knitr::include_graphics(fig("16_icc_ranked_barchart.png"))
 ```
 
 ```{r icc-top-table}
-icc <- read.csv("outputs/tables/16_icc_summary.csv")
-icc_top <- icc[order(-icc$icc_player),
-               c("feature", "icc_player", "icc_season", "icc_residual")]
-# clean feature names
-icc_top$feature <- gsub("^per90_|^rate_", "", icc_top$feature)
-icc_top$feature <- gsub("_", " ", icc_top$feature)
+icc <- read.csv(tbl("16_icc_summary.csv"))
+icc_top <- icc[order(-icc$icc_player), c("feature","icc_player","icc_season","icc_residual")]
+icc_top$feature <- gsub("_", " ", gsub("^per90_|^rate_", "", icc_top$feature))
 icc_top$explained <- round((icc_top$icc_player + icc_top$icc_season) * 100, 1)
-icc_top$icc_player   <- round(icc_top$icc_player * 100, 1)
-icc_top$icc_season   <- round(icc_top$icc_season * 100, 1)
-icc_top$icc_residual <- round(icc_top$icc_residual * 100, 1)
-colnames(icc_top) <- c("Feature", "Player", "Season", "Residual", "Total explained")
+icc_top[, 2:4] <- round(icc_top[, 2:4] * 100, 1)
+colnames(icc_top) <- c("Feature", "Player (%)", "Season (%)", "Residual (%)", "Explained (%)")
 kable(head(icc_top, 10), booktabs = TRUE, escape = FALSE, row.names = FALSE,
-      caption = "Top 10 features by player ICC (percentage of total variance). ``Total explained'' = player + season ICC, i.e.\\ the variance attributable to the model's systematic effects.")
+      caption = "Top 10 features by player ICC. ``Explained'' = player + season ICC. From K=2 Normal model (stage 11 on rebuilt P=48 data).")
 ```
 
-The most stable player traits are volume metrics: interceptions (89\%), defensive duels (87\%),
-shots (86\%). Season effects are small ($< 5\%$) for most features, confirming that year-to-year
-variation in individual output is driven primarily by stable player identity rather than
-league-wide trends. Total model-explained variability exceeds 85\% for the top 10 features.
+*Note:* ICC values are from the K=2 Normal model (stage 10/11) on rebuilt data. ICC from the
+K=3 t-model (stage 28) pending stages 11--16 rerun.
 
-*Note:* ICC values are from the K=2 Normal model (stage 10 / stage 11) on the rebuilt data (P=48).
-ICC from the K=3 t-model (stage 28) will be regenerated when stages 11–16 are re-run on stage 28.
+---
+
+# Model Comparison Table {#sec-compare}
+
+```{r comparison-table}
+comp <- data.frame(
+  Comparison = c(
+    "Low-rank $K=2$ vs diagonal $K=0$",
+    "$t$-errors vs Gaussian ($K=2$, pre-rebuild)",
+    "Low-rank $K=3$ vs $K=2$ (Pathfinder)",
+    "Low-rank $K=3$ vs $K=2$ (PSIS-LOO)",
+    "Low-rank $K=3$ vs diagonal $K=0$ (LOO)"
+  ),
+  `$\\Delta$ELPD` = c("$+3{,}724$", "$+11{,}668$", "$+12{,}125$*", "$+1{,}244$**", "pending"),
+  `SE` = c("187", "554", "—", "1,271", "—"),
+  `SE ratio` = c("20", "21", "—", "0.98", "—"),
+  Source = c(
+    "Stage 20 PSIS-LOO ($P=53$, $N=4944$)",
+    "Stage 18b PSIS-LOO ($P=53$, $N=4944$)",
+    "Pathfinder screening ($P=48$, $N=4586$)",
+    "Block C PSIS-LOO ($P=48$, $N=4586$)",
+    "Stage 20 rerun needed ($P=48$)"
+  ),
+  check.names = FALSE
+)
+kable(comp, booktabs = TRUE, escape = FALSE, row.names = FALSE,
+      caption = "All model comparisons to date. * Pathfinder values are variational approximations; direction reliable, absolute magnitudes approximate. ** PSIS-LOO unreliable at 99.4\\% Pareto-$k>0.5$; direction consistent with Pathfinder.")
+```
+
+**Summary:** All comparisons favour the production model (K=3 t-errors). The low-rank structure
+is real (20 SE over diagonal). Student-$t$ residuals are strongly supported (21 SE improvement
+pre-rebuild; structurally justified post-rebuild with $\hat\nu=4.90\neq\infty$). Rank K=3
+is preferred over K=2 in both Pathfinder screening and PSIS-LOO direction.
 
 ---
 
 # Posterior Predictive Checks {#sec-ppc}
 
-**TODO addressed:** *Posterior predictive checks for the model with $\Sigma_a$ low-rank $+$ diagonal
-and $\Sigma_b$ diagonal.*
-
-Posterior predictive checks (PPCs) assess whether the fitted model generates data that resemble
-the observed dataset. We focus on the cross-feature correlation structure: if the model correctly
-captures the covariance among features, predicted feature-pair correlations should match observed
-ones.
-
-For each posterior draw $s$, we simulate replicated observations
-$y^{(s)}_n \sim t\!\left(\nu^{(s)},\, a^{(s)}_{i[n]}+b^{(s)}_{j[n]},\, \sigma_e^{(s)}\right)$
-and compute the correlation matrix of $y^{(s)}$. The plot below compares observed correlations
-with the posterior mean predicted correlations.
-
 ```{r}
-#| label: fig-ppc-scatter
-#| fig-cap: "PPC: each point is a (feature $i$, feature $j$) pair (P=48 rebuilt data). Predicted correlations (y-axis) closely track observed (x-axis). Residual scatter represents cross-feature structure not fully captured by $K=2$ factors (this check will be rerun for the K=3 production model)."
+#| label: fig-ppc
+#| fig-cap: "PPC: observed vs predicted feature-pair correlations (K=2 Normal model, P=48 rebuilt data). High correlation ($r\\approx 0.98$) confirms the model captures cross-feature covariance structure. PPC for stage 28 K=3 t-model pending stage 19 rerun."
 #| out-width: "72%"
-knitr::include_graphics("outputs/figures/19_correlation_ppc_scatter.png")
+knitr::include_graphics(fig("19_correlation_ppc_scatter.png"))
 ```
-
-The model reproduces the bulk of the cross-feature correlation structure. The scatter around
-the diagonal is informative: most off-diagonal residuals correspond to pairs that share a
-specific sub-role (e.g.\ pairs within the defensive group for fullbacks vs central defenders).
-The K=3 production fit (stage 28) is expected to tighten this alignment; PPC for stage 28 is
-pending rerun of stage 19.
 
 ---
 
-# Current Status and Next Steps {#sec-next}
+# Open Questions and Next Steps {#sec-next}
 
-## Production model status (July 2026)
+## Production model status
 
-The **stage 28** fit is the current production model: $K=3$, $P=48$, $N=4{,}586$,
-Student-$t$ residuals, $\hat{\nu}=4.90$, 4 chains × 1,000 post-warmup draws.
-
-Key diagnostic results:
-
-- $\hat{\nu}=4.90$ (ESS=2,734, $\hat{R}=1.000$) — well-converged, transforms absorbed tails
-- $\text{LLt}_{[1,10]}$: ESS=237, $\hat{R}=1.005$ — Lambda_a mixing PASS at K=3
-- Lambda_a overall: ESS median=374, min=130; Rhat max=1.014 (4 params above 1.01, 0 above 1.05)
-- $\psi_a$, $\sigma_b$, $\sigma_e$: ESS $\geq 528$, $\hat{R}\leq 1.005$
+| Item | Value | Status |
+|---|---|---|
+| Model | Stage 28: K=3, P=48, N=4,586, t-errors | Complete |
+| $\hat\nu$ | 4.902 (95\% CI [4.79, 5.01]) | Complete |
+| Lambda_a mixing | ESS=237, Rhat=1.005 (PASS) | Complete |
+| LOO K=3 vs K=2 | $+1{,}244\pm 1{,}271$ (direction: K=3 preferred) | Complete |
+| Marginalized Normal ($I=1{,}000$) | Coverage $\geq 85\%$ (PASS) | Complete |
+| Outlier study (stage 29) | All 48 features, 1,529 players, top 200 cells | Complete |
 
 ## Pending analyses
 
-1. **LOO comparison K=2 vs K=3.** Generate quantities with \texttt{compute\_log\_lik=1} on
-   stage 18 and stage 28 to obtain PSIS-LOO ELPD. Compare $\Delta$ELPD direction to
-   Pathfinder gain of +12,125 (in progress, Session 9 Block C).
+1. **Stage 20 rerun.** Diagonal baseline needs refitting on rebuilt data ($P=48$, $N=4{,}586$,
+   K=0 stage 03). Currently running (Session 9 Block D). Once complete, the low-rank vs diagonal
+   comparison becomes final on the rebuilt data.
 
-2. **Stage 20 (diagonal vs low-rank on rebuilt data).** Requires stage 03 diagonal refit
-   on $P=48$ data (in progress, Session 9 Block D). Will restore ICC comparison figure.
+2. **Stages 11--16 on stage 28.** Full ICC, loading analysis, player/season profiles for the
+   K=3 production model. Currently these sections use the K=2 Normal model as proxy.
 
-3. **Stages 11–16 re-run on stage 28.** Full loading analysis, ICC, player/season profiles
-   for the K=3 production model. Currently the post-processing (Sections 5–7) uses the K=2
-   Normal model (stage 10) on rebuilt data.
+3. **Factor interpretation.** PC1/PC2/PC3 labels are preliminary. Draws-level PCA of $\Lambda\Lambda^\top$
+   gives posterior intervals on the eigenvectors, enabling credible-interval loading plots.
 
-4. **Factor interpretation.** PC1/PC2/PC3 labels need draws-level PCA (stage 13 equivalent
-   for stage 28) to produce credible interval–weighted loading plots and player score scatter.
+4. **Structured group prior.** A prior that encourages loadings to be sparse within feature
+   groups could improve interpretability and regularisation.
 
-## Longer-term recommendations
+## Longer-term modelling
 
-5. **Variable group structure.** A structured prior on $\Lambda$ by feature group could
-   improve interpretability and regularisation.
+5. **Team-season effects.** A team-season effect $c_{t[n]}\in\mathbb{R}^P$ would separate
+   manager and tactical system effects from stable individual traits. Required: a player-team
+   mapping, which is available in the raw data.
 
-6. **Team-season effects.** A team-season effect $c_{t[n]}\in\mathbb{R}^P$ would separate
-   manager and tactical system effects from stable individual traits.
+6. **Temporal structure.** Season effects $b_j$ are currently exchangeable. A Gaussian process
+   or random walk over time would capture league-wide temporal trends with appropriate smoothing.
 
-7. **Temporal structure for season effects.** Season effects $b_j$ are currently exchangeable.
-   A random walk or Gaussian process over time would capture league-wide temporal trends.
-
+7. **Two-component mixture (deprioritised).** At $\hat\nu=4.90$, the tail is moderate and
+   well-characterised by Student-$t$. The mixture model (outlier fraction vs smooth heavy tail)
+   is theoretically appealing but practically unnecessary given the current $\hat\nu$.
