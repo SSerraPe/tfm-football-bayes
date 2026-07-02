@@ -1,119 +1,119 @@
 variable,is_candidate_per90_or_rate,in_curated_list,passed_missingness_filter,passed_variance_filter,selected_for_model,exclusion_reason,n_missing,prop_missing,n_observed,variance,n_distinct
-per90_accelerations,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.31233444696841445,3674
-per90_aerial_duels,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,5.9958322732042335,4712
-per90_assists,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.007873406726814082,2115
-per90_back_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,8.506599145569185,4509
-per90_clearances,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,1.4498639228434742,4495
-per90_crosses,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,2.0491997896661975,4058
-per90_dangerous_opponent_half_recoveries,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.041596259794195796,3457
-per90_dangerous_own_half_losses,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.057263875059079664,3854
-per90_defensive_duels,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,6.357137723076693,4713
-per90_dribbles,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,5.180025379542875,4411
-per90_dribbles_against,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,1.677592138486681,4603
-per90_forward_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,28.699123767737667,4832
-per90_fouls,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.4194384603749626,4190
-per90_fouls_suffered,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.4916969218180405,4393
-per90_goals,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.024187857440940708,2402
-per90_head_shots,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.04598983075136616,2603
-per90_interceptions,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,2.9476327765493195,4688
-per90_key_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.0685387259112485,3325
-per90_lateral_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,41.16680933066861,4836
-per90_long_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,6.241490649309071,4726
-per90_loose_ball_duels,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,2.110789488293133,4513
-per90_losses,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,7.775253570476495,4752
-per90_offensive_duels,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,20.509849711003188,4722
-per90_opponent_half_recoveries,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,1.2077664818765952,4269
-per90_own_half_losses,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.9749087615603609,4538
-per90_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,178.27930051997294,4905
-per90_passes_to_final_third,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,6.591257202241225,4748
-per90_pressing_duels,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,5.445897616528706,4202
-per90_progressive_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,7.501206409383973,4755
-per90_progressive_run,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.9296235266746586,4140
-per90_received_pass,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,121.27064778187079,4874
-per90_recoveries,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,10.378825272054303,4785
-per90_shot_assists,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.2849270336177176,3844
-per90_shots,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.730709086734532,4119
-per90_shots_blocked,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.049624750391417574,3168
-per90_sliding_tackles,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.1625810714214362,3675
-per90_smart_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.7011147545591393,3658
-per90_through_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.3446600641396746,4086
-per90_touch_in_box,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,1.7418373633960915,4251
-per90_xg_assist,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.004821228046240194,4261
-per90_xg_shot,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.018320036257907683,4481
-per90_yellow_cards,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.021204378779758497,3414
-rate_aerial_duels_won,TRUE,TRUE,TRUE,TRUE,TRUE,included,5,0.0010113268608414239,4939,0.03401704570881555,1602
-rate_defensive_duels_won,TRUE,TRUE,TRUE,TRUE,TRUE,included,52,0.010517799352750809,4892,0.008707418133309965,1955
-rate_dribbles_against_won,TRUE,TRUE,TRUE,TRUE,TRUE,included,66,0.013349514563106795,4878,0.022427169995395242,953
-rate_goal_conversion,TRUE,TRUE,TRUE,TRUE,TRUE,included,410,0.08292880258899676,4534,0.01104386317186044,397
-rate_offensive_duels_won,TRUE,TRUE,TRUE,TRUE,TRUE,included,105,0.021237864077669904,4839,0.020223791370629594,2095
-rate_shots_on_target,TRUE,TRUE,TRUE,TRUE,TRUE,included,410,0.08292880258899676,4534,0.032611088235476315,489
-rate_successful_crosses,TRUE,TRUE,TRUE,TRUE,TRUE,included,636,0.12864077669902912,4308,0.03209941854174483,692
-rate_successful_dribbles,TRUE,TRUE,TRUE,TRUE,TRUE,included,294,0.05946601941747573,4650,0.02071076377837913,1053
-rate_successful_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.0049314939239129985,4411
-rate_successful_progressive_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4944,0.009331983341382088,2270
-rate_successful_sliding_tackles,TRUE,TRUE,TRUE,TRUE,TRUE,included,675,0.13652912621359223,4269,0.06474910397874963,209
-per90_aerial_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,1.5253133614896182,4523
-per90_attacking_actions,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,18.634176082921908,4579
-per90_corners,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.7441592362273939,1786
-per90_counterpressing_recoveries,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,2.815475460092997,4675
-per90_defensive_actions,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,16.10855300197154,4798
-per90_defensive_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.39599126899640835,4229
-per90_direct_free_kicks,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.011552384014741403,1071
-per90_direct_free_kicks_on_target,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.0017321530287875268,568
-per90_direct_red_cards,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,3.9650634736019386e-4,376
-per90_dribbles_against_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.454956120447706,4300
-per90_duels,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,52.9262622902476,4844
-per90_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,7.781025872938338,4731
-per90_field_aerial_duels,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,6.163257591322502,4368
-per90_field_aerial_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,1.5879249692560367,4224
-per90_free_kicks,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.2325558438942522,1900
-per90_free_kicks_on_target,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.05278056324302284,1452
-per90_linkup_plays,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,4.754669805429782,2210
-per90_loose_ball_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.33719091250767297,4242
-per90_matches_coming_off,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.2651242466492688,3600
-per90_matches_in_start,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.014492195645289545,3227
-per90_matches_substituted,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.08196985079647742,3655
-per90_missed_balls,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.084080277844714807,3785
-per90_new_defensive_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,2.4977385087590753,4533
-per90_new_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,9.525125288278982,4736
-per90_new_offensive_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,3.441566591780708,4548
-per90_new_successful_dribbles,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,1.4544880862125653,4235
-per90_offensive_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,5.348497320008068,4602
-per90_offsides,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.0886792449784732,2705
-per90_penalties,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.0016397708944445105,567
-per90_pressing_duels_won,TRUE,FALSE,TRUE,FALSE,FALSE,not in curated thesis feature set,0,0,4944,0,1
-per90_red_cards,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,8.455372469312081e-4,745
-per90_second_assists,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.003312553975839386,1679
-per90_shot_on_target_assists,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.0685387259112485,3325
-per90_shots_on_target,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.14818344724474022,3469
-per90_successful_attacking_actions,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,3.8248554019095464,4443
-per90_successful_back_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,7.628754443281644,4482
-per90_successful_crosses,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.24501458224432796,3494
-per90_successful_defensive_actions,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,10.376408980036885,4789
-per90_successful_dribbles,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,2.563468792775931,4332
-per90_successful_forward_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,20.584574832898745,4829
-per90_successful_key_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.06619397295917398,3303
-per90_successful_lateral_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,41.67916392777679,4829
-per90_successful_linkup_plays,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,2.658554834512502,2126
-per90_successful_long_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,2.5580538735086686,4582
-per90_successful_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,163.22311374186555,4882
-per90_successful_passes_to_final_third,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,4.361149971346361,4683
-per90_successful_penalties,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.0011379284145437093,475
-per90_successful_progressive_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,5.165679869903035,4736
-per90_successful_sliding_tackles,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.045560090765525196,2993
-per90_successful_smart_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.19371695223923355,3045
-per90_successful_through_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.055191624984167485,3193
-per90_successful_vertical_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,41.67916392777679,4829
-per90_third_assists,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.0020341565501040913,1350
-per90_vertical_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,41.16680933066861,4836
-per90_xg_save,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.10693404311685885,362
-rate_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.01261807564665104,3696
-rate_field_aerial_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,358,0.07241100323624595,4586,0.019387759819375006,1572
-rate_successful_back_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,271,0.05481391585760518,4673,0.005830674407832677,1428
-rate_successful_forward_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.008388601184314328,3258
-rate_successful_key_passes,TRUE,FALSE,FALSE,FALSE,FALSE,not in curated thesis feature set,1014,0.20509708737864077,3930,NA,NA
-rate_successful_long_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,11,0.0022249190938511327,4933,0.017081224054503664,1719
-rate_successful_passes_to_final_third,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.015277137928397012,1990
-rate_successful_smart_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,902,0.1824433656957929,4042,0.05368683033625483,418
-rate_successful_through_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,250,0.0505663430420712,4694,0.04521834564260027,320
-rate_successful_vertical_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4944,0.010975445489216435,3367
+per90_accelerations,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.31406965382099833,3660
+per90_aerial_duels,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,5.7258270945540035,4367
+per90_assists,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.008108965714491136,2111
+per90_back_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,6.80162989874805,4421
+per90_clearances,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,1.4812107194895814,4199
+per90_crosses,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,2.0468165834517205,4058
+per90_dangerous_opponent_half_recoveries,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.038039605479720885,3451
+per90_dangerous_own_half_losses,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.055671091810989025,3620
+per90_defensive_duels,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,4.358955133556905,4411
+per90_dribbles,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,5.150452109204819,4286
+per90_dribbles_against,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,1.4437187589778293,4313
+per90_forward_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,30.34701760392207,4486
+per90_fouls,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.34124236351511394,4068
+per90_fouls_suffered,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.45267317648329336,4113
+per90_goals,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.025103805531116727,2400
+per90_head_shots,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.047649237550701856,2595
+per90_interceptions,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,2.789367784461902,4361
+per90_key_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.06788923093909949,3299
+per90_lateral_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,40.593683462206,4490
+per90_long_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,4.632051153761739,4381
+per90_loose_ball_duels,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,1.6061100035032467,4232
+per90_losses,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,5.81194172622366,4399
+per90_offensive_duels,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,19.405577537768224,4472
+per90_opponent_half_recoveries,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.9306752382818454,4244
+per90_own_half_losses,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.7144582080146407,4193
+per90_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,168.087849567091,4552
+per90_passes_to_final_third,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,6.519309554617054,4418
+per90_pressing_duels,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,5.5108017760203065,4200
+per90_progressive_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,7.745743985094731,4417
+per90_progressive_run,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.9028100079108469,4126
+per90_received_pass,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,117.26069510779719,4521
+per90_recoveries,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,10.337490415838392,4445
+per90_shot_assists,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.27701333249533533,3810
+per90_shots,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.7082282591085202,4099
+per90_shots_blocked,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.049828433768315576,3162
+per90_sliding_tackles,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.16269829449354997,3597
+per90_smart_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.7235758737616332,3651
+per90_through_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.34749301094583396,3875
+per90_touch_in_box,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,1.7114631001473253,4213
+per90_xg_assist,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.004800736114489921,4227
+per90_xg_shot,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.018622183600829498,4464
+per90_yellow_cards,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.020539254620888375,3249
+rate_aerial_duels_won,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.02089412258264678,1572
+rate_defensive_duels_won,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.005076616286735882,1949
+rate_offensive_duels_won,TRUE,TRUE,TRUE,TRUE,TRUE,included,2,4.361098996947231e-4,4584,0.011993100697170632,2096
+rate_successful_dribbles,TRUE,TRUE,TRUE,TRUE,TRUE,included,68,0.014827736589620584,4518,0.01927290728137443,1053
+rate_successful_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.00487264067501438,4140
+rate_successful_progressive_passes,TRUE,TRUE,TRUE,TRUE,TRUE,included,0,0,4586,0.009181403335751568,2117
+per90_aerial_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,1.5208859887492763,4224
+per90_attacking_actions,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,17.768507189280324,4438
+per90_corners,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.7891434787455867,1786
+per90_counterpressing_recoveries,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,2.363316448535499,4325
+per90_defensive_actions,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,12.059210497942118,4445
+per90_defensive_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.33682595085834394,4109
+per90_direct_free_kicks,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.01231872403170256,1068
+per90_direct_free_kicks_on_target,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.001855570534392589,567
+per90_direct_red_cards,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,4.028341827714355e-4,349
+per90_dribbles_against_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.41066871760081913,4094
+per90_duels,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,33.05133896871802,4492
+per90_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,5.212645821046094,4380
+per90_field_aerial_duels,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,5.7258270945540035,4367
+per90_field_aerial_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,1.5208859887492763,4224
+per90_free_kicks,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.2468004833682893,1871
+per90_free_kicks_on_target,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.056123485351932886,1435
+per90_linkup_plays,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,5.005308982801594,2209
+per90_loose_ball_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.259178285151307,4003
+per90_matches_coming_off,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.27239415727424593,3567
+per90_matches_in_start,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.015506308841594176,3081
+per90_matches_substituted,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.07792161406267212,3610
+per90_missed_balls,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.07853624122989145,3658
+per90_new_defensive_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,1.8194976730088046,4290
+per90_new_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,5.080062589126169,4384
+per90_new_offensive_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,3.2578185150371475,4331
+per90_new_successful_dribbles,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,1.4476374856411112,4134
+per90_offensive_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,5.108386509253836,4370
+per90_offsides,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.09245189171657223,2704
+per90_penalties,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.0017549931251704706,566
+per90_pressing_duels_won,TRUE,FALSE,TRUE,FALSE,FALSE,not in curated thesis feature set,0,0,4586,0,1
+per90_red_cards,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,8.836666602720109e-4,716
+per90_second_assists,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.003461765735718148,1656
+per90_shot_on_target_assists,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.06788923093909949,3299
+per90_shots_on_target,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.14905264723566838,3463
+per90_successful_attacking_actions,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,3.6855110552546644,4330
+per90_successful_back_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,6.176120803339374,4414
+per90_successful_crosses,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.24719765116117776,3494
+per90_successful_defensive_actions,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,8.43014035503234,4436
+per90_successful_dribbles,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,2.5548965679859696,4213
+per90_successful_forward_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,21.780716798783157,4485
+per90_successful_key_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.06561519906994251,3280
+per90_successful_lateral_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,42.30578238192303,4484
+per90_successful_linkup_plays,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,2.8012333288870996,2126
+per90_successful_long_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,1.5609209350469924,4234
+per90_successful_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,159.26862805696499,4531
+per90_successful_passes_to_final_third,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,4.326705732759816,4354
+per90_successful_penalties,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.0012195972820471025,474
+per90_successful_progressive_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,5.257387705074235,4404
+per90_successful_sliding_tackles,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.046468757803332705,2947
+per90_successful_smart_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.202229292287768,3042
+per90_successful_through_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.05675919186564509,3100
+per90_successful_vertical_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,42.30578238192303,4484
+per90_third_assists,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.0021393123901784976,1324
+per90_vertical_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,40.593683462206,4490
+per90_xg_save,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,6.987327901690416e-7,4
+rate_dribbles_against_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,4,8.722197993894462e-4,4582,0.015148546386170253,952
+rate_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.0038473704043843365,3602
+rate_field_aerial_duels_won,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.02089412258264678,1572
+rate_goal_conversion,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,72,0.01569995638901003,4514,0.01165021197754769,398
+rate_shots_on_target,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,72,0.01569995638901003,4514,0.03423650716128238,489
+rate_successful_back_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.002307005552134114,1426
+rate_successful_crosses,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,279,0.06083733100741387,4307,0.03450584997318123,692
+rate_successful_forward_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.008478802319064243,3038
+rate_successful_key_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,684,0.14914958569559528,3902,0.007626432556574968,55
+rate_successful_long_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,11,0.002398604448320977,4575,0.016885893545731858,1506
+rate_successful_passes_to_final_third,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.013073441472186316,1913
+rate_successful_sliding_tackles,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,412,0.08983863933711295,4174,0.06509048169910203,209
+rate_successful_smart_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,553,0.12058438726559093,4033,0.05728840682837115,417
+rate_successful_through_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,152,0.033144352376798955,4434,0.043716874891488906,320
+rate_successful_vertical_passes,TRUE,FALSE,TRUE,TRUE,FALSE,not in curated thesis feature set,0,0,4586,0.010496698499852393,3203

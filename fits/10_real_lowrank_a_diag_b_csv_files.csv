@@ -1,5 +1,4 @@
 model_id,csv_file
-10_real_lowrank_a_diag_b,/Users/sserra/Documents/01_MESIO_UPC/TFM/model/fits/csv/10_real_lowrank_a_diag_b/20260529_014045/10_real_lowrank_a_diag_b-1.csv
-10_real_lowrank_a_diag_b,/Users/sserra/Documents/01_MESIO_UPC/TFM/model/fits/csv/10_real_lowrank_a_diag_b/20260529_014045/10_real_lowrank_a_diag_b-2.csv
-10_real_lowrank_a_diag_b,/Users/sserra/Documents/01_MESIO_UPC/TFM/model/fits/csv/10_real_lowrank_a_diag_b/20260529_014045/10_real_lowrank_a_diag_b-3.csv
-10_real_lowrank_a_diag_b,/Users/sserra/Documents/01_MESIO_UPC/TFM/model/fits/csv/10_real_lowrank_a_diag_b/20260529_014045/10_real_lowrank_a_diag_b-4.csv
+10_real_lowrank_a_diag_b,fits/csv/10_real_lowrank_a_diag_b/20260701_025514/10_real_lowrank_a_diag_b-2.csv
+10_real_lowrank_a_diag_b,fits/csv/10_real_lowrank_a_diag_b/20260701_025514/10_real_lowrank_a_diag_b-3.csv
+10_real_lowrank_a_diag_b,fits/csv/10_real_lowrank_a_diag_b/20260701_025514/10_real_lowrank_a_diag_b-4.csv

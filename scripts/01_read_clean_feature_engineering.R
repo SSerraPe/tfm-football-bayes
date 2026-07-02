@@ -31,6 +31,15 @@ if (!"player_name" %in% names(panel)) {
   panel <- panel |> mutate(player_name = NA_character_)
 }
 
+if ("total_gk_saves" %in% names(panel)) {
+  n_pre_gk <- nrow(panel)
+  panel <- panel |> filter(is.na(total_gk_saves) | total_gk_saves == 0)
+  message("GK exclusion: removed ", n_pre_gk - nrow(panel), " GK player-seasons.")
+} else {
+  warning("Column 'total_gk_saves' not found in panel; GK players NOT excluded. ",
+          "Run stage 00 to rebuild the interim file.")
+}
+
 eligible <- panel |>
   mutate(is_model_minutes_eligible = minutes >= pipeline$minimum_minutes_model) |>
   filter(is_model_minutes_eligible) |>

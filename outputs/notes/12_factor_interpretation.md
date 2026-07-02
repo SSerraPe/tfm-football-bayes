@@ -1,24 +1,24 @@
 # Football Factor Interpretation — La Liga Low-Rank Model
 
 Model: low-rank Sigma_a (Q_a = 2) + diagonal Sigma_b
-Data: real La Liga Wyscout data (1650 players, 12 seasons, 53 features)
+Data: real La Liga Wyscout data (1529 players, 12 seasons, 48 features)
 
 ## Inferred Factor Labels
 
-### Factor_1: Attacking / Creative
+### Factor_1: Defensive / Physical
 
-**Top positive loadings:** per90_offensive_duels (0.847), per90_touch_in_box (0.804), per90_shots (0.779), per90_forward_passes (-0.760), per90_recoveries (-0.739)
-**Top negative loadings:** per90_forward_passes (-0.760), per90_recoveries (-0.739), per90_long_passes (-0.697), per90_clearances (-0.641), per90_progressive_passes (-0.623)
+**Top positive loadings:** per90_loose_ball_duels (0.847), per90_dangerous_own_half_losses (0.804), per90_shots (0.779), per90_lateral_passes (-0.760), per90_interceptions (-0.739)
+**Top negative loadings:** per90_lateral_passes (-0.760), per90_interceptions (-0.739), per90_progressive_passes (-0.697), per90_offensive_duels (-0.641), per90_key_passes (-0.623)
 
 **Interpretation:**
-Factor 1 captures the latent dimension labelled 'Attacking / Creative'.
+Factor 1 captures the latent dimension labelled 'Defensive / Physical'.
 Players with high scores on this factor tend to show elevated values
 on the positively-loading features and suppressed values on negatively-loading ones.
 
 ### Factor_2: Attacking / Creative
 
-**Top positive loadings:** per90_received_pass (0.797), per90_passes (0.796), per90_back_passes (0.679), per90_lateral_passes (0.635), per90_passes_to_final_third (0.612)
-**Top negative loadings:** rate_aerial_duels_won (-0.337), per90_head_shots (-0.243), per90_aerial_duels (-0.210), per90_long_passes (-0.061), per90_xg_shot (-0.045)
+**Top positive loadings:** per90_forward_passes (0.797), per90_back_passes (0.796), per90_long_passes (0.679), per90_smart_passes (0.635), per90_through_passes (0.612)
+**Top negative loadings:** per90_yellow_cards (-0.337), per90_head_shots (-0.243), per90_sliding_tackles (-0.210), per90_progressive_passes (-0.061), per90_xg_shot (-0.045)
 
 **Interpretation:**
 Factor 2 captures the latent dimension labelled 'Attacking / Creative'.
@@ -55,4 +55,4 @@ Posterior summary: /Users/sserra/Documents/01_MESIO_UPC/TFM/model/outputs/tables
 Loading table:     /Users/sserra/Documents/01_MESIO_UPC/TFM/model/outputs/tables/11_real_lambda_a_loading_table.csv
 Player scores:     /Users/sserra/Documents/01_MESIO_UPC/TFM/model/outputs/tables/12_player_factor_scores.csv
 
-Generated: 2026-05-29 08:22:13.050647
+Generated: 2026-07-02 01:17:55.438108

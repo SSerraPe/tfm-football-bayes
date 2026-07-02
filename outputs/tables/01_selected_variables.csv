@@ -5,8 +5,6 @@ per90_xg_shot
 per90_xg_assist
 per90_shots
 per90_head_shots
-rate_shots_on_target
-rate_goal_conversion
 per90_received_pass
 per90_passes
 per90_forward_passes
@@ -22,7 +20,6 @@ per90_crosses
 per90_shot_assists
 rate_successful_passes
 rate_successful_progressive_passes
-rate_successful_crosses
 per90_dribbles
 per90_progressive_run
 per90_accelerations
@@ -47,8 +44,6 @@ per90_dribbles_against
 rate_defensive_duels_won
 rate_offensive_duels_won
 rate_aerial_duels_won
-rate_dribbles_against_won
-rate_successful_sliding_tackles
 per90_fouls
 per90_fouls_suffered
 per90_yellow_cards

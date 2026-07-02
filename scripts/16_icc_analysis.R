@@ -158,7 +158,7 @@ if (file.exists(diag_summary_path)) {
   diag_pa   <- extract_vector_summary(diag_ps, "prop_a", feature_names)
   diag_pb   <- extract_vector_summary(diag_ps, "prop_b", feature_names)
 
-  if (!is.null(diag_pa) && !is.null(diag_pb)) {
+  if (!is.null(diag_pa) && !is.null(diag_pb) && nrow(diag_pa) == length(feature_names)) {
     compare_tbl <- tibble::tibble(
       feature          = feature_names,
       icc_player_diag  = diag_pa$mean,

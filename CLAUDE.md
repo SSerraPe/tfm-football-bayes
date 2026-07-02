@@ -122,8 +122,19 @@ Stages run as isolated `Rscript` processes. `run_pipeline.R 10 11 12` runs a sub
 | 19 | `19_posterior_predictive_checks.R` | Correlation PPC + residual distribution check |
 | 20 | `20_diagonal_comparison.R` | LOO: low-rank vs diagonal `Σ_a` |
 | 21 | `21_fit_k4_t.R` | **Untracked/new:** K=4 t-errors fit (not yet in `run_pipeline.R`) |
+| 22 | `22_residual_icc_screen.R` | Residual analysis + ICC feature screen |
+| 23 | `23_transform_recommendations.R` | Transform recommendations per feature |
+| 24 | `24_frobenius_kfold_icc.R` | Frobenius dist, K-fold ELPD, ICC shift, Pareto-k |
+| 26 | `26_ablation_gk_only_t.R` | GK-only ablation fit (stage 26, K=2 t, N=4586) |
+| 27 | `27_sim_marginalized_recovery.R` | Sim recovery for marginalized Normal model (I=200) |
+| 28 | `28_fit_k_t_prod.R` | **Production fit:** t-model at chosen K (K=3) |
+| B4 | `scripts/B4_postfit_diagnostics.R` | Task L (ν) and Task S (Λ_a mixing) post-fit verdicts |
+| B-diag | `scripts/B_block_b_diagnostics_28.R` | Stage 28 diagnostics via Python column-pass |
+| B-loo | `scripts/C_block_c_loo_k2_vs_k3.R` | LOO K=2 vs K=3 via generate_quantities |
+| B-marg | `scripts/B_block_f_marginalized_i1000.R` | Marginalized sim recovery at I=1000 |
+| B-plt | `scripts/B_block_h_loading_plots_k3.R` | K=3 loading plots from stage 28 posterior summary |
 
-Note: stage 21 exists as a script but is **not** registered in `run_pipeline.R`'s `stage_map`.
+Note: stages 22-28 and B-scripts exist but are **not** registered in `run_pipeline.R`'s `stage_map`.
 
 ---
 
@@ -198,7 +209,9 @@ the fit, with fallback discovery if stored paths are stale (e.g. after moving th
   baseline → low-rank), Entry 2 (professor feedback: PCA post-proc, profiles, ICC, init), Entry 3
   (LT identification confirmed; stage 10 re-fit), Entry 4 (rank selection, t-errors, PPC, model
   comparison), Entry 5 (diagnostics, screening, transforms, runtime hardening), Entry 6 (GK
-  discovery, residual calibration, Lambda_a mixing check, feature decision). **Always read the latest entry when resuming.**
+  discovery, residual calibration, Lambda_a mixing check, feature decision), Entry 7 (full rebuild:
+  GK exclusion, feature drops, transforms, K=3 fit), Entry 8 (Session 9 diagnostics, LOO K=2 vs K=3,
+  loading plots, professor summary). **Always read the latest entry when resuming.**
 - **`docs/professor/professor_summary.qmd`** — polished results doc; section per professor TODO.
   Figure numbering used by the professor maps to: Fig 1 = ICC scatter, Fig 2 = ELPD-rank,
   Fig 3 = loading heatmap, **Fig 4 = group radar (`12_real_factor_group_radar.png`)**,
@@ -215,12 +228,40 @@ the fit, with fallback discovery if stored paths are stale (e.g. after moving th
 
 ---
 
-## 8. Current state & known issues (as of 2026-06-30)
+## 8. Current state & known issues (as of 2026-07-02)
 
-**State:** production fits are stage 10 (Normal, K=2) and stage 18 (Student-t, K=2; actual
-sampler settings: 500 warmup + 1000 sampling, delta=0.9, max_depth=10). Rank selection
-(stage 17) shows CV-ELPD rising monotonically through K=4 with no elbow. A K=4 t-fit
-script (stage 21) exists but the fit has not been finalised/registered.
+**State:** Full rebuild (Tasks K–Q) complete. Production fits: stage 10 (Normal, K=2, P=48,
+N=4586, 3 chains), stage 18 (Student-t, K=2, P=48, N=4586, 4 chains, ν=4.882), stage 28
+(Student-t, **K=3**, P=48, N=4586, 4 chains, ν=4.902). Rank selection (Pathfinder K=0-4)
+selected K*=3 (ELPD peak at K=3, reversal at K=4; K=0-8 Pathfinder too noisy to use).
+Sampler settings: 1000 warmup + 1000 sampling, delta=0.95, max_treedepth=12.
+
+**Implemented Session 9 (2026-07-02):**
+- **Block A** — Stage 10 fresh 4-chain refit launched (chain 1 of previous run at 64%, per no-merge rule). In progress.
+- **Block B** — Stage 28 full diagnostics via Python column-pass (289 params, 1 batch call/chain). ν=4.902 (ESS=2734, Rhat=1.000). **Task S PASS at K=3:** LLt.1.10 ESS=237>200, Rhat=1.005. Worst Lambda_a Rhat=1.014; 7/144 Lambda_a params with Rhat>1.01. Cached to `outputs/tables/28_diagnostics_cache.csv`.
+- **Block C** — LOO K=2 (stage 18) vs K=3 (stage 28) via `generate_quantities(fitted_params = csv_files)`. In progress (resolves 45-min `as_cmdstan_fit()` bottleneck).
+- **Block D** — Stage 03 diagonal refit on P=48/N=4586 fresh 4-chain. In progress.
+- **Block E** — Stage 20 LOO diagonal vs K=3. Blocked on Block D.
+- **Block F** — Marginalized Normal I=1000 sim recovery (5× I=200 baseline); unit test S_i=2 PASS confirmed. In progress.
+- **Block G** — P-mismatch audit: 3 Session 8 fixes documented in `outputs/notes/note_p_mismatch_fixes.md`; stale STAGE18_* constants in `src/large_fit_helpers.R` marked.
+- **Block H** — K=3 loading plots from stage 28 posterior summary: `28_lambda_a_heatmap.png`, `28_pca_loading_heatmap.png`, `28_factor_group_radar.png`. PCA of ΛΛ': PC1=61.8%, PC2=27.7%, PC3=10.5%.
+- **Block H** (professor summary) — `docs/professor/professor_summary.qmd` updated with K=3 model spec, ν=4.90, new stage 28 figures, Pathfinder rank selection table, P=48/N=4586 data section.
+
+**Implemented Session 8 (2026-07-01/02):**
+- **Task K (B1-B2):** GK row filter in stage 01 (N: 4944→4586, I: 1650→1529); 5 rate_*
+  features dropped from config.R (P: 53→48); 23-feature transform block in stage 02
+  (log1p×5, sqrt×18) before Z-scaling.
+- **Task L:** ν moved 2.95→4.882 (stage 18) / 4.902 (stage 28). Verdict: transforms
+  absorbed heavy tails. t-model still appropriate.
+- **Task S (Λ_a mixing):** LLt.1.10 ESS 24→193 (8×), Rhat 1.130→1.005, between-chain SD
+  0.0153→0.0032 (5×). Borderline verdict (ESS=193, threshold 200); escalated with flag.
+- **B5 rank selection:** Pathfinder K=0-4 calibration → K*=3 (reversal at K=4).
+  Full K=0-8 Pathfinder confirmed unreliable at K≥2 (huge inter-run variance).
+- **B6 marginalized Normal:** `stan/player_season_lowrank_marginalized.stan` + stage 27
+  sim recovery (coverage 78%, math correct).
+- **B7 stage 28:** t-model K=3 fit complete (2.4h wall, 4 chains, ν=4.902).
+- **B8 post-processing:** stages 11–16, 19 regenerated. Three P-mismatch bugs fixed in
+  pipeline scripts (stages 11, 13, 16). Stage 20 deferred (needs new stage 03 on P=48 data).
 
 **Implemented Session 5 (2026-06-30):**
 - `log_lik` gating: both Stan models gate the N-loop behind `BFA_COMPUTE_LOG_LIK` (default 0).
@@ -234,7 +275,7 @@ script (stage 21) exists but the fit has not been finalised/registered.
 - Feature analysis: stage 22 (residuals + ICC screen), stage 23 (transform recommendations),
   stage 24 (Frobenius, K-fold ELPD, ICC shift, Pareto-k reliability note).
 
-**Implemented Session 6 (2026-06-30, this session):**
+**Implemented Session 6 (2026-06-30):**
 - GK player exclusion confirmed missing from pipeline (only GK-specific *column* names were
   filtered in stage 01; GK player *rows* remained). Confirmed 358 GK rows / 121 GK players
   via `total_gk_saves > 0` join from raw Wyscout CSV. Fix goes in stage 01's eligibility step.
@@ -250,6 +291,23 @@ script (stage 21) exists but the fit has not been finalised/registered.
   keep `rate_successful_dribbles` (borderline, p99 unremarkable). 48 features retained for rebuild.
 - p99 calibration (Task I): expected p99 under t(2.95) = 3.37. Only 6 of 53 features genuinely
   exceed this; 47 are relative leaders among well-behaved residuals.
+
+**Implemented Session 7 (2026-07-01):**
+- p99 formula verified: `qt(0.995, df=nu)/sqrt(nu/(nu-2)) = 3.371` is correct for the unit-variance
+  standardisation used. Numerical coincidence with `qt(0.99, df=5)=3.365` confirmed as coincidence;
+  both thresholds flag the same 6 features. nu=2.9508 hardcoded in script matches cache (2.950752).
+- Sign-alignment check on existing stage-18 draws: ZERO column-level sign flips across 4000 draws.
+  LT positive-diagonal constraint is working; column-level sign-switching is not the mixing cause.
+  Off-diagonal ESS problem is concentrated in one pair: LLt.1.10 (goals×passes, ESS=24).
+  Five of seven selected pairs have adequate ESS (228–775). Problem is specific to `Lambda_a[10,1]`
+  (per90_passes loading on factor 1), not global.
+- GK-only ablation fit (stage 26, `26_real_lowrank_a_diag_b_t_gk_excl`): N=4586, I=1529, ~4684s.
+  Results: between-chain SD reduced 1.5× (0.0153→0.0104); LLt.1.10 ESS improved 2.7× (24→64);
+  Lambda_a[10,1] ESS=30. GK exclusion is PARTIAL contributor — mixing not resolved. Grand mean
+  shifted from −0.452 to −0.614 (outfield-only estimate more interpretable). Full verdict and
+  per-chain baseline in `outputs/notes/note_ablation_gk_lambda.md`.
+- `write_fit_outputs()` patched: wrapped `fit$summary()` in `tryCatch` to degrade gracefully when
+  a custom model_id doesn't match any `summary_variables_for_model` pattern.
 
 **Known issues (diagnosed; fixes deferred — full notes in `PROJECT_RUNDOWN_AND_RUNTIME.txt`):**
 
@@ -269,35 +327,38 @@ script (stage 21) exists but the fit has not been finalised/registered.
    grouped in a football-meaningful way (reuse `feature_group_lookup()`).
 5. **PCA on `Σ_a` vs `ΛΛ'`.** Stage 13 eigendecomposes `ΛΛ'` (common variance only); professor
    suggests `Σ_a = ΛΛ' + Ψ_a`.
-6. **Rank K.** No elbow through K=4; Pathfinder screening for K=5–8 is now ready to run
-   (`BFA_RANK_METHOD=pathfinder BFA_RANK_MAX=8`); full NUTS to follow on promising ranks.
+6. **Rank K.** K*=3 selected by Pathfinder K=0-4 reversal rule (ELPD peaked at K=3, reversed at K=4).
+   Full NUTS LOO K=2 vs K=3 comparison in progress (Block C). K=0-8 Pathfinder confirmed unreliable
+   at K≥2 for this model (huge inter-run variance).
 7. **Low-rank vs diagonal: better metrics added.** Frobenius distance = 4.54, K-fold Δ = +72,881
-   (see stage 24). Remaining issue: correlation structure misses key defensive blocs (K=2 too low).
-8. **Student-t** ν pinned near its lower bound (≈3). Transform analysis (stage 23) identified 5
-   log1p + 18 sqrt candidates. Whether transforms move ν requires a refit (gate: go-ahead for
-   Task K rebuild which bundles GK exclusion + feature drops + transforms).
-9. **GK players not yet excluded.** Present in the panel as rows; GK feature columns were excluded
-   in stage 01, but player rows were not. Fix: `total_gk_saves == 0 | is.na(total_gk_saves)` filter
-   in stage 01 before the `eligible` step. Goes into Task K's rebuild bundle.
+   (see stage 24). Stage 20 rebuild (K=3 vs diagonal P=48) blocked on Block D (stage 03 refit).
+   When complete, output `outputs/tables/20_icc_diagonal_vs_lowrank_rebuilt.csv`.
+8. **Student-t** ν moved 2.95→4.88 after transforms. ~~Pinned near lower bound.~~ ✅ Resolved.
+   Two-component mixture (Issue 12) deprioritised.
+9. **GK players excluded.** ✅ Resolved in Session 8 — 501 rows removed, N=4586, I=1529.
 10. **LOO reliability.** Pareto-k "very bad" for >58% of points. Use K-fold ELPD (already
     computed, Δ = +72,881) as primary metric; PSIS-LOO as secondary with explicit Pareto-k caveat.
-11. **Lambda_a convergence — mixing problem escalated.** Raw Lambda_a: min ESS_bulk=19, max
-    Rhat=1.185. Lambda_a Lambda_a' (rotation-invariant): diagonal ESS=104, Rhat=1.056;
-    off-diagonal ESS=24, Rhat=1.130. 5.5× ESS improvement (rotation-labeling contribution)
-    but still below thresholds. GK bimodal structure is the leading hypothesis. Priority: run
-    Task K (GK exclusion + rebuild) and check whether ESS improves before proceeding to Task O.
+11. **Lambda_a convergence — Task S PASS at K=3 (Session 9).** Stage 28 (K=3, P=48): LLt.1.10
+    ESS=237>200, Rhat=1.005<1.01. Worst Lambda_a Rhat=1.014; 7/144 params with Rhat>1.01; min
+    ESS_bulk=130. All hyperparameters (psi_a, sigma_b, sigma_e) Rhat<1.006. Full history:
+    pre-rebuild ESS=24/Rhat=1.130 → GK ablation ESS=64 → full rebuild K=2 ESS=193 → K=3 ESS=237.
+    Task S **CLOSED** at K=3. Residual mild mixing in 7/144 Lambda_a entries is not concerning.
+    See `outputs/notes/note_ablation_gk_lambda.md` for GK ablation baseline.
 12. **Two-component mixture (Issue 12).** Proposed alternative to Student-t:
     ε ~ π·N(0,σ₁²) + (1-π)·N(0,σ₂²) with σ₁ < σ₂. More interpretable than t for football
     (discrete outlier fraction vs smooth heavy tail). Requires simulation-recovery check before
     fitting real data.
 
-**Next required go-ahead:** Task K (stage 01+ rebuild: GK exclusion + 5 feature drops + 23
-feature transforms; then refit stages 10 and 18). Optional: run GK-only ablation fit (stage 18
-with only GK exclusion applied, ~2.3h extra) before the full bundle, for clean attribution of
-which change moved ν and improved Lambda_a Lambda_a' ESS.
+**Next required go-ahead (after Session 9 background jobs complete):**
+- **Block C result:** LOO K=2 vs K=3 ELPD comparison — confirm K*=3 (expect direction consistent with Pathfinder +12,125 gain)
+- **Block D/E result:** Stage 03 diagonal fit on P=48/N=4586 → stage 20 LOO diagonal vs K=3 → `outputs/tables/20_icc_diagonal_vs_lowrank_rebuilt.csv`
+- **Block A result:** Stage 10 fresh 4-chain Normal K=2 fit complete
+- **Block F result:** Marginalized I=1000 coverage vs 78% baseline; go-ahead for real-data use if coverage ≥ 85%
+- After Block C: if K*=3 confirmed, go-ahead to run stages 11–16, 19, 20 on stage 28 (currently all post-processing is on stage 10/18 K=2)
+- Two-component mixture model (Issue 12) deprioritised — ν≈5 after transforms.
 
 **Chain initialisation — confirmed in place:** `build_pca_init()` (`src/stan_helpers.R:179`) is
-wired into stages 10, 18 and 21.
+wired into stages 10, 18, 21, and 28.
 
 ---
 

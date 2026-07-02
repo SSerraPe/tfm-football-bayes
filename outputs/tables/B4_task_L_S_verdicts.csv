@@ -1,0 +1,3 @@
+task,metric,baseline,verdict
+L_nu,nu=4.882,nu=2.95,TRANSFORMS ABSORBED HEAVY TAILS (nu >= 4.5) — t-model still appropriate.
+S_LLt,"ESS=193,Rhat=1.005","ESS=24,Rhat=1.130","MIXING STILL POOR (ESS=193, Rhat=1.005) — escalated; proceed to Task O with flag."

@@ -11,4 +11,4 @@ Check 2: Residual distributions
   Compared to Normal(0, posterior_mean(sigma_e)) for selected features.
   Result: see outputs/figures/19_residual_distribution_check.png
 
-Selected features for residual check: per90_recoveries, per90_touch_in_box, per90_smart_passes, per90_pressing_duels, rate_successful_crosses, rate_successful_sliding_tackles
+Selected features for residual check: per90_interceptions, per90_dangerous_own_half_losses, per90_passes_to_final_third, per90_dribbles_against, per90_accelerations

@@ -1,8 +1,8 @@
 Stage 17: Rank selection via held-out ELPD
 
-Dataset: N=4944 obs, I=1650 players, J=12 seasons, P=53 variables
+Dataset: N=4586 obs, I=1529 players, J=12 seasons, P=48 variables
 Folds: 5 (unit = player-variable pair)
 Ranks evaluated: K = 0, 1, 2, 3, 4
 
 Results saved to outputs/rank_selection/
-Best rank: K* = 4
+Best rank: K* = 5

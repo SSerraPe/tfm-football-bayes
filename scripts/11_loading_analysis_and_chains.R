@@ -121,7 +121,7 @@ make_variance_decomp <- function(summ, tag, feature_names) {
   if (is.null(sa) || is.null(pa)) return(NULL)
 
   tbl <- tibble::tibble(
-    feature     = feature_names,
+    feature     = sa$observed_variable,
     sigma_a_diag_mean  = sa$mean,
     var_b_mean         = vb$mean,
     var_e_mean         = ve$mean,

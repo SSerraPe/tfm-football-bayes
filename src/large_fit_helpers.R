@@ -11,7 +11,10 @@
 #   lp__ is index 0; sampler-internal cols are indices 1-6; first model
 #   parameter starts at index 7.
 #
-# Documented positions for stage-18 (additive_lowrank_a_diag_b_t, K=2, P=53):
+# Documented positions for stage-18 PRE-REBUILD (additive_lowrank_a_diag_b_t, K=2, P=53):
+# STALE after Session 8 rebuild (stage-18 now uses P=48). STAGE18_* constants below
+# are preserved for reference but NOT USED anywhere. Use parse_col_index() or the
+# dynamic discovery in B_block_b_diagnostics_28.R for any new extraction.
 #   nu               : col 7
 #   lambda_a_diag[k] : cols 90758-90759  (K=2)
 #   psi_a[p]         : cols 90863-90915  (P=53)

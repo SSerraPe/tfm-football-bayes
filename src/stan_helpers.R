@@ -318,7 +318,14 @@ write_fit_outputs <- function(fit, model_id) {
     return(invisible(NULL))
   }
 
-  posterior_summary <- fit$summary(variables = summary_variables_for_model(model_id))
+  posterior_summary <- tryCatch(
+    fit$summary(variables = summary_variables_for_model(model_id)),
+    error = function(e) {
+      message("write_fit_outputs: fit$summary() failed (", conditionMessage(e),
+              "); falling back to lp__-only summary.")
+      fit$summary(variables = "lp__")
+    }
+  )
   readr::write_csv(
     posterior_summary,
     file.path(paths$tables, paste0(model_id, "_posterior_summary.csv"))

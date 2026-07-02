@@ -1,0 +1,5 @@
+chain,pre_gk_mean,pre_gk_sd,param,note
+1,-0.4476,0.0273,Lambda_a.10.1,per90_passes on factor 1 (stage-18 production fit)
+2,-0.4325,0.0291,Lambda_a.10.1,per90_passes on factor 1 (stage-18 production fit)
+3,-0.4627,0.0283,Lambda_a.10.1,per90_passes on factor 1 (stage-18 production fit)
+4,-0.4657,0.0258,Lambda_a.10.1,per90_passes on factor 1 (stage-18 production fit)

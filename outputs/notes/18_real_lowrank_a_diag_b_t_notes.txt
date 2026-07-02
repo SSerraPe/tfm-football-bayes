@@ -1,0 +1,16 @@
+Stage 18: Student-t residuals
+
+Stan model: stan/additive_lowrank_a_diag_b_t.stan
+Same player factor structure as stage 10 (low-rank Sigma_a + diagonal Sigma_b).
+Difference: residuals are Student-t(nu) instead of Normal.
+Prior on nu: Gamma(2, 0.1).
+
+nu posterior mean:   4.88
+nu posterior median: 4.88
+nu 95% CI: [4.77, 4.99]
+
+Interpretation:
+  nu >> 30: t errors nearly Normal; no gain over stage 10.
+  nu < 10:  meaningful heavy tails; outlier player-seasons present.
+
+LOO comparison saved to outputs/tables/18_loo_normal_vs_t.csv

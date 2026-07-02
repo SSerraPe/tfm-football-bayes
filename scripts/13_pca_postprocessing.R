@@ -312,7 +312,7 @@ run_pca_postproc <- function(fit, tag, truth_Lambda = NULL) {
 
   # ── Recovery validation for simulated data ───────────────────────────────────
 
-  if (!is.null(truth_Lambda)) {
+  if (!is.null(truth_Lambda) && nrow(truth_Lambda) == nrow(L_pca_mean)) {
     B_true     <- truth_Lambda %*% t(truth_Lambda)
     pca_true   <- pca_from_B(B_true, Q_a)
     L_pca_true <- fix_signs(pca_true$loadings)

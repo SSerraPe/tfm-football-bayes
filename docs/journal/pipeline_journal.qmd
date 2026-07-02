@@ -1854,6 +1854,256 @@ complete and GK exclusion's effect on mixing is assessed.
 
 ---
 
+## Entry 7 — 2026-07-02 — Full rebuild: GK exclusion, feature drops, transforms, K=3 t-fit
+
+### Summary
+
+Full pipeline rebuild (Tasks K–Q, Blocks 1–9). The three code changes applied in Block 1 are:
+GK player-season rows excluded from stage 01 (501 rows, N 4944→4586, I 1650→1529);
+five low-ICC rate features dropped from `src/config.R` (P 53→48);
+and 23 distributional transforms applied in stage 02 (log1p for 5 count-like features,
+sqrt for 18 right-skewed features) before Z-scaling.
+Stages 10 and 18 were refit on the rebuilt data, confirming the transforms substantially
+lightened the residual tails (ν 2.95→4.88).
+Pathfinder K=0-4 calibration selected K*=3 (ELPD peak at K=3, reversal at K=4).
+Stage 28 fit the t-model at K=3; ν=4.90 confirmed.
+Post-processing stages 11–16, 19 regenerated on rebuilt K=2 fits.
+
+### Configuration
+
+| Parameter | Value |
+|---|---|
+| Seed | 20260513 |
+| Chains | 4 (stage 10: 3 — chain 1 killed) |
+| Iter warmup | 1000 |
+| Iter sampling | 1000 |
+| Adapt delta | 0.95 |
+| Max treedepth | 12 |
+| Player factor rank Q_a | 2 (stages 10/18); 3 (stage 28) |
+
+### Stages Run
+
+- **00** — Rebuilt interim CSV to add `total_gk_saves` column (required for GK row filter)
+- **01** — GK row filter added before `eligible` step; 501 GK player-seasons removed (N: 4944→4586, I: 1650→1529)
+- **02** — 23-feature transform block inserted before Z-scaling: log1p(5), sqrt(18)
+- **10** — Normal K=2 refit on rebuilt data (3 chains completed; chain 1 killed at 64%); wall ~2h
+- **18** — Student-t K=2 refit; ν=4.882 (pre-rebuild: 2.95); wall ~4h
+- **B4** — Post-fit diagnostics: Task L and Task S verdicts
+- **17 (K=0-4 calibration)** — Pathfinder ELPD calibration: ELPD rose K=0→3, reversed at K=4 → K*=3
+- **17 (K=0-8 full)** — Pathfinder K=0-8: chaotic (huge inter-run variance); treated as directional only
+- **27** — Simulation recovery for marginalized Normal model: coverage 78% (math correct; prior shrinkage on large loadings)
+- **28** — t-model K=3 production fit; ν=4.902; 4 chains, 1057 lines each; wall ~2.4h
+- **11–16, 19** — Post-processing regenerated on rebuilt stage 10/18 (K=2, P=48)
+
+### Task L — Did ν move? (transforms absorbed heavy tails?)
+
+Pre-rebuild baseline: ν ≈ 2.95 (95%CI: [2.91, 2.99]).
+
+Post-rebuild (stage 18, K=2, P=48): **ν = 4.882** (ESS=3068, Rhat=1.000).
+
+Post-rebuild (stage 28, K=3, P=48): **ν = 4.902** (95%CI: [4.793, 5.011]).
+
+**Verdict: TRANSFORMS ABSORBED HEAVY TAILS (ν ≥ 4.5).** The 23 distributional transforms
+(log1p for count-like goal/assist features, sqrt for passing/action counts) substantially
+reduced the extreme observations that were driving ν near 3. The t-model remains appropriate
+(ν ≈ 5 means heavier tails than Normal but far more tractable than ν ≈ 3). A two-component
+mixture model (Issue 12) is no longer the immediate priority.
+
+### Task S — Did Λ_a mixing improve?
+
+Pre-rebuild baselines: raw Λ_a ESS=19/Rhat=1.185; LLt.1.10 (per90_goals × per90_passes)
+ESS=24/Rhat=1.130. Post-GK-only ablation (stage 26): LLt.1.10 ESS=64/Rhat=1.048.
+
+Post-full-rebuild (stage 18):
+
+| Metric | Pre-rebuild | GK ablation | Full rebuild |
+|---|---|---|---|
+| Λ_a[10,1] ESS | 19 | ~35 | **176** |
+| Λ_a[10,1] Rhat | 1.185 | ~1.07 | **1.004** |
+| LLt.1.10 ESS | 24 | 64 | **193** |
+| LLt.1.10 Rhat | 1.130 | 1.048 | **1.005** |
+| Between-chain SD | 0.0153 | 0.0104 | **0.0032** |
+
+**Verdict: BORDERLINE (ESS=193, threshold 200).** ESS improved 8× and between-chain SD 5×;
+Rhat=1.005 is excellent. The per90_passes sqrt transform (addressing the Lambda_a[10,1]
+posterior geometry) combined with GK exclusion resolved most of the mixing problem.
+Technically below the ESS>200 threshold by 7 draws; escalated with flag per plan.
+Proceeding to Task O.
+
+### B5 Rank Selection — Pathfinder K=0-4 calibration
+
+| K | ELPD | Δ_k | 0.20 × Δ₂ |
+|---|------|-----|-----------|
+| 0 | −747,373 | — | — |
+| 1 | −702,443 | +44,929 | — |
+| 2 | −690,213 | +12,231 | 2,446 (threshold) |
+| **3** | **−678,088** | **+12,125** | still above |
+| 4 | −689,861 | **−11,773 ← reversal** | — |
+
+K*=3 selected by reversal rule (Δ₄ < 0, select peak K=3).
+
+The K=0-8 full Pathfinder run produced chaotic results (ELPD non-monotone with massive
+reversals at K=3, 6, 8; inter-run variance for K=2 was 9,800 ELPD units). This confirms
+Pathfinder approximation breaks down at K≥2 for this model (P=48, N=4586, hierarchical t).
+The K=0-4 calibration run is used for K selection; K>4 treated as directional only per plan.
+Old NUTS K=0-4 results (P=53 data) showed monotone rise through K=4, consistent with K*≥3.
+
+### Stage 28 — K=3 t-model production fit
+
+Model ID: `28_real_lowrank_a_diag_b_t_k3`. Four chains, 1057 lines each (1000 sampling draws).
+Wall time: 2.4h (faster than stage 18's 4h, likely due to better posterior geometry from transforms).
+ν=4.902 (95%CI: [4.793, 5.011]) — fully consistent with stage 18 ν=4.882.
+
+Λ_a is now 48×3 lower-triangular; the third factor column adds P−3=45 free parameters.
+LOO comparison between K=2 (stage 18) and K=3 (stage 28) requires `generate_quantities`
+with `compute_log_lik=1` (not run in this session; deferred to Task O LOO validation).
+
+### Marginalized Normal model (B6)
+
+Stan model `stan/player_season_lowrank_marginalized.stan` written and compiled.
+Simulation recovery (stage 27, P=10, K=2, I=200): ESS=1396, Rhat=1.008, 0 divergences,
+coverage 78% (39/50 parameters within 90% CI). S_i=2 off-diagonal block sanity check: PASS.
+Coverage shortfall consistent with prior shrinkage (lognormal(log(0.7), 0.20) pulls
+Lambda_a[1,1]=1.2 toward ~0.7). Real-data use requires separate go-ahead.
+
+### Post-processing (B8) — stages 11–16, 19
+
+All stages run on rebuilt stage 10 (Normal K=2, P=48, N=4586, 3 chains) and stage 18
+(t-model K=2). Three P-mismatch bugs fixed in pipeline scripts:
+
+- `11_loading_analysis_and_chains.R`: `feature = sa$observed_variable` (not global `feature_names`) in `make_variance_decomp()` — sim summary (P=53) vs real (P=48)
+- `13_pca_postprocessing.R`: guard PCA recovery comparison with `nrow(truth_Lambda) == nrow(L_pca_mean)` — skips sim recovery when P differs
+- `16_icc_analysis.R`: guard diagonal-vs-lowrank comparison with `nrow(diag_pa) == length(feature_names)` — stage 03 diagonal was fit on N=4944/P=53
+
+Stage 20 (diagonal LOO comparison) deferred: stage 03 baseline was fit on N=4944/P=53;
+a new diagonal fit on N=4586/P=48 is needed before the comparison is valid.
+
+### Known issues updated
+
+- **Rank K**: K*=3 selected from Pathfinder K=0-4 calibration. LOO comparison K=2 vs K=3 still needed (requires generate_quantities on stage 28).
+- **Stage 20**: needs new stage 03 re-run on rebuilt P=48/N=4586 data before diagonal comparison is valid.
+- **Mixing**: LLt.1.10 ESS=193 (borderline; flagged). Full resolution may require longer warmup or reparameterization.
+- **Pathfinder reliability**: confirmed unreliable at K≥2 for this model. NUTS sweep at K=3 confirmed independently.
+
+### New pipeline scripts registered this session
+
+| Script | Purpose |
+|---|---|
+| `scripts/B4_postfit_diagnostics.R` | Task L (ν) and Task S (Λ_a mixing) post-fit verdicts |
+| `scripts/27_sim_marginalized_recovery.R` | Simulation recovery for marginalized Normal model |
+| `scripts/28_fit_k_t_prod.R` | t-model production fit at chosen K (K≠2) |
+| `stan/player_season_lowrank_marginalized.stan` | Marginalized player-effects Normal Stan model |
+
+---
+
+## Entry 8 — 2026-07-02 — Session 9: stage 28 diagnostics, LOO K=2 vs K=3, stage 10 refit, stage 03 diagonal rebuild, marginalized I=1000, loading plots, professor summary update
+
+### Configuration
+
+| Parameter | Value |
+|---|---|
+| Seed | 20260513 |
+| Chains | 4 |
+| Iter warmup | 1000 (stages A, D) |
+| Iter sampling | 1000 |
+| Adapt delta | 0.95 |
+| Max treedepth | 12 |
+| Player factor rank Q_a | 2 (stages 10/18); 3 (stage 28) |
+
+### Stages Run
+
+- **Block A** — Fresh 4-chain refit of stage 10 (Normal K=2, P=48) — chain 1 of previous run had 694 lines (64% complete, unacceptable partial chain); per user rule no merge; full restart launched (`logs/A_stage10_fresh_4chain.log`; **IN PROGRESS**)
+- **Block B** — Stage 28 full diagnostics via Python column-pass (289 params in one batch call per chain); cached to `outputs/tables/28_diagnostics_cache.csv`; **Task S PASS at K=3**
+- **Block C** — LOO K=2 (stage 18) vs K=3 (stage 28) via `generate_quantities(fitted_params = csv_files)`; bypasses 45-min `as_cmdstan_fit()` bottleneck; (`logs/C_block_c_loo.log`; **IN PROGRESS** — generate_quantities for K=3 running)
+- **Block D** — New stage 03 diagonal baseline on P=48/N=4586 (fresh 4-chain NUTS); needed for Block E LOO comparison (`logs/D_stage03_diagonal_rebuilt.log`; **IN PROGRESS**)
+- **Block E** — Stage 20 LOO: diagonal vs K=3 low-rank; **BLOCKED on Block D**
+- **Block F** — Marginalized Normal sim recovery at I=1000 (5× original I=200); unit test S_i=2 PASS confirmed before fit; (`logs/F_marginalized_i1000.log`; **IN PROGRESS** — warmup ~10%)
+- **Block G** — P-mismatch audit complete; `outputs/notes/note_p_mismatch_fixes.md` written
+- **Block H** — K=3 loading plots generated from stage 28 posterior summary: `28_lambda_a_heatmap.png`, `28_pca_loading_heatmap.png`, `28_factor_group_radar.png`; PCA of ΛΛ' computed
+- **Block I** — Journal Entry 8 + CLAUDE.md update + git commit
+
+### Block B — Stage 28 Diagnostics (COMPLETE)
+
+Python column-pass extracted 289 parameters (Lambda_a: 144=48×3, psi_a: 48, sigma_b: 48, sigma_e: 48, nu: 1) from stage 28 CSVs in one batch call per chain (4 chains × 1 Python call = 4 calls total). Stage 28 CSV: 236,488 columns, ~2.4 GB per chain.
+
+**ν (Student-t degrees of freedom):**
+
+| Metric | Value |
+|---|---|
+| Posterior mean | 4.902 |
+| 95% CI | [4.793, 5.011] |
+| ESS_bulk | 2,734 |
+| Rhat | 1.000 |
+
+**Lambda_a mixing (Task S verdict at K=3):**
+
+| Metric | Pre-rebuild (K=2) | GK ablation (K=2) | Full rebuild (K=2) | K=3 stage 28 |
+|---|---|---|---|---|
+| Λ_a worst Rhat | 1.185 | — | ~1.004 | **1.014** |
+| Λ_a min ESS | 19 | — | ~176 | **130** |
+| LLt.1.10 ESS | 24 | 64 | 193 | **237** |
+| LLt.1.10 Rhat | 1.130 | 1.048 | 1.005 | **1.005** |
+| Params Rhat > 1.01 | many | — | ~4 | **7 / 144** |
+
+**Task S PASS at K=3:** LLt.1.10 ESS = 237 > 200, Rhat = 1.005 < 1.01. The 7 Lambda_a entries with Rhat > 1.01 (worst = 1.014) are concentrated in off-diagonal entries; none exceed 1.02. Hyperparameters (psi_a, sigma_b, sigma_e) all have Rhat < 1.006.
+
+**psi_a / sigma_b / sigma_e:** worst Rhat = 1.005; all well-converged.
+
+### Block F — Marginalized Normal I=1000 unit test (PASS confirmed pre-fit)
+
+Mathematical sanity check before the I=1000 run: for S_i = 2, the off-diagonal P×P block of
+Cov_i (the block-covariance from marginalizing a_i) equals Σ_a = ΛΛ' + Ψ_a. This is the
+key structural check that the Woodbury-marginalised likelihood is correctly coded. PASS
+confirmed analytically before launching the NUTS run. The NUTS run at I=1000 samples
+with the same true parameters as Stage 27 (I=200, coverage 78%) to isolate whether the
+coverage shortfall was driven by I (more players → tighter posterior) or prior shrinkage.
+Expected runtime: ~2–3h. Results pending.
+
+### Block G — P-mismatch audit (COMPLETE)
+
+Three runtime P-mismatch bugs fixed in Session 8 were documented in `outputs/notes/note_p_mismatch_fixes.md`:
+
+| Fix | File | Line | Description |
+|---|---|---|---|
+| Fix 1 | `scripts/11_loading_analysis_and_chains.R` | 124 | `feature = sa$observed_variable` (not `feature_names`) — sim summary P=53 vs real P=48 |
+| Fix 2 | `scripts/13_pca_postprocessing.R` | 315 | Guard PCA recovery comparison with `nrow(truth_Lambda) == nrow(L_pca_mean)` |
+| Fix 3 | `scripts/16_icc_analysis.R` | 161 | Guard diagonal-vs-lowrank comparison with `nrow(diag_pa) == length(feature_names)` |
+
+Hardcoded P locations noted in the audit: `src/large_fit_helpers.R` STAGE18_* column map constants (marked STALE; pre-rebuild P=53 values, no longer used anywhere); `stan/` models use data-block `P` (safe); `scripts/` use `model_objects$variable_names` length (safe after Session 8 rebuild).
+
+### Block H — K=3 Loading Plots (COMPLETE)
+
+Posterior mean Λ_a matrix (48×3 lower-triangular) assembled from stage 28 posterior summary CSV. PCA of posterior-mean ΛΛ' (canonical factor rotation):
+
+| PC | Variance explained |
+|---|---|
+| PC1 | 61.8% |
+| PC2 | 27.7% |
+| PC3 | 10.5% |
+
+Figures generated:
+- `outputs/figures/28_lambda_a_heatmap.png` — raw LT loadings P=48 × K=3
+- `outputs/figures/28_pca_loading_heatmap.png` — PCA-rotated loadings (rotation-invariant interpretation)
+- `outputs/figures/28_factor_group_radar.png` — mean |loading| by feature group per PC
+
+Professor summary (`docs/professor/professor_summary.qmd`) updated: K=3 model spec, ν=4.90, new figures, rebuilded Pathfinder rank selection table, P=48/N=4586 data section, Task S PASS noted.
+
+### Pending (as of this entry)
+
+- **Block A** — Stage 10 fresh 4-chain refit in progress (~2h expected); when complete, manifest auto-updates via `persist_fit_pointer()`
+- **Block C** — LOO K=2 vs K=3: generate_quantities running for stage 28 (K=3), then stage 18 (K=2), then PSIS-LOO comparison; directional reference: Pathfinder K=2→3 = +12,125
+- **Block D** — Stage 03 diagonal fresh 4-chain fit in progress
+- **Block E** — Stage 20 diagonal LOO comparison blocked on Block D; will output `outputs/tables/20_icc_diagonal_vs_lowrank_rebuilt.csv`
+- **Block F** — Marginalized I=1000 NUTS in progress; will update coverage baseline (78% → ?)
+
+### Notes
+
+- **generate_quantities with CSV paths**: `mod$generate_quantities(fitted_params = csv_files)` passes CSV file paths directly to CmdStan binary, bypassing R-side memory load. This resolves the 45-min `as_cmdstan_fit()` bottleneck for the 12-GB stage-18 fits and 9.6-GB stage-28 fits.
+- **No merge rule**: Stage 10 chain 1 had 694 lines (64% of 1057 target). Per session rule, a partial chain cannot be merged with a fresh run. Fresh 4-chain run started from scratch.
+- **Stale STAGE18_* constants**: `src/large_fit_helpers.R` pre-built column maps for stage-18 at P=53 (now wrong after rebuild). Added STALE comment; they are unused in the pipeline.
+
+---
+
 # Entry Template (Reference for Future Updates)
 
 The following template should be used for each new journal entry appended to this document.

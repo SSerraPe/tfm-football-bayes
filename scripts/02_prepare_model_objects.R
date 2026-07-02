@@ -52,6 +52,23 @@ if (any(!is.finite(Y_raw))) {
        call. = FALSE)
 }
 
+# Pre-scaling distributional transforms (user-specified; supersede 23_feature_skewness.csv).
+# per90_xg_shot, per90_xg_assist, per90_shot_assists, per90_key_passes use log1p by design
+# despite skew<2 (modelling choice). per90_passes uses sqrt to address Lambda_a[10,1]
+# posterior geometry (GK ablation confirmed partial need; sqrt is the planned fix).
+log1p_feats <- c("per90_goals", "per90_xg_shot", "per90_xg_assist",
+                 "per90_shot_assists", "per90_key_passes")
+sqrt_feats  <- c("per90_passes", "per90_forward_passes", "per90_back_passes",
+                 "per90_lateral_passes", "per90_received_pass", "per90_crosses",
+                 "per90_long_passes", "per90_through_passes", "per90_progressive_passes",
+                 "per90_smart_passes", "per90_dribbles", "per90_shots",
+                 "per90_head_shots", "per90_shots_blocked", "per90_recoveries",
+                 "per90_clearances", "per90_interceptions", "per90_fouls_suffered")
+for (f in intersect(log1p_feats, colnames(Y_raw))) Y_raw[, f] <- log1p(Y_raw[, f])
+for (f in intersect(sqrt_feats,  colnames(Y_raw))) Y_raw[, f] <- sqrt(Y_raw[, f])
+message("Applied log1p to ", sum(log1p_feats %in% colnames(Y_raw)),
+        " features and sqrt to ", sum(sqrt_feats %in% colnames(Y_raw)), " features.")
+
 feature_means <- colMeans(Y_raw)
 feature_sds <- apply(Y_raw, 2, stats::sd)
 if (any(feature_sds <= 0 | !is.finite(feature_sds))) {

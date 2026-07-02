@@ -1,9 +1,9 @@
 item,value
-input_player_season_rows,7859
+input_player_season_rows,7358
 minimum_minutes_model,450
-eligible_player_season_rows,4944
+eligible_player_season_rows,4586
 candidate_features,118
 missingness_threshold,0.2
-features_after_missingness_filter,117
-features_after_variance_filter,116
-selected_features,53
+features_after_missingness_filter,118
+features_after_variance_filter,117
+selected_features,48
