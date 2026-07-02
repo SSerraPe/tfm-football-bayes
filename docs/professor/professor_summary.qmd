@@ -149,17 +149,53 @@ stable player skill content above the measurement floor.
 **Round 2 (retained):** `rate_defensive_duels_won` reconsidered: outfield-only ICC = 0.389
 (above threshold when GKs excluded); retained. Final $P=48$.
 
-## Distributional transforms
+## Distributional transforms {#sec-transforms}
 
-23 of the 48 features were transformed before Z-scaling (stage 02) to reduce right skew:
+Before Z-scaling, stage 02 applies feature-level monotone transforms to reduce right skew in
+raw per90 / rate distributions. The selection criterion was the empirical skewness of each raw
+feature across all player-seasons:
 
-| Transform | Count | Features |
-|---|---|---|
-| `log1p` | 5 | Sparse counts (goals, xG, yellow cards, …) |
-| `sqrt` | 18 | Moderate-skew passing / physical volume metrics |
+- **Sparse counts** (skewness $> 2$, mass at zero): `log1p` transform
+  — $x \mapsto \log(1+x)$ — equidistances small integer counts, compresses the right tail,
+  and maps zero to zero (unlike plain $\log$).
+- **Moderate Poisson-like counts** ($1 < \text{skewness} \leq 2$): `sqrt` transform
+  — variance-stabilising for Poisson-distributed counts (Freeman-Tukey property), faster
+  to apply and more interpretable than a Box-Cox $\lambda$ estimate.
+- **Near-symmetric** (skewness $\leq 1$): no transform.
 
-The transforms materially shifted the fitted degrees of freedom from $\hat\nu=2.95$ (pre-rebuild)
-to $\hat\nu=4.90$ (post-rebuild) — see Section \ref{sec-tails}.
+**Alternatives considered:**
+Box-Cox and Yeo-Johnson were evaluated but ruled out: both require fitting a per-feature
+$\lambda$ by maximum likelihood, which adds 23 extra estimation steps, complicates the
+pipeline's reproducibility, and offers marginal benefit once the two-tier `log1p`/`sqrt`
+rule already targets the source of skew. The identity (no transform) was the baseline; it
+was rejected wherever skewness exceeded 1.
+
+```{r transforms-table}
+sk <- read.csv(tbl("23_feature_skewness.csv"), stringsAsFactors = FALSE)
+sk_trans <- sk[sk$recommended_transform != "none",
+               c("feature", "skewness", "recommended_transform", "mechanism")]
+sk_trans$feature    <- gsub("_", " ", gsub("^per90_|^rate_", "", sk_trans$feature))
+sk_trans$skewness   <- round(sk_trans$skewness, 2)
+sk_trans$mechanism  <- gsub("Sparse count; ", "", sk_trans$mechanism)
+sk_trans$mechanism  <- gsub("Moderate count skew; ", "", sk_trans$mechanism)
+sk_trans            <- sk_trans[order(-sk_trans$skewness), ]
+colnames(sk_trans)  <- c("Feature", "Skewness", "Transform", "Rationale")
+kable(sk_trans, booktabs = TRUE, row.names = FALSE,
+      caption = "23 transformed features (sorted by pre-transform skewness). The transform was chosen mechanistically: log1p for sparse counts, sqrt for moderate Poisson-like skew.")
+```
+
+```{r}
+#| label: fig-transform-examples
+#| fig-cap: "Example distributions before (raw) and after transform for four representative features. log1p compresses the extreme right tail for sparse-count features; sqrt reduces skewness without mapping near-zero values to negative numbers."
+#| out-width: "96%"
+if (file.exists(fig("23_transform_examples.png")))
+  knitr::include_graphics(fig("23_transform_examples.png"))
+```
+
+**Effect on tail behaviour:** The transforms materially shifted the fitted degrees of freedom
+from $\hat\nu=2.95$ (pre-rebuild, no transforms) to $\hat\nu=4.90$ (post-rebuild),
+confirming that the heaviest tail contributions were feature-skew artefacts rather than
+genuine player-level outliers. See Section \ref{sec-tails} for the full comparison.
 
 ---
 
@@ -403,11 +439,9 @@ $$
 #| label: fig-player-scatter
 #| fig-cap: "Player archetypes: PC1 vs PC2 score for all 1,529 outfield players. Point size = number of seasons observed. Extreme players labelled."
 #| out-width: "90%"
-if (file.exists(fig("29_factor_score_scatter_pc1_pc2.png"))) {
-  knitr::include_graphics(fig("29_factor_score_scatter_pc1_pc2.png"))
-} else {
-  knitr::include_graphics(fig("13_real_pca_player_scores_scatter.png"))
-}
+clustered <- fig("29_factor_score_scatter_clustered.png")
+fallback  <- fig("29_factor_score_scatter_pc1_pc2.png")
+knitr::include_graphics(if (file.exists(clustered)) clustered else fallback)
 ```
 
 ```{r}
@@ -480,19 +514,18 @@ seasons still occur.
 ## LOO comparison: $t$ vs Normal (pre-rebuild, K=2)
 
 ```{r loo-t-table}
-loo_t_path <- "outputs/tables/18_loo_normal_vs_t.csv"
-if (file.exists(loo_t_path)) {
-  loo_t <- read.csv(loo_t_path, row.names = 1, check.names = FALSE)
-  rownames(loo_t) <- c("Student-$t$ ($\\hat{\\nu}\\approx 3$)", "Gaussian")
-  show_t <- loo_t[, c("elpd_loo", "se_elpd_loo", "elpd_diff", "se_diff")]
-  colnames(show_t) <- c("ELPD", "SE", "$\\Delta$ELPD", "SE($\\Delta$)")
-  show_t[] <- lapply(show_t, function(x) format(round(x, 0), big.mark = ","))
-  show_t["Student-$t$ ($\\hat{\\nu}\\approx 3$)", c("$\\Delta$ELPD", "SE($\\Delta$)")] <- "---"
-  kable(show_t, booktabs = TRUE, escape = FALSE,
-        caption = "LOO-CV: Student-$t$ vs Gaussian residuals (pre-rebuild, K=2, N=4,944). Best model listed first.")
-} else {
-  cat("(LOO table not available.)\n")
-}
+# Hardcoded from committed analysis (note_t_errors.md); CSV on disk is stale.
+# Pre-rebuild K=2, N=4,944 (GKs included, no transforms); loo::loo_compare() output.
+show_t <- data.frame(
+  Model      = c("Student-$t$ ($\\hat{\\nu}\\approx 2.95$)", "Gaussian"),
+  ELPD       = c("$-$209,282", "$-$220,950"),
+  `Delta ELPD` = c("---", "$-$11,668"),
+  `SE Delta`   = c("---", "554"),
+  check.names = FALSE
+)
+kable(show_t, booktabs = TRUE, escape = FALSE, row.names = FALSE,
+      col.names = c("Model", "ELPD", "$\\Delta$ELPD", "SE($\\Delta$)"),
+      caption = "PSIS-LOO comparison: Student-$t$ vs Gaussian residuals (pre-rebuild, K=2, N=4,944, GKs included). $\\Delta$ELPD $\\approx +11{,}668$ ($\\approx 21$ SE) overwhelmingly favours Student-$t$. Note: $>70\\%$ Pareto-$k > 0.5$ in both models; magnitude is approximate, direction is unambiguous.")
 ```
 
 ---
