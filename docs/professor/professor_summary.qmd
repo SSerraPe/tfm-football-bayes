@@ -1,7 +1,7 @@
 ---
 title: "Factor Model of La Liga Player Performance: Technical Report"
 subtitle: "Hierarchical Bayesian Analysis — Session 10 Results"
-author: "Sergi Serra Pericàs"
+author: "Sebastián Serra Peña"
 date: "July 2026"
 format:
   pdf:

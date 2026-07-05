@@ -5,7 +5,7 @@ title: |
 subtitle: |
   A Factor-Structured Additive Model with
   Low-Rank Player Effects and Diagonal Season Effects
-author: "S. Serra Pe"
+author: "Sebastián Serra Peña"
 date: today
 format:
   pdf:
