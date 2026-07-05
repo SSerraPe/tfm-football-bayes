@@ -25,6 +25,7 @@ library(tidyr)
 # Chunks run from docs/professor/ (Quarto default).
 # Symlinks docs/professor/outputs -> ../../outputs and docs/professor/data -> ../../data
 # are in place, so "outputs/..." and "data/..." resolve correctly from here.
+source(file.path("..", "..", "src", "loading_visualization.R"))
 knitr::opts_chunk$set(fig.align = "center")
 
 fig  <- function(name) file.path("outputs", "figures", name)
@@ -437,7 +438,7 @@ $$
 
 ```{r}
 #| label: fig-player-scatter
-#| fig-cap: "Player archetypes: PC1 vs PC2 score for all 1,529 outfield players. Point size = number of seasons observed. Extreme players labelled."
+#| fig-cap: "Player archetypes: PC1 vs PC2 for all 1,529 outfield players, coloured by k-means cluster (k=5). PC1 negative = high attacking output; PC1 positive = high defensive work-rate. PC2 negative = technical/creative style; PC2 positive = direct/physical. Extreme players labelled per cluster. Messi/Neymar/Mbappé appear in 'Attacking midfielders' (high attacking, high technical creativity), distinct from pure goal-scorers (Isak, Stuani, Dovbyk) in 'Forwards'."
 #| out-width: "90%"
 clustered <- fig("29_factor_score_scatter_clustered.png")
 fallback  <- fig("29_factor_score_scatter_pc1_pc2.png")
@@ -636,14 +637,21 @@ knitr::include_graphics(fig("16_icc_ranked_barchart.png"))
 ```
 
 ```{r icc-top-table}
-icc <- read.csv(tbl("16_icc_summary.csv"))
-icc_top <- icc[order(-icc$icc_player), c("feature","icc_player","icc_season","icc_residual")]
+icc    <- read.csv(tbl("16_icc_summary.csv"))
+groups <- as.data.frame(feature_group_lookup())
+icc_top <- merge(
+  icc[order(-icc$icc_player), c("feature","icc_player","icc_season","icc_residual")][1:10, ],
+  groups, by = "feature", all.x = TRUE
+)
+icc_top$group   <- ifelse(is.na(icc_top$group), "Other", icc_top$group)
+icc_top         <- icc_top[order(-icc_top$icc_player), ]
 icc_top$feature <- gsub("_", " ", gsub("^per90_|^rate_", "", icc_top$feature))
-icc_top$explained <- round((icc_top$icc_player + icc_top$icc_season) * 100, 1)
-icc_top[, 2:4] <- round(icc_top[, 2:4] * 100, 1)
-colnames(icc_top) <- c("Feature", "Player (%)", "Season (%)", "Residual (%)", "Explained (%)")
-kable(head(icc_top, 10), booktabs = TRUE, escape = FALSE, row.names = FALSE,
-      caption = "Top 10 features by player ICC. ``Explained'' = player + season ICC. From K=2 Normal model (stage 11 on rebuilt P=48 data).")
+icc_top[, c("icc_player","icc_season","icc_residual")] <-
+  round(icc_top[, c("icc_player","icc_season","icc_residual")] * 100, 1)
+kable(icc_top[, c("feature","group","icc_player","icc_season","icc_residual")],
+      booktabs = TRUE, row.names = FALSE,
+      col.names = c("Feature", "Group", "Player ICC (%)", "Season ICC (%)", "Residual ICC (%)"),
+      caption = "Top 10 features by player ICC (K=2 Normal model, rebuilt P=48 data). Player ICC = proportion of total variance attributable to stable between-player differences. High values indicate genuine skill signal.")
 ```
 
 *Note:* ICC values are from the K=2 Normal model (stage 10/11) on rebuilt data. ICC from the
