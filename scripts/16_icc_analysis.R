@@ -101,6 +101,7 @@ message("ICC summary table saved.")
 # ── Ranked ICC barchart ───────────────────────────────────────────────────────
 
 plot_tbl <- icc_tbl |>
+  dplyr::filter(!is.na(feature), !is.na(group)) |>   # drop phantom rows with no feature mapping
   dplyr::mutate(
     feature_label = gsub("per90_|rate_", "", feature),
     feature_label = gsub("_", " ", feature_label),
