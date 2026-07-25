@@ -1,8 +1,8 @@
 ---
 title: "Factor Model of La Liga Player Performance: Technical Report"
-subtitle: "Hierarchical Bayesian Analysis — Session 10 Results"
+subtitle: "Hierarchical Bayesian Analysis — K=3 Student-$t$ Model (Stage 28)"
 author: "Sebastián Serra Peña"
-date: "July 2026"
+date: "25 July 2026"
 format:
   pdf:
     geometry: "margin=2.5cm"
@@ -10,6 +10,7 @@ format:
     toc: true
     number-sections: true
     keep-tex: false
+    fig-pos: "H"
 execute:
   echo: false
   warning: false
@@ -490,16 +491,35 @@ if (file.exists(fig("29_top_players_table_pc3.png")))
 
 ## Season trends from $\hat{b}_j$
 
-Season effects $\hat{b}_j$ capture year-specific league-wide shifts. The figure below shows
-posterior-mean season effects with 90\% credible bands for each feature, grouped by
-football category. Because ICC\_season $< 5\%$ for most features, bands are wide relative to
-trend magnitudes --- interpret as indicative directions rather than sharp year-by-year signals.
+Season effects $\hat{b}_j$ capture year-specific league-wide shifts. Because ICC\_season
+$< 5\%$ for most features, individual feature bands are wide relative to trend magnitudes.
+We present two complementary views: (i) group-averaged trends --- a single line per football
+category averaging all features within that group --- which reveals coherent league-wide
+shifts; and (ii) a heatmap of posterior-mean effects across all 48 features and 12 seasons,
+providing a compact overview of which features and categories drove the variation.
 
 ```{r}
-#| label: fig-season-trends
-#| fig-cap: "Posterior season effects $\\hat{b}_{j,p}$ (90\\% credible bands) for all 48 features, grouped by football category (stage 28, K=3, $N=4{,}586$). Season 1 = 2011/12, Season 12 = 2022/23. Most ICC\\_season $< 5\\%$; bands are wide relative to trends --- interpret conservatively."
+#| label: fig-season-group
+#| fig-cap: "Group-averaged season effects: posterior mean $\\hat{b}_{j,p}$ averaged within each feature group. Ribbons = mean of 90\\% credible intervals across features in the group. Reveals coherent league-wide tactical shifts (stage 28, K=3, seasons 2011/12--2022/23)."
 #| out-width: "100%"
-knitr::include_graphics(fig("15_season_profiles_grid.png"))
+#| fig-pos: "H"
+knitr::include_graphics(fig("33_season_group_trends.png"))
+```
+
+```{r}
+#| label: fig-season-heatmap
+#| fig-cap: "Heatmap of posterior-mean season effects $\\hat{b}_{j,p}$ for all 48 features $\\times$ 12 seasons, grouped by football category. Red = above-average season for that feature; blue = below-average. Colour scale clamped at the 98th percentile of $|\\hat{b}|$ for readability (stage 28, K=3)."
+#| out-width: "100%"
+#| fig-pos: "H"
+knitr::include_graphics(fig("33_season_heatmap.png"))
+```
+
+```{r}
+#| label: fig-season-top6
+#| fig-cap: "Season effects for the 6 features with highest ICC\\_season: passes to final third, dribbles against, losses, shot assists, fouls, and aerial duel win rate (ICC\\_season range 1.5--2.5\\%). These are the features with the most genuine year-to-year signal. Ribbon = 90\\% CI (stage 28, K=3)."
+#| out-width: "100%"
+#| fig-pos: "H"
+knitr::include_graphics(fig("33_season_top6.png"))
 ```
 
 ---
