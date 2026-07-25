@@ -1,8 +1,8 @@
 Real La Liga Data: Low-Rank Sigma_a + Diagonal Sigma_b
 
-N = 4944 player-season rows
-P = 53 scaled features
-I = 1650 unique players
+N = 4586 player-season rows
+P = 48 scaled features
+I = 1529 unique players
 S = 12 seasons
 Q_a = 2 player latent factors
 
