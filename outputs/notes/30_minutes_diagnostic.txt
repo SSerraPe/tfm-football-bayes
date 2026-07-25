@@ -1,0 +1,42 @@
+=== Stage 30: Minutes-in-variance diagnostic ===
+Date: 2026-07-25
+
+Data: N=4586 observations, minutes range 450–3738 (median 1585)
+20th pct minutes threshold: 889 min (917 / 4586 observations below this)
+
+--- Regression on worst-200 subset (selection-biased; directional only) ---
+max|z| ~ log(minutes):   slope=-0.3600, SE=0.2179, p=0.100
+max|z| ~ 1/minutes:      slope=285.8, SE=211.1, p=0.177
+Note: regression on the 180 obs that appear in worst-200 is selection-biased.
+The non-significance reflects this bias, not absence of an effect.
+
+--- Primary test: binomial quantile share ---
+Under H0 (no minutes effect): each of the 180 worst-obs obs is a uniform
+draw from 4586, so P(obs in bottom 20%) = 917/4586 = 20.0%.
+
+Observed: 88 / 180 = 48.9% of worst-200 obs have minutes < 889 min.
+Expected under H0: 0.200 × 180 = 36 obs.
+
+Binomial p-value (one-sided, H1: share > 20%): p < 4.4e-18
+
+This is overwhelming evidence that low-minute player-seasons are over-represented
+in the worst standardised residuals: 2.4× higher than expected under no effect.
+
+--- VERDICT ---
+CONFIRM — low-minute observations are massively over-represented in the tails
+(48.9% vs 20% expected, p < 1e-17). Proceed with Task 1b: minutes-scaled
+residual variance in stan/additive_lowrank_a_diag_b_t.stan.
+
+Mechanism: per90 features are ratio estimators with precision ∝ minutes_n.
+Constant σ_{e,p} across observations treats a 500-minute season the same as a
+3000-minute season, inflating residuals for low-minute observations.
+
+Recommended change: σ_{n,p} = σ_{e,p} · (m_ref / minutes_n)^φ with φ=0.5
+(Poisson/ratio-theory value). Estimated φ variant as alternative.
+
+Expected effects after model change:
+- ν̂ rises (tail was partly a minutes artefact, not genuine heavy tails)
+- Low-minute entries in outlier list shrink or disappear
+- K-fold ΔELPD > 0 vs stage 28 (if confirmed by Pathfinder first)
+
+Figures: 30_minutes_vs_residual.png, 30_minutes_distribution_comparison.png

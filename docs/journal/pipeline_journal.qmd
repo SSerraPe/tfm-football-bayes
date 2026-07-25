@@ -2104,6 +2104,101 @@ Professor summary (`docs/professor/professor_summary.qmd`) updated: K=3 model sp
 
 ---
 
+## Entry 9 — 2026-07-25 — Session 11: post-Víctor feedback (minutes diagnostic, PCA-with-CI, editorial)
+
+### Context
+
+Professor Víctor reviewed `professor_summary.pdf` (Session 10 / stage 28, K=3, P=48, N=4586,
+Student-t, ν̂=4.902). His five substantive comments drive this session. Goal: close the current
+model — no new extensions. Deferred: team-season effect, temporal GP, two-component mixture.
+
+### Víctor's five points → task mapping
+
+| Point | Víctor's comment | Task |
+|---|---|---|
+| 1 | Per90 features are ratios; low-minute seasons inflate variance artificially. Worth testing if σ_{e,p} should scale with 1/minutes. | Issue #13 → Task 1a (diagnostic) → Task 1b (Stan change if confirmed) |
+| 2 | The season-effects PC-projection figure (`29_season_factor_trends.png`) is hard to follow. Show per-feature posterior b̂_j with credible bands instead. | Task 2 → swap to `15_season_profiles_grid.png` |
+| 3 | "Λ ni lo reportaría" — raw loadings are unidentified up to rotation, uninterpretable. | Task 3 → remove raw-Λ heatmap and table; replace with CI-filtered PCA from `31_pca_with_ci.R` |
+| 4 | PCA should be of Σ_a = ΛΛ' + Ψ_a, not just ΛΛ'. | Task 4 → add Σ_a variant in `31_pca_with_ci.R`, report side by side |
+| 5 | Close the current model before extending. Stages 11–16 and 19 still using K=2 Normal proxies. | Task 5 → stages 11–16/19 on stage 28; stage 03 refit for stage 20 |
+
+### Task 1a — Minutes diagnostic
+
+**Script:** `scripts/30_minutes_diagnostic.R`
+
+**Mechanism:** per90 features are ratio estimators. A player-season with `m` minutes has an
+effective per90 precision ∝ m. The current likelihood uses σ_{e,p} constant across observations,
+so a 200-minute season with the same raw rate as a 2000-minute season gets the same residual
+scale — but its measurement uncertainty is 10× larger. Under misspecified constant σ_e, these
+rows will look like heavy-tailed outliers, driving ν low.
+
+**Diagnostic gate (no refit):**
+- Join `model_objects$metadata$minutes` (N-vector) to per-observation worst-|z| from
+  `29_residual_worst_cells.csv` (grouped max|z| per player_index×season_index).
+- Regress max|z| on log(minutes) and 1/minutes; report slope, SE, p-value.
+- Check: share of top-200 worst cells in bottom-20th-percentile of minutes distribution.
+- Expected if confirmed: negative slope (more minutes → smaller |z|); top-200 share >> 20%.
+
+**RISK:** none (pure re-read). **Check:** significance of regression and quantile share.
+
+**Verdict:** → determines whether Task 1b proceeds.
+
+### Task 1b — Minutes-scaled Stan model (conditional on 1a)
+
+**Files:** `stan/additive_lowrank_a_diag_b_t.stan`, `src/stan_helpers.R`, new `scripts/32_fit_minutes_scaled.R`
+
+**Stan change:** add `vector[N] minutes_n; real m_ref;` to data block. In transformed data:
+`vector[N] w_n = pow(m_ref ./ minutes_n, 0.5);` (Poisson/ratio-theory φ=0.5 first).
+Likelihood: `Y[n]' ~ student_t(nu, mean_n, sigma_e .* w_n[n]);`.
+Update `var_e` and `log_lik` in generated quantities with `w_n[n]^2` factor.
+
+**RISK: meaning-changing.** Requires sim-recovery (stages 04/06/09 machinery with minutes-scaled
+noise) before real fit. Pathfinder screen first (~10 min) to check ν direction before paying
+full NUTS (~2.3 h+).
+
+**Expected: ν̂ rises if minutes was inflating tails; K-fold ΔELPD > 0 vs stage 28.**
+
+### Task 2 — Season figure swap
+
+**File:** `docs/professor/professor_summary.qmd`
+
+Replace `fig-season-trends` chunk: use `15_season_profiles_grid.png` (per-feature b̂_j with
+q05–q95 bands, already produced by stage 15) instead of `29_season_factor_trends.png`
+(PC-projection on player-covariance axes — hard to interpret). Add caveat that ICC_season < 5%
+for most features so credible bands are wide.
+
+### Tasks 3+4 — PCA with CIs + Σ_a variant
+
+**Script:** `scripts/31_pca_with_ci.R`
+
+Why not extend stage 13: `run_pca_postproc()` calls `as_cmdstan_fit()` → 45-min bottleneck on
+stage-28 12GB CSVs. Instead, read posterior summary CSV (`28_real_..._posterior_summary.csv`)
+for Lambda_a and psi_a (posterior mean, q5, q95 per entry). No raw draw access needed for
+CI-filtered interpretation.
+
+**Output:**
+- PCA of posterior-mean ΛΛ': top loaders per PC with q5/q95, flagged as "reliable" (same-sign CI).
+- Σ_a = ΛΛ' + Ψ_a variant: compute from psi_a posterior means; eigenvalue shares side by side.
+- Remove raw-Λ heatmap and top-loaders kable from professor_summary; add CI errorbar loading plot.
+- Update cluster archetype labels in `29b_clustered_scatter.R` to derive from reliable loaders.
+
+### Task 5 — Housekeeping
+
+- Stage 03 diagonal refit on P=48/N=4586 (background, ~1h) → stage 20 LOO diagonal vs K=3.
+- Stages 11–16 + 19 on stage 28 (reuse fit, ~minutes): replace K=2 Normal proxies in summary.
+- Stage 13 (`run_pca_postproc()`) skipped for stage 28 — handled by `31_pca_with_ci.R`.
+
+### Notes
+
+- **Do not report raw Λ** — this is now a permanent project rule (Víctor's instruction).
+  All loading interpretation goes through the PCA rotation; only CI-filtered (same-sign q5/q95)
+  features are named per factor.
+- **PC1 sign convention** (confirmed empirically): PC1 negative = high attacking output
+  (Neymar=−8.3, Cristiano=−7.5); PC1 positive = defensive work-rate (Ramos=+5.6, Piqué=+6.2).
+  This was verified against known players in Session 10.
+
+---
+
 # Entry Template (Reference for Future Updates)
 
 The following template should be used for each new journal entry appended to this document.

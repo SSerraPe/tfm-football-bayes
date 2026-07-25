@@ -360,65 +360,84 @@ compressing the apparent difference. The direction is correct and consistent wit
 ## Factor loadings and PCA of $\hat{\Lambda}\hat{\Lambda}^\top$
 
 The $K=3$ factor loadings $\Lambda\in\mathbb{R}^{48\times 3}$ are identified only up to
-orthogonal rotation. We apply PCA to the posterior-mean common variance matrix
-$\hat\Lambda\hat\Lambda^\top$ to obtain a canonical, interpretable rotation:
+orthogonal rotation and are not directly interpretable (they are a lower-triangular
+identification device). We apply PCA to the posterior-mean common variance matrix
+$\hat\Lambda\hat\Lambda^\top$ to obtain a canonical, rotation-invariant decomposition.
+Variance shares of $\hat\Lambda\hat\Lambda^\top$ and of the full player covariance
+$\hat\Sigma_a = \hat\Lambda\hat\Lambda^\top + \hat\Psi_a$ (which adds per-feature uniqueness):
 
-- **PC1:** 61.8\% of common variance
-- **PC2:** 27.7\% of common variance
-- **PC3:** 10.5\% of common variance
+| | PC1 | PC2 | PC3 |
+|---|---|---|---|
+| $\hat\Lambda\hat\Lambda^\top$ (common) | 61.8\% | 27.7\% | 10.5\% |
+| $\hat\Sigma_a = \hat\Lambda\hat\Lambda^\top + \hat\Psi_a$ (total player) | 45.6\% | 20.7\% | 8.1\% |
+
+The gap between the two rows reflects the uniqueness $\hat\Psi_a$: roughly 25\% of total
+player variance is feature-specific and not captured by the shared $K=3$ factor structure.
 
 ```{r}
-#| label: fig-loading-heatmap
-#| fig-cap: "Posterior mean factor loadings $\\hat{\\Lambda}$ (K=3 production model, stage 28, P=48, t-errors). Lower triangle shown; upper triangle is structurally zero (LT-PD identification)."
-#| out-width: "88%"
-knitr::include_graphics(fig("28_lambda_a_heatmap.png"))
+#| label: fig-sigma-comparison
+#| fig-cap: "Variance shares per PC for $\\hat\\Lambda\\hat\\Lambda^\\top$ (common factor variance) vs $\\hat\\Sigma_a = \\hat\\Lambda\\hat\\Lambda^\\top + \\hat\\Psi_a$ (total player variance). The gap is the per-feature uniqueness $\\hat\\Psi_a$ not explained by the $K=3$ shared factors."
+#| out-width: "75%"
+if (file.exists(fig("31_sigma_a_vs_llambda_comparison.png")))
+  knitr::include_graphics(fig("31_sigma_a_vs_llambda_comparison.png"))
 ```
+
+## CI-filtered factor interpretation
+
+The figure below shows PCA loadings with 90\% marginal credible intervals
+propagated from the $\Lambda$ posterior. A feature is **reliable** (solid) if its CI
+excludes zero; faded features have intervals that straddle zero.
 
 ```{r}
-#| label: fig-pca-heatmap
-#| fig-cap: "PCA-rotated loadings: eigenvectors of posterior-mean $\\hat{\\Lambda}\\hat{\\Lambda}^\\top$ (K=3, stage 28)."
-#| out-width: "88%"
-knitr::include_graphics(fig("28_pca_loading_heatmap.png"))
+#| label: fig-pca-ci
+#| fig-cap: "PCA factor loadings (eigenvector $\\times$ $\\sqrt{\\text{eigenvalue}}$) with 90\\% credible intervals (K=3, stage 28, $P=48$). Solid = CI excludes zero (reliable loader). Positive PC1 = defensive work-rate; negative PC1 = attacking output."
+#| out-width: "100%"
+if (file.exists(fig("31_pca_loading_ci_plot.png")))
+  knitr::include_graphics(fig("31_pca_loading_ci_plot.png"))
 ```
 
-## Top loaders per factor
-
-```{r factor-loading-table}
-ps <- read.csv("outputs/tables/28_real_lowrank_a_diag_b_t_k3_posterior_summary.csv",
-               check.names = FALSE)
-mo_fnames <- readRDS(dat("model_objects.rds"))$variable_names
-
-la <- ps[grepl("^Lambda_a\\[", ps$variable), ]
-la$row_i <- as.integer(sub("Lambda_a\\[(\\d+),(\\d+)\\]", "\\1", la$variable))
-la$col_k <- as.integer(sub("Lambda_a\\[(\\d+),(\\d+)\\]", "\\2", la$variable))
-la$feature <- mo_fnames[la$row_i]
-
-top_loaders <- do.call(rbind, lapply(1:3, function(k) {
-  sub <- la[la$col_k == k, ]
-  sub <- sub[order(-abs(sub$mean)), ][1:5, ]
+```{r ci-loader-table}
+ci_tbl <- read.csv("outputs/tables/31_pca_loading_ci.csv", check.names = FALSE)
+rel <- ci_tbl[ci_tbl$reliable == TRUE, ]
+top_rel <- do.call(rbind, lapply(paste0("PC", 1:3), function(pc) {
+  sub <- rel[rel$pc == pc, ]
+  sub <- sub[order(-abs(sub$loading)), ][seq_len(min(5, nrow(sub))), ]
   data.frame(
-    Factor    = paste0("Factor ", k),
-    Feature   = gsub("_", " ", gsub("^per90_|^rate_", "", sub$feature)),
-    `Post. mean` = round(sub$mean, 3),
-    `q5`  = round(sub$q5, 3),
-    `q95` = round(sub$q95, 3),
+    PC      = pc,
+    Feature = gsub("_", " ", gsub("^per90_|^rate_", "", sub$feature)),
+    Group   = sub$group,
+    Loading = round(sub$loading, 3),
+    `CI lo` = round(sub$ci_lo, 3),
+    `CI hi` = round(sub$ci_hi, 3),
     check.names = FALSE
   )
 }))
-kable(top_loaders, booktabs = TRUE, row.names = FALSE,
-      caption = "Top 5 absolute loaders per factor (posterior mean $\\pm$ 90\\% CI). Lower-triangular: Factor 1 can load on all 48 features; Factor 2 on features 2--48; Factor 3 on features 3--48.")
+kable(top_rel, booktabs = TRUE, row.names = FALSE,
+      caption = "Top 5 reliable loaders per PC (CI excludes zero). PCA of posterior-mean $\\hat\\Lambda\\hat\\Lambda^\\top$. Signs: PC1 positive = defensive, negative = attacking; PC2 positive = pass-based, negative = aerial/physical; PC3 positive = possession quality, negative = wide/direct.")
 ```
 
-**Factor 1 — Offensive volume:** loads positively on goals, xG, shots, touches in box;
-negatively on recoveries, interceptions, long passes. Identifies forwards and attack-minded
-players at the positive extreme, defensive/physical players at the negative extreme.
+The three PCs map onto recognisable football dimensions (reliable loaders only):
 
-**Factor 2 — Width / creativity:** loads positively on crosses, shot assists, and assists.
-Identifies wide midfielders and creative players.
+**PC1 — Defensive work-rate vs Attacking output** (61.8\% of $\hat\Lambda\hat\Lambda^\top$
+variance): reliably positive on recoveries, interceptions, clearances, and forward/long passes
+(defensive reset actions); reliably negative on shots, touches in box, and offensive duels.
+Forwards sit at the negative extreme; centre backs at the positive extreme.
 
-**Factor 3 — Build-up / distribution:** loads negatively on received passes, lateral passes,
-progressive passes. Identifies the dimension separating ball-playing midfielders and
-deep-lying builders from other outfield roles.
+**PC2 — Pass-based / technical vs Aerial / physical** (27.7\%): reliably positive on pass
+volume (received passes, back passes, progressive passes, shot assists, crosses); reliably
+negative on aerial duels and headed shots. Identifies the dimension separating technical
+midfielders from physical/aerial profiles.
+
+**PC3 — Possession quality vs Wide / direct play** (10.5\%): reliably positive on successful
+passes and lateral passes (short-ball possession style); reliably negative on crosses and
+dribbles-against (wide / pressure-inviting style).
+
+```{r}
+#| label: fig-pca-heatmap
+#| fig-cap: "PCA-rotated loading heatmap: eigenvectors of posterior-mean $\\hat{\\Lambda}\\hat{\\Lambda}^\\top$ scaled by $\\sqrt{\\text{eigenvalue}}$ (K=3, stage 28). Positive PC1 = defensive; negative = attacking."
+#| out-width: "88%"
+knitr::include_graphics(fig("28_pca_loading_heatmap.png"))
+```
 
 ```{r}
 #| label: fig-radar
@@ -471,19 +490,16 @@ if (file.exists(fig("29_top_players_table_pc3.png")))
 
 ## Season trends from $\hat{b}_j$
 
-Season effects $\hat{b}_j$ capture year-specific league-wide shifts. Projecting onto the
-same PCA axes gives season-level factor trends:
+Season effects $\hat{b}_j$ capture year-specific league-wide shifts. The figure below shows
+posterior-mean season effects with 90\% credible bands for each feature, grouped by
+football category. Because ICC\_season $< 5\%$ for most features, bands are wide relative to
+trend magnitudes --- interpret as indicative directions rather than sharp year-by-year signals.
 
 ```{r}
 #| label: fig-season-trends
-#| fig-cap: "Season-level factor trends: $\\hat{b}_j$ projected onto PC1--PC3 axes (2012/13--2023/24). Positive = season shifted the league toward that archetype direction."
-#| out-width: "90%"
-#| fig-height: 4
-if (file.exists(fig("29_season_factor_trends.png"))) {
-  knitr::include_graphics(fig("29_season_factor_trends.png"))
-} else {
-  knitr::include_graphics(fig("15_season_profiles_grid.png"))
-}
+#| fig-cap: "Posterior season effects $\\hat{b}_{j,p}$ (90\\% credible bands) for all 48 features, grouped by football category (stage 28, K=3, $N=4{,}586$). Season 1 = 2011/12, Season 12 = 2022/23. Most ICC\\_season $< 5\\%$; bands are wide relative to trends --- interpret conservatively."
+#| out-width: "100%"
+knitr::include_graphics(fig("15_season_profiles_grid.png"))
 ```
 
 ---

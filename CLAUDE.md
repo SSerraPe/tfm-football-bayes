@@ -228,13 +228,33 @@ the fit, with fallback discovery if stored paths are stale (e.g. after moving th
 
 ---
 
-## 8. Current state & known issues (as of 2026-07-02)
+## 8. Current state & known issues (as of 2026-07-25)
 
 **State:** Full rebuild (Tasks K–Q) complete. Production fits: stage 10 (Normal, K=2, P=48,
 N=4586, 3 chains), stage 18 (Student-t, K=2, P=48, N=4586, 4 chains, ν=4.882), stage 28
 (Student-t, **K=3**, P=48, N=4586, 4 chains, ν=4.902). Rank selection (Pathfinder K=0-4)
 selected K*=3 (ELPD peak at K=3, reversal at K=4; K=0-8 Pathfinder too noisy to use).
 Sampler settings: 1000 warmup + 1000 sampling, delta=0.95, max_treedepth=12.
+Professor summary sent to Víctor (Session 10). Session 11 addresses his five feedback points
+(see journal Entry 9): minutes-in-variance diagnostic, season figure swap, PCA-with-CI
+interpretation (no raw Λ), Σ_a vs ΛΛ' comparison, and housekeeping (stage 03 refit + stages 11–16/19 on stage 28).
+
+**Implemented Session 10 (2026-07-02/05):**
+- **Stage 29 outlier study** (`scripts/29_outlier_study.R`): full standardised-residual analysis on
+  stage 28 posterior mean. τ₉₉=3.135 at ν=4.902; 0.77% cells exceed threshold (vs 2.65% expected).
+  Top outlier: Juanmi Latasa aerial duels z=16.7. Tables: `29_residual_feature_summary.csv`,
+  `29_residual_worst_cells.csv`, `29_residual_skew_triangulation.csv`, `29_player_factor_scores.csv`.
+- **Clustered player scatter** (`scripts/29b_clustered_scatter.R`): k-means k=5 on PC1×PC2, with
+  PC1-rank-ordered archetype labels (Forwards / Attacking midfielders / Midfielders / Defensive
+  midfielders / Centre backs). Verified against Messi, Neymar, Cristiano, Ramos, Xavi.
+- **`professor_summary.qmd` rewrite** (all 9 sections): generative model with full LaTeX, data
+  pipeline section (GK exclusion, transforms, feature selection), diagnostics, rank selection
+  (Pathfinder + PSIS-LOO), factor interpretation (PCA loadings), Student-t section (ν arc),
+  outlier study, model comparison table, next steps.
+- **Fixes applied during review:** LOO t-vs-Normal table hardcoded (stale CSV); ICC barchart NA
+  facet removed; transforms section expanded (log1p/sqrt rationale, alternatives, skewness table);
+  clustered scatter archetype labels corrected (PC1 sign inversion); author name fixed to
+  Sebastián Serra Peña.
 
 **Implemented Session 9 (2026-07-02):**
 - **Block A** — Stage 10 fresh 4-chain refit launched (chain 1 of previous run at 64%, per no-merge rule). In progress.
@@ -323,39 +343,41 @@ Sampler settings: 1000 warmup + 1000 sampling, delta=0.95, max_treedepth=12.
 3. **Figure 4 ("PC1 not showing").** The auto-labeler in `12_football_interpretation.R` gives
    **both** factors the same label, so `plot_radar_by_group()` collapses them into one dodged
    series. It also plots raw `Λ`, not the PCA-rotated loadings the caption claims.
-4. **Figure 7 grouping.** Season-effect grid facets an arbitrary top-12 by ICC_season; should be
-   grouped in a football-meaningful way (reuse `feature_group_lookup()`).
-5. **PCA on `Σ_a` vs `ΛΛ'`.** Stage 13 eigendecomposes `ΛΛ'` (common variance only); professor
-   suggests `Σ_a = ΛΛ' + Ψ_a`.
+4. **Do NOT report raw Λ; report PCA of both ΛΛ' and Σ_a.** Víctor: "Λ ni lo reportaría" —
+   raw loadings are identified only up to rotation and are uninterpretable. In professor_summary,
+   replace raw-Λ heatmap and top-loaders table with CI-filtered PCA loadings from `31_pca_with_ci.R`.
+   Also produce Σ_a = ΛΛ' + Ψ_a variant per draw and report eigenvalue shares side by side.
+   Session 11 Task 3+4 → `scripts/31_pca_with_ci.R`.
+5. **PCA on `Σ_a` vs `ΛΛ'` — covered in Issue 4 (merged).** See above.
 6. **Rank K.** K*=3 selected by Pathfinder K=0-4 reversal rule (ELPD peaked at K=3, reversed at K=4).
    Full NUTS LOO K=2 vs K=3 comparison in progress (Block C). K=0-8 Pathfinder confirmed unreliable
    at K≥2 for this model (huge inter-run variance).
 7. **Low-rank vs diagonal: better metrics added.** Frobenius distance = 4.54, K-fold Δ = +72,881
    (see stage 24). Stage 20 rebuild (K=3 vs diagonal P=48) blocked on Block D (stage 03 refit).
    When complete, output `outputs/tables/20_icc_diagonal_vs_lowrank_rebuilt.csv`.
-8. **Student-t** ν moved 2.95→4.88 after transforms. ~~Pinned near lower bound.~~ ✅ Resolved.
-   Two-component mixture (Issue 12) deprioritised.
+8. **Student-t ν.** ✅ Resolved — ν moved 2.95→4.902 after transforms; no longer near boundary.
 9. **GK players excluded.** ✅ Resolved in Session 8 — 501 rows removed, N=4586, I=1529.
 10. **LOO reliability.** Pareto-k "very bad" for >58% of points. Use K-fold ELPD (already
     computed, Δ = +72,881) as primary metric; PSIS-LOO as secondary with explicit Pareto-k caveat.
-11. **Lambda_a convergence — Task S PASS at K=3 (Session 9).** Stage 28 (K=3, P=48): LLt.1.10
-    ESS=237>200, Rhat=1.005<1.01. Worst Lambda_a Rhat=1.014; 7/144 params with Rhat>1.01; min
-    ESS_bulk=130. All hyperparameters (psi_a, sigma_b, sigma_e) Rhat<1.006. Full history:
-    pre-rebuild ESS=24/Rhat=1.130 → GK ablation ESS=64 → full rebuild K=2 ESS=193 → K=3 ESS=237.
-    Task S **CLOSED** at K=3. Residual mild mixing in 7/144 Lambda_a entries is not concerning.
-    See `outputs/notes/note_ablation_gk_lambda.md` for GK ablation baseline.
-12. **Two-component mixture (Issue 12).** Proposed alternative to Student-t:
-    ε ~ π·N(0,σ₁²) + (1-π)·N(0,σ₂²) with σ₁ < σ₂. More interpretable than t for football
-    (discrete outlier fraction vs smooth heavy tail). Requires simulation-recovery check before
-    fitting real data.
+11. **Lambda_a convergence.** ✅ Resolved (Session 9) — Task S PASS at K=3: LLt.1.10 ESS=237,
+    Rhat=1.005. Worst Lambda_a Rhat=1.014; 7/144 entries with Rhat>1.01; acceptable.
+12. **Two-component mixture.** Deprioritised — ν≈5 after transforms; Student-t sufficient.
+13. **Minutes-in-variance (Issue 13 — NEW, Session 11).** Per90 features are ratio estimators;
+    a player-season with few minutes has higher sampling variance ≈ 1/minutes. The current
+    likelihood uses σ_{e,p} constant across observations, so low-minute rows look heavy-tailed.
+    This is potentially misspecified variance, not genuine heavy tails. Diagnostic gate first
+    (`scripts/30_minutes_diagnostic.R`): regress max|z| on log(minutes) + check share of
+    top-200 worst cells in bottom-20th-percentile minutes. If confirmed: add observation-level
+    weight σ_{n,p} = σ_{e,p}·(m_ref/minutes_n)^φ to `stan/additive_lowrank_a_diag_b_t.stan`.
+    Meaning-changing → sim-recovery + Pathfinder screen before full NUTS.
 
-**Next required go-ahead (after Session 9 background jobs complete):**
-- **Block C result:** LOO K=2 vs K=3 ELPD comparison — confirm K*=3 (expect direction consistent with Pathfinder +12,125 gain)
-- **Block D/E result:** Stage 03 diagonal fit on P=48/N=4586 → stage 20 LOO diagonal vs K=3 → `outputs/tables/20_icc_diagonal_vs_lowrank_rebuilt.csv`
-- **Block A result:** Stage 10 fresh 4-chain Normal K=2 fit complete
-- **Block F result:** Marginalized I=1000 coverage vs 78% baseline; go-ahead for real-data use if coverage ≥ 85%
-- After Block C: if K*=3 confirmed, go-ahead to run stages 11–16, 19, 20 on stage 28 (currently all post-processing is on stage 10/18 K=2)
+**Next required go-ahead (Session 11 in progress):**
+- **Task 1a result:** Minutes diagnostic (`30_minutes_diagnostic.R`) → CONFIRM or REJECT minutes-in-variance hypothesis. If CONFIRM → go-ahead for Task 1b (sim-recovery then Pathfinder).
+- **Task 5:** Stage 03 diagonal refit (background, ~1h) → stage 20 LOO → `20_icc_diagonal_vs_lowrank_rebuilt.csv`.
+- **Tasks 2/3/4:** Editorial (season figure swap, remove raw Λ, add CI-filtered PCA + Σ_a comparison) — no go-ahead needed, pure post-processing.
+- **Stages 11–16 + 19 on stage 28:** Reuse fit; replace K=2 Normal proxies in professor_summary.
 - Two-component mixture model (Issue 12) deprioritised — ν≈5 after transforms.
+- Team-season effects, temporal GP, mixture model (professor_summary items 5–7) — DEFERRED; close current model first.
 
 **Chain initialisation — confirmed in place:** `build_pca_init()` (`src/stan_helpers.R:179`) is
 wired into stages 10, 18, 21, and 28.
