@@ -30,6 +30,30 @@ season_levels  <- model_objects$season_levels
 P              <- length(feature_names)
 S              <- length(season_levels)
 
+# Back-transformation helper ---------------------------------------------------
+# Converts a season effect b_j (Z-score space) to a deviation in original units.
+# center/scale are the post-transform, pre-Z-scale mean and SD (from scaling_parameters).
+back_transform_season_effect <- function(b, center, scale, type) {
+  y_t <- b * scale + center
+  avg <- ifelse(type == "log1p", expm1(center),
+         ifelse(type == "sqrt",  pmax(center, 0)^2, center))
+  x   <- ifelse(type == "log1p", expm1(y_t),
+         ifelse(type == "sqrt",  pmax(y_t, 0)^2,    y_t))
+  x - avg
+}
+
+sp <- if (!is.null(model_objects$scaling_parameters) &&
+          "transform_type" %in% names(model_objects$scaling_parameters)) {
+  model_objects$scaling_parameters
+} else {
+  sp_path <- file.path(paths$processed, "scaling_parameters.csv")
+  if (file.exists(sp_path)) {
+    readr::read_csv(sp_path, show_col_types = FALSE)
+  } else {
+    NULL
+  }
+}
+
 N_USE <- 1000L
 
 save_plot <- function(p, fname, w = 12, h = 8) {
@@ -39,12 +63,40 @@ save_plot <- function(p, fname, w = 12, h = 8) {
 
 # ── Load fit ──────────────────────────────────────────────────────────────────
 
-fit <- load_cmdstan_fit(
-  fit_path = file.path(paths$fits, "10_real_lowrank_a_diag_b_fit.rds"),
-  model_id = "10_real_lowrank_a_diag_b"
-)
+# Fit selection: prefer the t-model at K* (from stage 32 ELPD, or BFA_SIM_RANK_A),
+# then the stage-28 production fit, then the stage-10 Normal baseline.
+rank_a_env <- Sys.getenv("BFA_SIM_RANK_A", unset = "")
+chosen_k <- if (nchar(rank_a_env) > 0L) {
+  as.integer(rank_a_env)
+} else {
+  elpd_path <- file.path(paths$tables, "32_player_holdout_elpd.csv")
+  if (file.exists(elpd_path)) {
+    et <- readr::read_csv(elpd_path, show_col_types = FALSE) |>
+      dplyr::filter(!is.na(elpd_mv))
+    if (nrow(et) > 0L) et$K[which.max(et$elpd_mv)] else NA_integer_
+  } else NA_integer_
+}
+
+candidate_ids <- if (!is.na(chosen_k)) {
+  c(sprintf("28_real_lowrank_a_diag_b_t_k%d", chosen_k),
+    sprintf("34a_real_lowrank_a_diag_b_t_mv_k%d", chosen_k),
+    "28_real_lowrank_a_diag_b_t_k3",
+    "10_real_lowrank_a_diag_b")
+} else {
+  c("28_real_lowrank_a_diag_b_t_k3", "10_real_lowrank_a_diag_b")
+}
+
+fit <- NULL
+for (.id in candidate_ids) {
+  fit <- load_cmdstan_fit(
+    fit_path = file.path(paths$fits, paste0(.id, "_fit.rds")),
+    model_id = .id
+  )
+  if (!is.null(fit)) { message("Loaded fit: ", .id); break }
+}
+rm(.id)
 if (is.null(fit)) {
-  message("No fit available for stage 10 — skipping 15_season_profiles.")
+  message("No fit available — skipping 15_season_profiles. Run stage 28 or set BFA_SIM_RANK_A.")
   quit(save = "no", status = 0)
 }
 
@@ -95,7 +147,7 @@ B_sd   <- sqrt(pmax(B_sum2 - B_mean^2, 0))
 B_lo <- apply(B_q05, c(2, 3), quantile, probs = 0.05)
 B_hi <- apply(B_q05, c(2, 3), quantile, probs = 0.95)
 
-# ── Save table ────────────────────────────────────────────────────────────────
+# ── Save table (Z-score scale + original-unit deviations) ─────────────────────
 
 season_rows <- lapply(seq_len(S), function(j) {
   tibble::tibble(
@@ -108,6 +160,20 @@ season_rows <- lapply(seq_len(S), function(j) {
   )
 })
 season_tbl <- dplyr::bind_rows(season_rows)
+
+# Add original-unit deviations if transform info is available
+if (!is.null(sp) && "transform_type" %in% names(sp)) {
+  sp_lookup <- dplyr::rename(sp, feature = variable)
+  season_tbl <- season_tbl |>
+    dplyr::left_join(sp_lookup, by = "feature") |>
+    dplyr::mutate(
+      b_orig_mean = back_transform_season_effect(b_mean, center, scale, transform_type),
+      b_orig_q05  = back_transform_season_effect(b_q05,  center, scale, transform_type),
+      b_orig_q95  = back_transform_season_effect(b_q95,  center, scale, transform_type)
+    ) |>
+    dplyr::select(-center, -scale, -transform_type)
+}
+
 readr::write_csv(season_tbl,
   file.path(paths$tables, "15_season_effect_means.csv"))
 message("Season effect table saved.")
@@ -131,13 +197,27 @@ message("Plotting ", length(top_features), " features with highest ICC_season.")
 # ── Temporal line plots (faceted grid) ───────────────────────────────────────
 
 # Convert season labels to an ordered factor (chronological order from model)
+# Use original-unit deviations for plots if available; fall back to Z-scores
+use_orig <- "b_orig_mean" %in% names(season_tbl)
+y_col <- if (use_orig) "b_orig_mean" else "b_mean"
+ylo_col <- if (use_orig) "b_orig_q05" else "b_q05"
+yhi_col <- if (use_orig) "b_orig_q95" else "b_q95"
+
+# Determine units for y-axis label
+get_unit_label <- function(feat) {
+  if (startsWith(feat, "per90_")) "events per 90 min (deviation from average)"
+  else if (startsWith(feat, "rate_"))  "proportion (deviation from average)"
+  else                                  "value (deviation from average)"
+}
+y_axis_label <- if (use_orig) "Season effect in original units (deviation from average)" else "Season effect (standardised)"
+
 plot_df <- season_tbl |>
   dplyr::filter(feature %in% top_features) |>
+  dplyr::rename(y_mean = !!y_col, y_lo = !!ylo_col, y_hi = !!yhi_col) |>
   dplyr::mutate(
     season_f = factor(season, levels = season_levels),
     feature_label = gsub("per90_|rate_", "", feature),
     feature_label = gsub("_", " ", feature_label),
-    # Reorder features by decreasing ICC_season
     feature_f = factor(feature_label,
       levels = gsub("per90_|rate_", "",
                gsub("_", " ", top_features)))
@@ -149,9 +229,9 @@ plot_df <- plot_df |>
   dplyr::mutate(group = dplyr::coalesce(group, "Other"))
 
 p_grid <- ggplot2::ggplot(plot_df,
-  ggplot2::aes(x = season_f, y = b_mean, group = feature_f, colour = group)) +
+  ggplot2::aes(x = season_f, y = y_mean, group = feature_f, colour = group)) +
   ggplot2::geom_ribbon(
-    ggplot2::aes(ymin = b_q05, ymax = b_q95, fill = group),
+    ggplot2::aes(ymin = y_lo, ymax = y_hi, fill = group),
     alpha = 0.18, colour = NA) +
   ggplot2::geom_line(linewidth = 0.8) +
   ggplot2::geom_point(size = 2) +
@@ -163,7 +243,7 @@ p_grid <- ggplot2::ggplot(plot_df,
     title    = "Temporal season effects b_j — top 12 features by ICC_season",
     subtitle = "Posterior mean ± 90% credible interval",
     x        = "Season",
-    y        = "Season effect (standardised scale)"
+    y        = y_axis_label
   ) +
   ggplot2::theme_minimal(base_size = 9) +
   ggplot2::theme(

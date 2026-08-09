@@ -1,0 +1,53 @@
+=== Stage 37: Player similarity — top 10 nearest neighbours (PC1/PC2/PC3 space) ===
+Date: 2026-08-07
+
+Distance = Euclidean in standardised (PC1, PC2, PC3) space.
+
+--- Top 10 similar to L. Messi ---
+   1. Neymar                               dist = 1.736
+   2. Pedro                                dist = 2.014
+   3. Philippe Coutinho                    dist = 2.115
+   4. J. Rodríguez                        dist = 2.155
+   5. Jonathan Viera                       dist = 2.181
+   6. S. Nasri                             dist = 2.257
+   7. Isco                                 dist = 2.447
+   8. Riqui Puig                           dist = 2.495
+   9. İ. Gündoğan                       dist = 2.519
+  10. K. Mbappé                           dist = 2.556
+
+--- Top 10 similar to Sergio Busquets ---
+   1. Damián Rodríguez                   dist = 0.455
+   2. Marc Casadó                         dist = 0.476
+   3. Z. Kuzmanović                       dist = 0.570
+   4. M. Díaz                             dist = 0.594
+   5. Dean Huijsen                         dist = 0.594
+   6. Sergio Marcos                        dist = 0.678
+   7. M. Perrone                           dist = 0.707
+   8. D. Blind                             dist = 0.722
+   9. Kirian Rodríguez                    dist = 0.764
+  10. J. Mascherano                        dist = 0.765
+
+--- Top 10 similar to Sergio Ramos ---
+   1. Javi García                         dist = 0.161
+   2. Gerard Piqué                        dist = 0.164
+   3. S. Umtiti                            dist = 0.316
+   4. A. Christensen                       dist = 0.382
+   5. A. Rüdiger                          dist = 0.424
+   6. R. Araújo                           dist = 0.438
+   7. T. Vermaelen                         dist = 0.513
+   8. Diego Carlos                         dist = 0.562
+   9. J. Mathieu                           dist = 0.563
+  10. A. Mandi                             dist = 0.618
+
+--- Top 10 similar to K. Benzema ---
+   1. Cristiano Ronaldo                    dist = 0.562
+   2. S. Jovetić                          dist = 0.774
+   3. L. Suárez                           dist = 0.827
+   4. Rubén Castro                        dist = 1.186
+   5. K. Mbappé                           dist = 1.193
+   6. Paulinho                             dist = 1.353
+   7. A. Griezmann                         dist = 1.357
+   8. L. Vietto                            dist = 1.401
+   9. Iago Aspas                           dist = 1.405
+  10. K. Boateng                           dist = 1.452
+

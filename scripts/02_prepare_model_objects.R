@@ -124,10 +124,18 @@ season_counts <- row_mapping |>
   count(season_id, season_index, name = "player_season_rows") |>
   arrange(season_index)
 
+transform_type_map <- setNames(
+  rep("identity", length(selected_variables)),
+  selected_variables
+)
+for (f in intersect(log1p_feats, selected_variables)) transform_type_map[f] <- "log1p"
+for (f in intersect(sqrt_feats,  selected_variables)) transform_type_map[f] <- "sqrt"
+
 scaling_parameters <- tibble(
-  variable = selected_variables,
-  center = as.numeric(feature_means),
-  scale = as.numeric(feature_sds)
+  variable       = selected_variables,
+  center         = as.numeric(feature_means),
+  scale          = as.numeric(feature_sds),
+  transform_type = unname(transform_type_map[selected_variables])
 )
 
 model_summary <- tibble(

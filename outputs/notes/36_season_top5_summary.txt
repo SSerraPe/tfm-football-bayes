@@ -1,0 +1,11 @@
+=== Stage 36: Top 5 features by season-effect range ===
+Date: 2026-08-07
+
+Measure: max(b_mean) - min(b_mean) across 12 La Liga seasons.
+
+Feature                                                 Range (σ)     Direction
+per90_smart_passes                                          2.452       falling
+rate_defensive_duels_won                                    1.597  non-monotone
+per90_pressing_duels                                        1.467  non-monotone
+per90_through_passes                                        1.399  non-monotone
+per90_dribbles_against                                      1.309  non-monotone

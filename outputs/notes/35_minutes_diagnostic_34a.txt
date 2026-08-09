@@ -1,0 +1,21 @@
+=== Stage 35: Minutes-in-variance diagnostic on stage-34a residuals ===
+Date: 2026-08-07
+
+Model: Stage 34a (fixed phi=0.5, nu=5.6672)
+Data: N=4586 observations, minutes range 450-3738 (median 1585)
+
+--- Stage-28 baseline (from stage 30) ---
+Low-minute share in top-200 worst: 48.9% (88/180 obs), binomial p < 4.4e-18
+
+--- Stage-34a (minutes-scaled) ---
+Residual formula: z_{n,p} = (y - A_hat - B_hat) / (sigma_e[p] * sqrt(m_ref/m_n) * sqrt(nu/(nu-2)))
+tau_99 at nu=5.6672: 3.0556
+20th pct minutes: 889 min
+Top-200 obs with minutes < p20: 14/168 = 8.3% (expected 20%)
+Binomial p-value (H1: share > 20%): 1
+Regression max|z| ~ log(min): slope=0.0074, p=0.9679
+
+--- VERDICT ---
+CORRECTED — minutes-scaled model eliminates low-minute over-representation.
+
+Figures: 35_minutes_vs_residual_34a.png, 35_minutes_distribution_comparison_34a.png

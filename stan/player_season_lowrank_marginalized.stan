@@ -47,7 +47,7 @@ data {
 parameters {
   vector<lower=0>[Q_a]        lambda_a_diag;
   vector[N_lambda_a_free]     lambda_a_free;
-  vector<lower=0>[P]          psi_a;
+  vector<lower=sigma_floor>[P] psi_a;
 
   matrix[S, P]                z_b;
   vector<lower=0>[P]          sigma_b;

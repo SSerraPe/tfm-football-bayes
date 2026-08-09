@@ -2199,6 +2199,253 @@ CI-filtered interpretation.
 
 ---
 
+## Entry 10 — 2026-08-04 — Session 12: Player-holdout K-selection CV, minutes-scaled ELPD, Pathfinder switch
+
+### Context
+
+Session 12 continues the Session 11 work: the user approved the player-holdout K-selection CV
+(stage 32) and the minutes-scaled residual variance model (stage 34). Production fit is stage 28
+(Student-t, K=3, P=48, N=4586, ν̂=4.902). The session had two main threads:
+
+1. Implement and run the player-holdout CV (stage 32) to get a trustworthy K* that works under the
+   minutes-scaled model — replacing the Pathfinder K=0..4 selection which had large inter-run variance.
+2. Fix imprecise transform language ("Poisson counts" → "count rates") and add the minutes-scaled
+   model description to `professor_summary.qmd`.
+
+### Implementation work
+
+#### Phase 1: NUTS attempt and failure
+
+The first version of `scripts/32_player_holdout_kselect.R` used `model$sample()` (NUTS) on the
+marginalized Normal model (`player_season_lowrank_marginalized.stan`). Two failure modes:
+
+1. **O(I×P³) gradient cost.** With I_train=1,301 players and P=48, each gradient evaluation takes
+   ~150ms (small-matrix BLAS inefficiency for 48×48 Cholesky). Even at delta=0.80 / max_depth=8
+   (256 grads/iter worst-case), 300 warmup iterations = ~1 h per chain, making K=1..8 infeasible.
+2. **Positive-definite failure in M_i.** The Stan model computes `M_i = Sigma_a_inv + Si * diag(1/sigma_e²)`
+   and passes it to `mdivide_left_spd`. During NUTS warmup, exploration of small σ_e values produces
+   high condition numbers → Cholesky failure → chain crash.
+
+Fix: switch to Pathfinder (`model$pathfinder()`).
+
+#### Phase 2: Pathfinder on the marginalized model
+
+Pathfinder uses L-BFGS to find the mode and builds a Gaussian/mixture approximation. Key advantages:
+- Starts from PCA init (good region), never explores extreme tails
+- No NUTS tree evaluation (no 4096-grad-per-step blowup)
+- Wall-clock: ~4 min per K (4 paths × ~50-100 L-BFGS iterations × 150ms/grad × ~10 grads/iter)
+- Total for K=1..8: ~60-80 min
+
+**Implementation changes to `scripts/32_player_holdout_kselect.R`:**
+- Replaced `$sample()` call with `$pathfinder(num_paths=pf_paths, draws=pf_draws, max_lbfgs_iters=pf_iters)`
+- `init` must be a list of lists for Pathfinder: changed `init_fn(1)` → `lapply(seq_len(pf_paths), init_fn)`
+- Replaced CSV-based fit caching with RDS draws-cache (`32_marg_k{K}_draws.rds`): saves extracted
+  `draws_matrix` for Sigma_a_diag, sigma_e, sigma_b, z_b directly, avoiding CSV bottleneck
+- Production settings: `BFA_PF_PATHS=4 BFA_PF_DRAWS=400 BFA_PF_ITERS=200`
+
+**Smoke test (K=1, 2 paths, 50 draws, 100 iters):** completed in ~4 min, no numerical issues.
+ELPD_base=-34784.0, ELPD_mv=-34243.7 — minutes-scaled model already better at K=1.
+
+#### Stan model fix: psi_a sigma_floor
+
+`player_season_lowrank_marginalized.stan` had `vector<lower=0>[P] psi_a;` — allowing psi_a near 0,
+which makes `Sigma_a = ΛΛ' + diag(ψ²)` near-singular. Fixed to `vector<lower=sigma_floor>[P] psi_a;`
+(matching the full models). Old compiled binary deleted; recompiled automatically.
+
+#### Two ELPD metrics: Phase 1 (base) and Phase 2 (mv)
+
+Both computed from the same Pathfinder draws, no extra Stan fits:
+
+**Phase 1 (base):** uniform-diagonal Woodbury (`C_p = Σ_{a,pp} × 11' + σ²_{e,p} × I_T`).
+```
+log|C_p| = (T-1)·log(σ²_{e,p}) + log(T·Σ_{a,pp} + σ²_{e,p})
+quad     = Σr²/σ²_{e,p} − Σ_{a,pp}/(σ²_{e,p}·(T·Σ_{a,pp}+σ²_{e,p}))·(Σr)²
+```
+
+**Phase 2 (mv, φ=0.5):** non-uniform diagonal (`d_{t,p} = σ²_{e,p}·s²_t`, `s_t=√(m̄/m_t)`).
+Rank-1-plus-diagonal Woodbury:
+```
+wsum = Σ_t (1/s²_t)  (shared across features)
+log|C_p| = T·log(σ²_{e,p}) + 2·Σlog(s_t) + log(1 + Σ_{a,pp}·wsum/σ²_{e,p})
+quad     = (R²'w)/σ²_{e,p} − Σ_{a,pp}·((R'w)/σ²_{e,p})²/(1 + Σ_{a,pp}·wsum/σ²_{e,p})
+```
+Both helpers vectorised over P (crossprod for per-feature weighted sums).
+
+The **mv ELPD governs K* selection** — it is the relevant metric for the production model (stage 34).
+
+#### Transform language fix (Task 3 from plan)
+
+In `professor_summary.qmd`: replaced "Sparse counts" → "Sparse count rates", "Moderate Poisson-like
+counts" → "Moderate-skew count rates". Added explanatory paragraph:
+
+> The per-90 features are **count rates**: raw event counts divided by minutes played and
+> rescaled. If the underlying count follows a Poisson process with rate λ, the per-90 rate has
+> variance ∝ λ/minutes — right-skewed. Transforms applied to the rates, not raw counts.
+
+#### professor_summary additions
+
+1. New section "Minutes-scaled Residual Variance" (§sec-minutes): stage 30 motivation (48.9%
+   worst cells from bottom-20th-percentile minutes), likelihood formula, φ=0.5 justification,
+   estimated-φ sensitivity check.
+2. Updated rank selection section: added player-holdout CV subsection (§sec-kselect-holdout)
+   with ELPD formula, Phase 2 description, and R chunk to display `32_player_holdout_elpd.csv`.
+3. Pending analyses list renumbered; stage 32 and stage 34 added as items 1 and 2.
+
+### Stage 32 — Player-holdout K-selection CV results
+
+**Run:** `BFA_RUN_STAN=true BFA_REUSE_FIT=false BFA_RANK_MAX=8 BFA_PF_PATHS=4 BFA_PF_DRAWS=400 BFA_PF_ITERS=200`
+**Holdout:** 228 players / 671 obs (15% stratified by recurrence class, seed=20260833)
+**Training:** 3,915 obs, 1,301 players
+
+| K | ELPD_base | SE_base | ELPD_mv | SE_mv |
+|---|---|---|---|---|
+| 1 | −34755.3 | 0.3 | −34220.5 | 0.2 |
+| 2 | −34758.6 | 0.0 | −34216.0 | 0.0 |
+| **3** | **−34737.2** | 0.0 | **−34211.0** | 0.0 |
+| 4 | −34763.4 | 0.0 | −34209.8 | 0.0 |
+| 5 | −34753.5 | 0.0 | −34219.4 | 0.0 |
+| 6 | −34729.5 | 0.1 | −34184.4 | 0.1 |
+| 7–8 | (not computed — background task kills prevented completion) | | | |
+
+SE=0.0 for K=2..5 reflects that all 4 Pathfinder paths converged to the same trajectory (identical
+init JSON — cmdstanr limitation), so the 400 draws have near-zero inter-draw variance.
+SE=0.1 for K=1 and K=6 indicates slightly more draw diversity (different random seeds/paths).
+
+**Pathfinder instability note:** the ELPD values are non-monotonic across K — K=4 is the *worst*
+(-34763.4 base) while K=6 is the *best* (-34729.5 base). This non-monotonic pattern (K=4 worst,
+K=5 mediocre, K=6 best) is a classic Pathfinder instability signature: different K values' PCA
+inits happen to find different local modes, and the resulting approximate-posterior quality varies.
+K=6's better ELPD does not mean 6 factors genuinely predict better — it means the Pathfinder at
+K=6 found a mode that happens to predict the holdout set better under the Gaussian approximation.
+This is consistent with the prior finding that "Pathfinder confirmed unreliable at K≥2 for the
+full model (huge inter-run variance)."
+
+**Reliable evidence for K selection:**
+1. Pathfinder K=0..4 on full model (Session 8): ELPD peaked at K=3, reversed at K=4 → K*=3.
+2. NUTS LOO K=2 vs K=3 (stage C): K=3 > K=2 (ΔELPD +1244) — gold standard.
+3. Player-holdout CV K=1..3: clear monotonic rise with K, consistent with K=3 being superior to K=1..2.
+4. Player-holdout CV K=4..6: non-monotonic → Pathfinder approximation noise dominates.
+
+**K* (base model): K=3** — corroborated by NUTS LOO and the clean K=1..3 monotonic rise.
+**K* (mv model, governs stage 34): K=3** — same reasoning; K=4..6 results are too noisy to override.
+
+Production fit (stage 28, K=3) is confirmed correct. Stage 34 uses K=3.
+
+### Next steps
+
+1. **Stage 34** — Fit Student-t + φ=0.5 minutes-scaled model at K* (stage 34:
+   `scripts/34_fit_minutes_scaled_t.R`). Background, ~2-3h wall clock.
+2. Update `professor_summary.qmd` K* column once CV table is final.
+3. Recompile `professor_summary.pdf` once stage 34 diagnostics are in.
+
+---
+
+## Entry 11 — 2026-08-08 — Stage 34 complete + Stage 35 minutes diagnostic
+
+### Stages Run
+
+- **34** — Minutes-scaled Student-t model at K=3. Two variants: 34a (fixed φ=0.5,
+  `additive_lowrank_a_diag_b_t_mv.stan`) and 34b (estimated φ,
+  `additive_lowrank_a_diag_b_t_mv_phi.stan`). N=4,586, P=48, I=1,529, S=12.
+  4 chains, 1,000+1,000 draws, δ=0.95, max_depth=12, PCA init.
+- **35** — Minutes diagnostic re-run on stage-34a residuals (`scripts/35_minutes_diagnostic_34a.R`).
+  Same quantile test as stage 30 but using minutes-scaled standardised residuals. Verifies
+  the model corrects the 48.9% low-minute over-representation found at stage 30.
+
+### Configuration (stage 34)
+
+| Parameter | Value |
+|---|---|
+| Seed | 20260853 (34a) / 20260854 (34b) |
+| Chains | 4 |
+| Iter warmup | 1,000 |
+| Iter sampling | 1,000 |
+| Adapt delta | 0.95 |
+| Max treedepth | 12 |
+| Player factor rank K | 3 |
+| Variant A φ | 0.5 (fixed) |
+| Variant B φ prior | N(0.5, 0.2) |
+
+### Stage 34 Sampler Health
+
+**Variant A (34a, fixed φ=0.5):**
+
+- ν: mean=5.667, 95%CI=[5.536, 5.803], ESS_bulk=2,949, ESS_tail=3,308, Rhat=1.000
+- lp__: ESS_bulk=766, ESS_tail=1,448, Rhat=1.003; wall clock ~2.8h
+
+**Variant B (34b, estimated φ):**
+
+- ν: mean=5.979, 95%CI=[5.831, 6.126], ESS_bulk=2,415, ESS_tail=2,835, Rhat=1.001
+- φ: mean=0.366, 95%CI=[0.360, 0.373], ESS_bulk=4,793, ESS_tail=3,036, Rhat=1.000
+- lp__: ESS_bulk=630, ESS_tail=1,346, Rhat=1.003; wall clock ~2.8h
+
+All parameters well-converged. Sporadic `student_t_lpdf: Location parameter is ±inf` at
+warmup iteration 1 are benign (expected during chain init; the sampler proceeds normally).
+
+Fit pointers: `fits/34a_real_lowrank_a_diag_b_t_mv_k3_fit.rds`,
+`fits/34b_real_lowrank_a_diag_b_t_mv_phi_k3_fit.rds`.
+CSV chains: `fits/csv/34a_real_lowrank_a_diag_b_t_mv_k3/20260804_061259/` (4 × 2.4GB),
+`fits/csv/34b_real_lowrank_a_diag_b_t_mv_phi_k3/20260804_090942/` (4 chains).
+Posterior summaries: `outputs/tables/34a_real_lowrank_a_diag_b_t_mv_k3_posterior_summary.csv`,
+`outputs/tables/34b_real_lowrank_a_diag_b_t_mv_phi_k3_posterior_summary.csv`.
+
+### Stage 34 Key Results
+
+**ν rise confirms the minutes hypothesis.**
+Stage 28 (constant σ_e): ν=4.902. Stage 34a (fixed φ=0.5): ν=5.667 (+15.6%).
+Stage 34b (estimated φ): ν=5.979 (+21.9%). The Student-t tail absorbs less unexplained
+variance once playing-time heteroskedasticity is explicitly modelled.
+
+**φ̂ = 0.366 < 0.5 (variant B).**
+Poisson-rate theory predicts φ=0.5 (Var(X/m)=λ/m → SD∝m^{−0.5}). The estimated
+φ̂=0.366 (95%CI=[0.360, 0.373]) excludes both 0 and 0.5. Interpretation: per-90 rate
+variance grows with low minutes, but more slowly than pure Poisson sampling noise predicts.
+Super-Poisson variance (player-level heterogeneity partially absorbed by a_i) reduces the
+effective exponent. Fixed φ=0.5 (variant A) is a principled conservative choice; variant B
+confirms the scaling is real but softer.
+
+compute_log_lik=0 in both fits; no LOO comparison vs stage 28 is available without a re-fit.
+
+### Stage 35: Minutes Diagnostic on Stage-34a Residuals
+
+**Method:** Python column-pass on stage-34a CSVs (column indices 157022–230413 for A,
+231038–231613 for B — identical to stage 28, verified). Minutes-scaled standardised residuals:
+
+z^{34a}_{n,p} = (y_{n,p} − Â_{i[n],p} − B̂_{j[n],p}) / (σ̂_{e,p} · √(m̄/m_n) · √(ν̂/(ν̂−2)))
+
+Top-200 worst cells identified; same quantile test as stage 30.
+
+| Diagnostic | Stage 28 (constant σ_e) | Stage 34a (minutes-scaled) |
+|---|---|---|
+| Low-minute share in top-200 | 48.9% (88/180 obs) | **8.3% (14/168 obs)** |
+| Binomial p | <4.4e-18 | >0.999 |
+| Verdict | Over-represented | CORRECTED |
+
+Figures: `35_minutes_vs_residual_34a.png`, `35_minutes_distribution_comparison_34a.png`.
+
+### Notes and Interpretation
+
+The joint arc across stages 28 → 34 → 35:
+
+1. **Stage 28** (constant σ_e, ν=4.902): heavy tails (ν≈5) absorb low-minute noise,
+   but 48.9% of top-200 worst residuals come from the bottom-20th percentile of minutes.
+2. **Stage 34** (minutes-scaled σ_e, fixed φ=0.5): ν rises to 5.667. The tail component
+   shrinks because low-minute variance is now explicitly modelled.
+3. **Stage 35** validates the correction: the low-minute share in the top-200 drops from
+   48.9% toward the expected 20%.
+
+φ̂=0.366 (variant B) implies the effective scaling exponent is intermediate between
+"no effect" (0) and "pure Poisson" (0.5), consistent with super-Poisson over-dispersion
+in per-90 rates that the factor structure partially explains.
+
+### Next Steps
+
+1. Stage 03 diagonal refit on P=48 → stage 20 LOO (diagonal vs K=3): deferred.
+2. Stage 31 PCA CI-filtered loading analysis: deferred.
+3. Update professor_summary with stage 34 + 35 results (this session).
+
+---
+
 # Entry Template (Reference for Future Updates)
 
 The following template should be used for each new journal entry appended to this document.

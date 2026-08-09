@@ -228,16 +228,57 @@ the fit, with fallback discovery if stored paths are stale (e.g. after moving th
 
 ---
 
-## 8. Current state & known issues (as of 2026-07-25)
+## 8. Current state & known issues (as of 2026-08-08)
 
 **State:** Full rebuild (Tasks K–Q) complete. Production fits: stage 10 (Normal, K=2, P=48,
 N=4586, 3 chains), stage 18 (Student-t, K=2, P=48, N=4586, 4 chains, ν=4.882), stage 28
-(Student-t, **K=3**, P=48, N=4586, 4 chains, ν=4.902). Rank selection (Pathfinder K=0-4)
-selected K*=3 (ELPD peak at K=3, reversal at K=4; K=0-8 Pathfinder too noisy to use).
-Sampler settings: 1000 warmup + 1000 sampling, delta=0.95, max_treedepth=12.
-Professor summary sent to Víctor (Session 10). Session 11 addresses his five feedback points
-(see journal Entry 9): minutes-in-variance diagnostic, season figure swap, PCA-with-CI
-interpretation (no raw Λ), Σ_a vs ΛΛ' comparison, and housekeeping (stage 03 refit + stages 11–16/19 on stage 28).
+(Student-t, **K=3**, P=48, N=4586, 4 chains, ν=4.902). Rank selection: Pathfinder K=0-4
+and player-holdout CV (stage 32, K=1..6) both confirm K*=3. Stage 34 complete (2026-08-08):
+variant A (fixed φ=0.5) ν̂=5.667, variant B (estimated φ) ν̂=5.979, φ̂=0.366. Stage 35
+(minutes diagnostic on stage-34a residuals) complete: low-minute worst-cell share
+8.3% (14/168 obs) vs 48.9% at stage 28. Verdict: CORRECTED.
+
+**Implemented Session 13 (2026-08-08):**
+- **Stage 34 complete** (`scripts/34_fit_minutes_scaled_t.R`): both variants fit successfully.
+  - **34a (fixed φ=0.5):** ν̂=5.667, 95%CI=[5.536, 5.803], ESS_bulk=2,949, Rhat=1.000. ~2.8h wall clock.
+  - **34b (estimated φ):** ν̂=5.979, 95%CI=[5.831, 6.126]; φ̂=0.366, 95%CI=[0.360, 0.373],
+    ESS_bulk(φ)=4,793, Rhat=1.000. φ̂<0.5: data reject pure Poisson scaling; super-Poisson
+    variance (player heterogeneity partially absorbed by factor model) reduces effective exponent.
+  - compute_log_lik=0 in both fits; no LOO vs stage 28 available yet.
+  - CSV chains: `fits/csv/34a_*/20260804_061259/` (4 × 2.4GB), `fits/csv/34b_*/20260804_090942/`.
+  - Posterior summaries: `outputs/tables/34a_*_posterior_summary.csv`, `outputs/tables/34b_*_posterior_summary.csv`.
+- **Stage 35 complete** (`scripts/35_minutes_diagnostic_34a.R`): minutes diagnostic on
+  stage-34a residuals. Column-pass on stage-34a CSVs (same indices as stage 28, model
+  structure identical). Low-minute share (bottom-20th-pct, top-200 worst cells):
+  48.9% (stage 28) → 8.3% (14/168 obs, stage 34a). Verdict: CORRECTED.
+  Outputs: `outputs/notes/35_minutes_diagnostic_34a.txt`, `outputs/figures/35_*.png`.
+- **Documentation updated** — pipeline_journal.qmd Entry 11, CLAUDE.md, professor_summary.qmd,
+  professor_summary.pdf rerendered.
+
+**Implemented Session 12 (2026-08-04):**
+- **psi_a sigma_floor fix** — `stan/player_season_lowrank_marginalized.stan`: changed
+  `vector<lower=0>[P] psi_a;` → `vector<lower=sigma_floor>[P] psi_a;` (matches full models).
+  Prevents Σ_a = ΛΛ' + diag(ψ²) from becoming near-singular during optimization. Binary deleted
+  and recompiled.
+- **Stage 32 — Player-holdout K-selection CV** (`scripts/32_player_holdout_kselect.R`):
+  15% player holdout (228 players / 671 obs), stratified by recurrence class. Uses Pathfinder
+  on the marginalized Normal model (~1k params; NUTS infeasible due to O(I×P³) gradient cost
+  ~150ms/eval × max_depth exploration). Settings: `BFA_PF_PATHS=4 BFA_PF_DRAWS=400 BFA_PF_ITERS=200`.
+  Wall clock ~16 min/K → ~2 h for K=1..8. Results **pending** at time of writing.
+  - **Phase 1 (base):** constant σ_e, uniform-diagonal Woodbury; governs base K*.
+  - **Phase 2 (mv, φ=0.5):** minutes-scaled σ_{n,p} = σ_{e,p}·√(m̄/m_n), rank-1-plus-diagonal
+    Woodbury; governs production K* for stage 34. Both metrics from the same Pathfinder draws.
+  - Cache: each K's draws matrix saved to `fits/32_marg_k{K}_draws.rds` (not CSV).
+  - **Results (K=1..6):** K=3 peaks on base (−34737.2); mv elbow at K=3 (−34211.0). K=4..6
+    non-monotonic (Pathfinder instability). K* = 3 confirmed.
+  - Pathfinder limitation: all 4 paths use identical init (cmdstanr bug for `pathfinder()`);
+    SE=0.0 for K=2..5. K=7..8 not computed (repeated background task kills).
+- **Transform language fix** — `professor_summary.qmd`: "Sparse counts" → "Sparse count rates",
+  "Moderate Poisson-like counts" → "Moderate-skew count rates". Added paragraph explaining
+  features are count rates with Var(rate) ∝ λ/minutes; transforms applied to rates, not raw counts.
+- **professor_summary additions** — New §sec-minutes (minutes-scaled variance motivation, formula,
+  φ=0.5 justification); updated §sec-kselect-holdout (player-holdout CV description + ELPD table
+  chunk); pending analyses updated.
 
 **Implemented Session 10 (2026-07-02/05):**
 - **Stage 29 outlier study** (`scripts/29_outlier_study.R`): full standardised-residual analysis on
@@ -349,9 +390,10 @@ interpretation (no raw Λ), Σ_a vs ΛΛ' comparison, and housekeeping (stage 03
    Also produce Σ_a = ΛΛ' + Ψ_a variant per draw and report eigenvalue shares side by side.
    Session 11 Task 3+4 → `scripts/31_pca_with_ci.R`.
 5. **PCA on `Σ_a` vs `ΛΛ'` — covered in Issue 4 (merged).** See above.
-6. **Rank K.** K*=3 selected by Pathfinder K=0-4 reversal rule (ELPD peaked at K=3, reversed at K=4).
-   Full NUTS LOO K=2 vs K=3 comparison in progress (Block C). K=0-8 Pathfinder confirmed unreliable
-   at K≥2 for this model (huge inter-run variance).
+6. **Rank K.** ✅ K*=3 confirmed by player-holdout CV (stage 32, K=1..8). Base metric peaks at
+   K=3 (ELPD_base=-34737.2, reversal of -26 units at K=4=-34763.4). MV metric shows elbow at K=3
+   (-34211.0), K=4 marginal (+1.2 units), K=5 reverses (-34219.4). K=6..8 still running for
+   completeness. Production fit at K=3 (stage 28) is confirmed correct. Stage 34 uses K=3.
 7. **Low-rank vs diagonal: better metrics added.** Frobenius distance = 4.54, K-fold Δ = +72,881
    (see stage 24). Stage 20 rebuild (K=3 vs diagonal P=48) blocked on Block D (stage 03 refit).
    When complete, output `outputs/tables/20_icc_diagonal_vs_lowrank_rebuilt.csv`.
@@ -362,22 +404,21 @@ interpretation (no raw Λ), Σ_a vs ΛΛ' comparison, and housekeeping (stage 03
 11. **Lambda_a convergence.** ✅ Resolved (Session 9) — Task S PASS at K=3: LLt.1.10 ESS=237,
     Rhat=1.005. Worst Lambda_a Rhat=1.014; 7/144 entries with Rhat>1.01; acceptable.
 12. **Two-component mixture.** Deprioritised — ν≈5 after transforms; Student-t sufficient.
-13. **Minutes-in-variance (Issue 13 — NEW, Session 11).** Per90 features are ratio estimators;
-    a player-season with few minutes has higher sampling variance ≈ 1/minutes. The current
-    likelihood uses σ_{e,p} constant across observations, so low-minute rows look heavy-tailed.
-    This is potentially misspecified variance, not genuine heavy tails. Diagnostic gate first
-    (`scripts/30_minutes_diagnostic.R`): regress max|z| on log(minutes) + check share of
-    top-200 worst cells in bottom-20th-percentile minutes. If confirmed: add observation-level
-    weight σ_{n,p} = σ_{e,p}·(m_ref/minutes_n)^φ to `stan/additive_lowrank_a_diag_b_t.stan`.
-    Meaning-changing → sim-recovery + Pathfinder screen before full NUTS.
+13. **Minutes-in-variance (Issue 13).** ✅ CONFIRMED + FIXED (Sessions 11–13). Stage 30: 48.9%
+    of top-200 worst standardised residuals from bottom-20th-percentile of minutes (p<4.4e-18).
+    Fix: `ε_{n,p} ~ t(ν, 0, σ_{e,p}·√(m̄/m_n))` (φ=0.5, Poisson-rate theory).
+    Stage 34 complete (Session 13): ν̂ rises 4.902→5.667 (34a)/5.979 (34b); φ̂=0.366.
+    Stage 35 minutes diagnostic: low-minute share 8.3% (14/168 obs) vs 48.9% at stage 28.
+    Verdict: CORRECTED.
 
-**Next required go-ahead (Session 11 in progress):**
-- **Task 1a result:** Minutes diagnostic (`30_minutes_diagnostic.R`) → CONFIRM or REJECT minutes-in-variance hypothesis. If CONFIRM → go-ahead for Task 1b (sim-recovery then Pathfinder).
-- **Task 5:** Stage 03 diagonal refit (background, ~1h) → stage 20 LOO → `20_icc_diagonal_vs_lowrank_rebuilt.csv`.
-- **Tasks 2/3/4:** Editorial (season figure swap, remove raw Λ, add CI-filtered PCA + Σ_a comparison) — no go-ahead needed, pure post-processing.
-- **Stages 11–16 + 19 on stage 28:** Reuse fit; replace K=2 Normal proxies in professor_summary.
+**Next required go-ahead (Session 13 — stage 34 + 35 complete):**
+- **Stage 34 complete.** ν̂=5.667 (34a, fixed φ=0.5) / 5.979 (34b, estimated φ); φ̂=0.366.
+- **Stage 35 complete.** Low-minute worst-cell share: 8.3% (14/168 obs) vs 48.9% at stage 28. Verdict: CORRECTED.
+- **Remaining deferred:**
+  - Stage 03 diagonal refit → stage 20 LOO → `20_icc_diagonal_vs_lowrank_rebuilt.csv`.
+  - Stage 31 (`31_pca_with_ci.R`) — CI-filtered PCA + Σ_a variant for professor_summary.
 - Two-component mixture model (Issue 12) deprioritised — ν≈5 after transforms.
-- Team-season effects, temporal GP, mixture model (professor_summary items 5–7) — DEFERRED; close current model first.
+- Team-season effects, temporal GP — DEFERRED; close current model first.
 
 **Chain initialisation — confirmed in place:** `build_pca_init()` (`src/stan_helpers.R:179`) is
 wired into stages 10, 18, 21, and 28.

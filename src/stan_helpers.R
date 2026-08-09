@@ -134,6 +134,14 @@ summary_variables_for_model <- function(model_id) {
     ))
   }
 
+  if (grepl("lowrank_a_diag_b_t_mv_phi", model_id)) {
+    return(c(
+      "lp__", "nu", "phi", "lambda_a_diag", "lambda_a_free", "Lambda_a",
+      "psi_a", "sigma_b", "sigma_e",
+      "Sigma_a_diag", "var_b", "var_e", "prop_a", "prop_b", "prop_e"
+    ))
+  }
+
   if (grepl("lowrank_a_diag_b_t", model_id)) {
     return(c(
       "lp__", "nu", "lambda_a_diag", "lambda_a_free", "Lambda_a",
