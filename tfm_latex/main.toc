@@ -1,0 +1,46 @@
+\babel@toc {english}{}\relax 
+\contentsline {chapter}{\tocchapter {Chapter}{1}{Introduction}}{1}{chapter.1}%
+\contentsline {part}{Part\ 1. \enspace \noindent Data Source}{4}{part.1}%
+\contentsline {chapter}{\tocchapter {Chapter}{2}{Data source and construction}}{5}{chapter.2}%
+\contentsline {part}{Part\ 2. \enspace \noindent Background}{8}{part.2}%
+\contentsline {chapter}{\tocchapter {Chapter}{3}{Background}}{9}{chapter.3}%
+\contentsline {section}{\tocsection {}{1}{Similarity representation}}{10}{section.3.1}%
+\contentsline {section}{\tocsection {}{2}{Exploratory low-dimensional structure}}{11}{section.3.2}%
+\contentsline {subsection}{\tocsubsection {}{2.1}{Principal component analysis}}{13}{subsection.3.2.1}%
+\contentsline {subsection}{\tocsubsection {}{2.2}{Factor analysis}}{16}{subsection.3.2.2}%
+\contentsline {subsection}{\tocsubsection {}{2.3}{Classical multidimensional scaling}}{19}{subsection.3.2.3}%
+\contentsline {subsection}{\tocsubsection {}{2.4}{Summary of the exploratory role of PCA, FA, and CMDS}}{22}{subsection.3.2.4}%
+\contentsline {part}{Part\ 3. \enspace \noindent Model}{23}{part.3}%
+\contentsline {chapter}{\tocchapter {Chapter}{4}{Model}}{24}{chapter.4}%
+\contentsline {section}{\tocsection {}{1}{Motivation and overview}}{24}{section.4.1}%
+\contentsline {section}{\tocsection {}{2}{Notation}}{25}{section.4.2}%
+\contentsline {section}{\tocsection {}{3}{The additive hierarchical decomposition}}{26}{section.4.3}%
+\contentsline {section}{\tocsection {}{4}{Covariance structure}}{26}{section.4.4}%
+\contentsline {subsection}{\tocsubsection {}{4.1}{Player covariance: low-rank plus diagonal}}{27}{subsection.4.4.1}%
+\contentsline {subsection}{\tocsubsection {}{4.2}{Season covariance: diagonal}}{28}{subsection.4.4.2}%
+\contentsline {subsection}{\tocsubsection {}{4.3}{Residual covariance}}{28}{subsection.4.4.3}%
+\contentsline {section}{\tocsection {}{5}{Likelihood specification}}{28}{section.4.5}%
+\contentsline {subsection}{\tocsubsection {}{5.1}{Normal baseline}}{28}{subsection.4.5.1}%
+\contentsline {subsection}{\tocsubsection {}{5.2}{Student-$t$ residuals}}{29}{subsection.4.5.2}%
+\contentsline {subsection}{\tocsubsection {}{5.3}{Observation-level variance scaling}}{29}{subsection.4.5.3}%
+\contentsline {section}{\tocsection {}{6}{Model identification}}{30}{section.4.6}%
+\contentsline {subsection}{\tocsubsection {}{6.1}{Rotational non-identifiability}}{31}{subsection.4.6.1}%
+\contentsline {subsection}{\tocsubsection {}{6.2}{Lower-triangular positive-diagonal parametrisation}}{31}{subsection.4.6.2}%
+\contentsline {section}{\tocsection {}{7}{Non-centred parametrisation}}{32}{section.4.7}%
+\contentsline {section}{\tocsection {}{8}{Prior specification}}{33}{section.4.8}%
+\contentsline {section}{\tocsection {}{9}{Rank selection}}{34}{section.4.9}%
+\contentsline {subsection}{\tocsubsection {}{9.1}{The rank as a model selection problem}}{34}{subsection.4.9.1}%
+\contentsline {subsection}{\tocsubsection {}{9.2}{Hold-out cross-validation}}{35}{subsection.4.9.2}%
+\contentsline {subsection}{\tocsubsection {}{9.3}{Selecting the rank}}{35}{subsection.4.9.3}%
+\contentsline {section}{\tocsection {}{10}{Variance decomposition and intraclass correlation}}{35}{section.4.10}%
+\contentsline {section}{\tocsection {}{11}{Canonical factor directions via spectral decomposition}}{36}{section.4.11}%
+\contentsline {subsection}{\tocsubsection {}{11.1}{Why the identification constraint does not yield interpretable directions}}{36}{subsection.4.11.1}%
+\contentsline {subsection}{\tocsubsection {}{11.2}{Spectral decomposition of the common variance matrix}}{37}{subsection.4.11.2}%
+\contentsline {subsection}{\tocsubsection {}{11.3}{Interpretation of canonical factor directions}}{38}{subsection.4.11.3}%
+\contentsline {part}{Part\ 4. \enspace \noindent Results}{39}{part.4}%
+\contentsline {chapter}{\tocchapter {Chapter}{5}{Results}}{40}{chapter.5}%
+\contentsline {section}{\tocsection {}{1}{Stuff}}{40}{section.5.1}%
+\contentsline {chapter}{\tocappendix {Appendix}{A}{Appendix Title}}{41}{appendix.A}%
+\contentsline {chapter}{\tocappendix {Appendix}{B}{SQL extraction and construction queries}}{42}{appendix.B}%
+\contentsline {section}{\tocsection {}{1}{Complete extraction query}}{42}{section.B.1}%
+\contentsline {chapter}{\tocappendix {Appendix}{}{Bibliography}}{54}{appendix*.1}%

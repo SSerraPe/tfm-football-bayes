@@ -1,0 +1,186 @@
+% -------------------------- main.tex -------------------------%
+% English template for the fmetfm class (UPC/FME inspired)
+% ------------------------------------------------------------%
+
+\documentclass{fmetfm}
+
+% ------------------------------------------------------------%
+% LANGUAGE + ENCODING
+% ------------------------------------------------------------%
+% If you compile with pdfLaTeX:
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+
+% If you compile with XeLaTeX/LuaLaTeX, comment out fontenc/inputenc
+% and use fontspec instead.
+
+% ------------------------------------------------------------%
+% MATH + FIGURES (you already had these)
+% ------------------------------------------------------------%
+\usepackage{amsmath,amsfonts,amssymb,latexsym}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+
+% Optional: nicer theorem refs, clever refs, etc.
+% \usepackage{cleveref}
+
+\usepackage{listings}
+\usepackage{xcolor}
+
+\lstdefinelanguage{SQL}{
+  keywords={select, from, where, join, inner, left, right, full, on, as, and, or, not,
+  case, when, then, else, end, group, by, order, having, union, all, distinct,
+  with, over, partition, row_number, sum, count, avg, min, max, coalesce, cast},
+  sensitive=false,
+  morecomment=[l]{--},
+  morestring=[b]'
+}
+
+\lstset{
+  language=SQL,
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\bfseries,
+  commentstyle=\itshape,
+  showstringspaces=false,
+  breaklines=true,
+  breakatwhitespace=false,
+  columns=fullflexible,
+  frame=single,
+  tabsize=2,
+  captionpos=b
+}
+
+\usepackage{hyperref}
+
+% ------------------------------------------------------------%
+% Title page metadata (same roles as your old \def\autor etc.)
+% ------------------------------------------------------------%
+\title{Title of the Thesis}
+\autor{Sebastián Serra Peña}
+\treball{Master Thesis}
+\advisor{Victor Peña Pizarro}
+\departament{Departament d'Estadística i Investigació Operativa (EIO)}
+
+\begin{document}
+
+% ------------------------------------------------------------%
+% Title page
+% ------------------------------------------------------------%
+\maketitle
+
+% ------------------------------------------------------------%
+% Optional: Dedication page
+% ------------------------------------------------------------%
+\dedicatoria{A short dedication placed on its own page, where I have no idea who to dedicate this too...}
+
+% ------------------------------------------------------------%
+% Optional: Preface
+% ------------------------------------------------------------%
+\begin{preface}
+% Write your preface here. Usually 1–2 pages at most.
+% You can explain motivations, context, acknowledgements, etc.
+\end{preface}
+
+% ------------------------------------------------------------%
+% Frontmatter numbering (roman)
+% ------------------------------------------------------------%
+\frontmatter
+
+% ------------------------------------------------------------%
+% Abstract (English)
+% ------------------------------------------------------------%
+\begin{abstract}
+
+\vspace{1cm}
+Will write the abstract here (about 300–500 words). Explain the problem,
+methodology, main contributions, and results.
+\end{abstract}
+
+% ------------------------------------------------------------%
+% Optional: Notation
+% ------------------------------------------------------------%
+\begin{notation}
+\begin{tabular}{cl}
+$\mathbb{N}$ & Natural numbers\\[0.3em]
+$\mathbb{Z}$ & Integers\\[0.3em]
+$\mathbb{Q}$ & Rational numbers\\[0.3em]
+$\mathbb{R}$ & Real numbers\\[0.3em]
+$\mathbb{C}$ & Complex numbers
+\end{tabular}
+\end{notation}
+
+% ------------------------------------------------------------%
+% Table of contents
+% ------------------------------------------------------------%
+\tableofcontents
+
+% ------------------------------------------------------------%
+% Main content numbering (arabic)
+% ------------------------------------------------------------%
+\mainmatter
+
+\chapter{Introduction}
+
+Modern football data analysis increasingly depends on the ability to compare players and teams in a principled, scalable manner. Clubs, analysts, and recruitment departments are often faced with questions that are conceptually simple yet technically demanding: \emph{Which players are truly similar in style? How does a player’s role change across seasons or clubs? Can we characterise tactical profiles in a way that is both interpretable and uncertainty-aware?} Recent work in sports analytics and the broader literature on tactical behaviour highlights the growing importance of data-driven representations of playing style, collective dynamics, and contextual effects \cite{teixeira2025mapping,orucc2024analysis}. However, many operational approaches remain either heuristic or too tightly tied to one-off visualisations, not to mention the inability to quantify the uncertainty in the sport, making it difficult to quantify similarity consistently across large populations, seasons, and evolving contexts.
+
+This masters' thesis is motivated by a practical and scientific aim: to build a framework for \emph{modelling} latent football style from player performance data, with an explicit treatment of uncertainty. Rather than attempting to predict a single outcome (e.g., goals or match results), the focus is on constructing a space in which players (and, ultimately, groups such as teams or positional archetypes) can be compared meaningfully. This is aligned with Bayesian statistics, where uncertainty is not an afterthought but a core component of inference and decision-making \cite{swinton2023bayesian}. While Bayesian hierarchical modelling has a long track record for football outcome prediction \cite{baio2010bayesian} and performance modelling \cite{ribeiro2025bayesian}, comparatively less attention has been paid to Bayesian latent-space constructions tailored to similarity and style, particularly with hierarchical structure reflecting repeated measures across seasons.
+
+The starting point of this work is a longitudinal dataset of player match statistics from LaLiga, covering multiple seasons (from 2014/15 until 2024/25) and aggregated to the player--season level. Each observation corresponds to a player in a given season, with a minimum exposure threshold to reduce noise from small samples. From these aggregates, we construct feature vectors designed to be comparable across players and seasons: volume and intensity measures expressed per 90 minutes, efficiency ratios (such as passing accuracy or duel win rates), and interpretable blocks reflecting common scouting and coaching perspectives (offensive production; progression and creation; carrying and 1v1 actions; defence and pressing; duels and physical contests). This block structure is not merely cosmetic, but rather facilitates encoding a domain-informed decomposition of performance into components that are often discussed qualitatively, and it provides a natural handle for weighting or extending the dataset when needed.
+
+The resulting player--season observations are inherently multivariate, with substantial dependence structure across variables. This is not accidental: many football actions co-occur mechanically or tactically, and performance indicators often reflect overlapping dimensions of role, team context, and style. In such settings, analysing each variable in isolation can obscure the broader structure of the data, while naive comparisons in the original feature space may overstate noise, redundancy, or scale effects. A central methodological idea of this thesis is therefore to seek lower-dimensional latent representations that preserve the most relevant structure for comparison and interpretation. In practical terms, the goal is to represent player profiles in a way that is compact enough to visualise and reason about, yet rich enough to retain meaningful distinctions in style, usage, and tactical function.
+
+From this perspective, the thesis is situated within \emph{latent space modelling}. The main idea is that observed football statistics may be viewed as noisy, high-dimensional manifestations of a smaller number of underlying dimensions related to playing style, role execution, and tactical behaviour. Different statistical tools can then be used to recover these latent dimensions, depending on the aspect of the problem under study. In this work, factor-analytic representations are viewed as one natural route to extracting interpretable latent structure from correlated performance variables, while distance-based embeddings such as Bayesian multidimensional scaling \cite{oh2001bayesian} provide a complementary route when the emphasis is placed on pairwise similarity and uncertainty in latent geometry. This broader viewpoint is especially useful in a longitudinal setting, where repeated player--season observations motivate extensions with hierarchical structure and raise substantive questions about persistence, evolution, and context dependence in football style \cite{yanchenko2020hierarchical}.
+
+The overarching objectives of this master's thesis are therefore:
+\begin{enumerate}
+  \item to construct a robust and interpretable representation of player performance profiles at the player--season level, grounded in football-relevant blocks of execution;
+  \item to study how multivariate football data can be represented in lower-dimensional latent spaces without losing their most important stylistic and tactical information;
+  \item to investigate complementary latent-variable approaches---including factor-analytic and distance-based models---for the representation and comparison of player profiles;
+  \item to incorporate uncertainty-aware Bayesian modelling where appropriate, particularly for latent-space estimation, dimensionality assessment, and longitudinal structure \cite{oh2001bayesian,yanchenko2020hierarchical};
+  \item to frame the resulting representations as practical tools for scouting, player profiling, and tactical interpretation in modern football analytics \cite{teixeira2025mapping,orucc2024analysis}.
+\end{enumerate}
+
+The remainder of this work is organised as follows. Chapter~\ref{chap:background} introduces the methodological background required for distance-based modelling and Bayesian inference in latent spaces, including notation and key probabilistic concepts. Chapter~\ref{chap:methodology} describes the dataset construction, the feature engineering pipeline, and the definition of dissimilarities, before presenting the BMDS model and the inference strategy. Chapter~\ref{chap:results} then focuses on model diagnostics, interpretability of the learned spaces, and case studies illustrating how the framework can support football decision-making. Finally, we discuss limitations, possible extensions (including richer context variables and multi-level structures), and how this line of work connects to broader Bayesian modelling in sports \cite{baio2010bayesian,ribeiro2025bayesian,swinton2023bayesian}.
+
+\part{Data Source}
+\input{data_source}
+
+\part{Background}
+\input{background}
+
+\part{Model}
+\input{methodology}
+
+\part{Results}
+\input{results}
+
+% ------------------------------------------------------------%
+% Appendices
+% ------------------------------------------------------------%
+\appendix
+\chapter{Appendix Title}
+Appendices will contain technical proofs, algorithms, code, extra figures, additional experiments, etc.
+
+\chapter{SQL extraction and construction queries}
+
+This appendix contains the SQL query used to extract and assemble the staged Wyscout data used as the starting point for the player--season dataset analysed in this master's thesis.
+
+\section{Complete extraction query}
+
+\lstinputlisting[
+  caption={Complete SQL query used to extract the staged LaLiga player--match data from Redshift},
+  label={lst:sql_extraction}
+]{appendix/sql/wyscout_extraction_query.sql}
+
+% ------------------------------------------------------------%
+% Bibliography
+% ------------------------------------------------------------%
+
+% Option B: BibTeX (recommended)
+\bibliographystyle{amsplain}
+\bibliography{tfm}
+
+\end{document}
+% ------------------------------------------------------------%

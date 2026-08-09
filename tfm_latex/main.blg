@@ -1,0 +1,51 @@
+This is BibTeX, Version 0.99d (TeX Live 2025)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: main.aux
+The style file: amsplain.bst
+Database file #1: tfm.bib
+Warning--missing journal name in swinton2023bayesian
+Warning--missing pages in swinton2023bayesian
+Warning--missing journal name in yanchenko2020hierarchical
+Warning--missing pages in yanchenko2020hierarchical
+You've used 30 entries,
+            2213 wiz_defined-function locations,
+            686 strings with 8929 characters,
+and the built_in function-call counts, 10186 in all, are:
+= -- 914
+> -- 497
+< -- 1
++ -- 197
+- -- 163
+* -- 887
+:= -- 1648
+add.period$ -- 30
+call.type$ -- 30
+change.case$ -- 171
+chr.to.int$ -- 0
+cite$ -- 34
+duplicate$ -- 385
+empty$ -- 845
+format.name$ -- 163
+if$ -- 2101
+int.to.chr$ -- 0
+int.to.str$ -- 30
+missing$ -- 65
+newline$ -- 100
+num.names$ -- 66
+pop$ -- 209
+preamble$ -- 1
+purify$ -- 137
+quote$ -- 0
+skip$ -- 237
+stack$ -- 0
+substring$ -- 682
+swap$ -- 65
+text.length$ -- 1
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 108
+warning$ -- 4
+while$ -- 107
+width$ -- 32
+write$ -- 276
+(There were 4 warnings)

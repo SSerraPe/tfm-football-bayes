@@ -1,0 +1,493 @@
+\chapter{Model}
+\label{chap:methodology}
+
+\section{Motivation and overview}
+
+The exploratory analyses presented in Chapter~\ref{chap:background} establish that the player--season feature space contains meaningful lower-dimensional structure. Principal component analysis revealed that approximately ten components are needed to account for ninety per cent of the total sample variance, while a six-factor oblimin solution provided an interpretable account of the empirical correlation structure through recognisable football dimensions such as goal threat, pass circulation, defensive work, and duel efficiency. Classical multidimensional scaling applied to the cosine-based dissimilarity confirmed that the pairwise similarity structure admits a coherent low-dimensional Euclidean approximation. Taken together, these findings support the view that player--season performance profiles are governed by a small number of shared latent traits, and that the feature space is rich enough for such traits to be recoverable from the data.
+
+What the exploratory analyses cannot do, however, is quantify uncertainty in the latent structure. PCA scores and factor loadings are point estimates computed from the sample; they carry no natural notion of sampling variability, posterior distribution, or credible interval. This matters especially in a longitudinal setting, where the same player is observed in multiple seasons. The exploratory analyses treat all player--season rows as exchangeable, whereas a proper account of the data-generating process recognises that two observations belonging to the same player are not independent: they share the player's stable latent characteristics. Ignoring this structure risks conflating player-level persistence with season-to-season noise, and overstating the precision of latent-dimension estimates.
+
+This chapter specifies a probabilistic model designed to address these limitations. The model is hierarchical: it posits that the observed performance vector for a given player in a given season arises from the superposition of a stable player effect, a season-level shift, and observation-level residual noise. The player effects are themselves modelled as draws from a distribution whose covariance is structured as a low-rank factor model, directly encoding the finding from Chapter~\ref{chap:background} that player-level variation is largely explained by a small number of shared latent dimensions.
+
+The model has three principal objectives. First, it provides a principled variance decomposition, attributing each feature's total variance to player, season, and residual components; this decomposition is expressed as a set of intraclass correlation coefficients, one per feature. Second, it estimates the covariance structure of the player effects through a factor model with $K$ shared latent dimensions, recovering interpretable directions in the player-effect space. Third, all inferences are Bayesian: the model produces a joint posterior distribution over all parameters, from which uncertainty in the latent structure, the variance decomposition, and player-level factor scores is directly quantifiable \cite{carpenter2017stan}.
+
+\section{Notation}
+
+Throughout this chapter, the following notation is used consistently. Let $N$ denote the total number of player--season observations, $I$ the number of unique players, $S$ the number of seasons, $P$ the number of standardised performance features, and $K$ a positive integer referred to as the factor rank, whose selection is discussed in Section~\ref{sec:rank}. Observation indices run from $n = 1, \ldots, N$; the functions $i[n] \in \{1, \ldots, I\}$ and $j[n] \in \{1, \ldots, S\}$ return the player and season indices of observation $n$, respectively.
+
+\begin{table}[h]
+\centering
+\caption{Summary of notation used throughout this chapter.}
+\label{tab:notation_model}
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+Symbol & Meaning \\
+\midrule
+$N,\, I,\, S,\, P,\, K$ & Total observations; unique players; seasons; features; factor rank \\
+$n = 1,\ldots,N$ & Observation index \\
+$i[n] \in \{1,\ldots,I\}$ & Player index of observation $n$ \\
+$j[n] \in \{1,\ldots,S\}$ & Season index of observation $n$ \\
+$\mathbf{y}_n \in \mathbb{R}^P$ & Standardised performance vector for observation $n$ \\
+$\mathbf{a}_i \in \mathbb{R}^P$ & Player effect for player $i$ \\
+$\mathbf{b}_j \in \mathbb{R}^P$ & Season effect for season $j$ \\
+$\boldsymbol{\varepsilon}_n \in \mathbb{R}^P$ & Residual for observation $n$ \\
+$\boldsymbol{\Lambda} \in \mathbb{R}^{P \times K}$ & Factor loading matrix \\
+$\boldsymbol{\Psi}_a = \mathrm{diag}(\psi_{a,1}^2, \ldots, \psi_{a,P}^2)$ & Uniqueness matrix \\
+$\boldsymbol{\Sigma}_a,\, \boldsymbol{\Sigma}_b,\, \boldsymbol{\Sigma}_e$ & Player, season, and residual covariance matrices \\
+$\boldsymbol{\eta}_i \in \mathbb{R}^K$ & Latent factor scores for player $i$ \\
+$\mathbf{z}_{u,i} \in \mathbb{R}^P$ & Latent uniqueness scores for player $i$ \\
+$\nu > 2$ & Degrees-of-freedom parameter of the Student-$t$ residual \\
+$\phi \geq 0$ & Observation-level variance scaling exponent \\
+$m_n$ & Minutes played in observation $n$ \\
+$m_{\mathrm{ref}}$ & Reference exposure level \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{The additive hierarchical decomposition}
+
+The central structural assumption of the model is that the performance vector for any given player--season observation arises from an additive decomposition into three independent latent components.
+
+\begin{definition}[Additive decomposition]
+\label{def:additive}
+For each observation $n = 1, \ldots, N$, the observed performance vector $\mathbf{y}_n \in \mathbb{R}^P$ satisfies
+\begin{equation}
+\mathbf{y}_n = \mathbf{a}_{i[n]} + \mathbf{b}_{j[n]} + \boldsymbol{\varepsilon}_n,
+\label{eq:additive}
+\end{equation}
+where $\mathbf{a}_i \in \mathbb{R}^P$ is the \emph{player effect} for player $i$, $\mathbf{b}_j \in \mathbb{R}^P$ is the \emph{season effect} for season $j$, and $\boldsymbol{\varepsilon}_n \in \mathbb{R}^P$ is the \emph{residual} for observation $n$. The three components are assumed mutually independent.
+\end{definition}
+
+The player effect $\mathbf{a}_i$ is intended to capture those aspects of player performance that are stable across seasons: the habitual passing volume, defensive involvement, and goal-threat profile that characterise a player's identity rather than a particular team context. The season effect $\mathbf{b}_j$ captures shifts in the distribution of performance statistics that are common to all players in season $j$: changes in the pace of play, officiating style, or data-collection conventions that alter the observed values of many features simultaneously. The residual $\boldsymbol{\varepsilon}_n$ captures what remains after both systematic components are removed, including player--season idiosyncrasy, noise from the finite number of matches played, and any tactical or physical changes specific to one season that are not representative of the player's long-run profile.
+
+\begin{remark}[Absence of a global mean]
+No explicit population mean vector $\boldsymbol{\mu}$ appears in \eqref{eq:additive}. This is because the features $\mathbf{y}_n$ are constructed by standardising each feature to zero mean and unit variance across the full sample, as described in Chapter~\ref{chap:data_source}. The population mean is therefore absorbed into the standardisation step, and the model is centred from the outset.
+\end{remark}
+
+The decomposition \eqref{eq:additive} defines a \emph{crossed} random-effects structure: player and season indices are not nested---a player can appear in multiple seasons, and a season contains multiple players---but rather cross each other across the $N$ observations. This is in contrast to a nested structure in which seasons would be defined within players. The crossed structure is appropriate here because the inferential goal is to separate player-level persistence from season-level context, not to model players as a random sample within fixed seasons \cite{gelman2007data}.
+
+\section{Covariance structure}
+\label{sec:covariance}
+
+The three components $\mathbf{a}_i$, $\mathbf{b}_j$, and $\boldsymbol{\varepsilon}_n$ are each assigned a zero-mean multivariate distribution; they differ only in the structure of their covariance matrices. The choices here are asymmetric: a richer covariance structure is assigned to the player effects, which are the primary object of interest and for which the data contain many observations per latent quantity, while simpler structures are assigned to season effects and residuals.
+
+\subsection{Player covariance: low-rank plus diagonal}
+
+\begin{definition}[Factor covariance for player effects]
+\label{def:sigma_a}
+The player effects $\mathbf{a}_i$ are exchangeable with zero mean and covariance
+\begin{equation}
+\boldsymbol{\Sigma}_a = \boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top + \boldsymbol{\Psi}_a,
+\label{eq:sigma_a}
+\end{equation}
+where $\boldsymbol{\Lambda} \in \mathbb{R}^{P \times K}$ is the loading matrix and $\boldsymbol{\Psi}_a = \mathrm{diag}(\psi_{a,1}^2, \ldots, \psi_{a,P}^2)$ is the uniqueness matrix.
+\end{definition}
+
+The structure in \eqref{eq:sigma_a} decomposes the player-effect covariance into two parts. The term $\boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top$ is a rank-$K$ positive semi-definite matrix that captures the shared dependence among features through $K$ latent dimensions; $\boldsymbol{\Psi}_a$ is a diagonal matrix that captures the feature-specific variance not explained by those shared dimensions.
+
+\begin{proposition}[Entries of $\boldsymbol{\Sigma}_a$]
+\label{prop:sigma_entries}
+The diagonal entry $[\boldsymbol{\Sigma}_a]_{pp}$ for feature $p$ is
+\begin{equation}
+[\boldsymbol{\Sigma}_a]_{pp} = \sum_{k=1}^{K} \Lambda_{pk}^2 + \psi_{a,p}^2,
+\label{eq:sigma_diag}
+\end{equation}
+and the off-diagonal entry for features $p \neq q$ is
+\begin{equation}
+[\boldsymbol{\Sigma}_a]_{pq} = \sum_{k=1}^{K} \Lambda_{pk}\,\Lambda_{qk}.
+\label{eq:sigma_offdiag}
+\end{equation}
+\end{proposition}
+\begin{proof}
+Both statements follow by expanding $[\boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top + \boldsymbol{\Psi}_a]_{pq}$. For the diagonal, $[\boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top]_{pp} = \sum_k \Lambda_{pk}^2$ and $[\boldsymbol{\Psi}_a]_{pp} = \psi_{a,p}^2$. For the off-diagonal, $[\boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top]_{pq} = \sum_k \Lambda_{pk}\Lambda_{qk}$ and $[\boldsymbol{\Psi}_a]_{pq} = 0$ since $\boldsymbol{\Psi}_a$ is diagonal.
+\end{proof}
+
+In the factor-analysis literature, the quantity $\sum_{k=1}^K \Lambda_{pk}^2$ is called the \emph{communality} of feature $p$: it measures how much of the player-level variance in feature $p$ is explained by the $K$ shared latent dimensions. The quantity $\psi_{a,p}^2$ is called the \emph{uniqueness}: it is the portion of player-level variance in feature $p$ that is specific to that feature and not captured by the shared structure. Together, they account for all player-level variance in feature $p$, as stated in \eqref{eq:sigma_diag}.
+
+The off-diagonal entries in \eqref{eq:sigma_offdiag} reflect the pairwise covariance between features $p$ and $q$ induced by the shared factors: two features co-vary at the player level only to the extent that they share common loadings on the $K$ dimensions. A player who scores highly on a latent factor tends to score highly on all features with positive loadings on that factor, creating positive covariance among those features. The uniqueness matrix $\boldsymbol{\Psi}_a$ contributes nothing to off-diagonal entries, reflecting the assumption that, conditional on the $K$ shared factors, feature-specific residuals are uncorrelated.
+
+This covariance structure is motivated directly by the exploratory findings of Chapter~\ref{chap:background}. Factor analysis of the player--season feature matrix suggested that approximately six correlated latent traits are needed to reproduce the empirical correlation structure. A low-rank $\boldsymbol{\Sigma}_a$ directly encodes this empirical finding within a fully probabilistic model \cite{lopes2004bayesian}.
+
+\subsection{Season covariance: diagonal}
+
+\begin{remark}[Diagonal season covariance]
+\label{rem:sigma_b}
+The season effects $\mathbf{b}_j$ are assigned zero mean and diagonal covariance:
+\begin{equation}
+\boldsymbol{\Sigma}_b = \mathrm{diag}(\sigma_{b,1}^2, \ldots, \sigma_{b,P}^2).
+\label{eq:sigma_b}
+\end{equation}
+\end{remark}
+
+This is an asymmetric design choice relative to the player covariance. A richer specification, $\boldsymbol{\Sigma}_b = \boldsymbol{\Lambda}_b\boldsymbol{\Lambda}_b^\top + \boldsymbol{\Psi}_b$, would model correlated season-level drift, but would require reliable estimation of $P \times K_b$ loading parameters from only $S$ observations of the season-level quantity. With $S = 12$ seasons, this is severely under-determined for any $K_b \geq 1$: preliminary fits with a low-rank $\boldsymbol{\Sigma}_b$ produced R-hat values exceeding $1.70$ and bulk effective sample sizes as low as $6$ for the season loadings, indicating that the posterior was entirely dominated by the prior. The diagonal specification \eqref{eq:sigma_b} is therefore not a simplification imposed for computational convenience, but the principled choice given the available season-level information: it allows each feature its own season-level drift magnitude while avoiding parameters that the data cannot identify.
+
+\subsection{Residual covariance}
+
+The residuals $\boldsymbol{\varepsilon}_n$ are assigned a diagonal covariance $\boldsymbol{\Sigma}_e = \mathrm{diag}(\sigma_{e,1}^2, \ldots, \sigma_{e,P}^2)$, reflecting the assumption that, conditional on the player and season effects, the $P$ features are uncorrelated at the observation level. The full distributional specification for $\boldsymbol{\varepsilon}_n$ is given in Section~\ref{sec:likelihood}.
+
+\section{Likelihood specification}
+\label{sec:likelihood}
+
+The additive decomposition \eqref{eq:additive} and the covariance structure of Section~\ref{sec:covariance} are common to all model variants considered here. The models differ in the distributional form assigned to the scalar residuals $\varepsilon_{np}$, the $p$-th component of $\boldsymbol{\varepsilon}_n$.
+
+\subsection{Normal baseline}
+
+The simplest complete specification assigns each residual component a Gaussian distribution:
+\begin{equation}
+\varepsilon_{np} \mid \sigma_{e,p} \;\sim\; \mathcal{N}(0,\, \sigma_{e,p}^2), \qquad p = 1, \ldots, P,
+\label{eq:normal_resid}
+\end{equation}
+independently across features and observations, giving the conditional joint likelihood
+\begin{equation}
+\mathbf{y}_n \mid \mathbf{a}_{i[n]},\, \mathbf{b}_{j[n]},\, \boldsymbol{\sigma}_e \;\sim\; \mathcal{N}_P\!\left(\mathbf{a}_{i[n]} + \mathbf{b}_{j[n]},\; \boldsymbol{\Sigma}_e\right).
+\label{eq:normal_likelihood}
+\end{equation}
+This specification, referred to as the Normal model, serves as a computational and inferential baseline against which richer likelihood choices are compared.
+
+\subsection{Student-$t$ residuals}
+\label{sec:t_likelihood}
+
+For player--season data, the Gaussian assumption on residuals is restrictive. Some player--seasons produce extreme per-90 statistics for identifiable reasons: a player returning from injury may appear in only a handful of matches with atypical physical load; a player deployed in an unusual tactical role for one season may display statistics far from any stable average; a breakout season may represent an extreme but transient realisation. Under the Normal model, these extreme residuals exert a disproportionate influence on the estimates of the player and season effects, since the Gaussian density penalises departures from the conditional mean quadratically and without limit. A heavier-tailed distribution assigns such observations a higher residual likelihood and effectively down-weights their influence on the shared parameters.
+
+\begin{definition}[Student-$t$ error model]
+\label{def:student_t}
+In the Student-$t$ model, the residual for feature $p$ in observation $n$ follows
+\begin{equation}
+\varepsilon_{np} \mid \nu,\, \sigma_{e,p} \;\sim\; t\!\left(\nu,\; 0,\; \sigma_{e,p}\right), \qquad p = 1, \ldots, P,
+\label{eq:t_resid}
+\end{equation}
+independently across features and observations, where $\nu > 2$ is a degrees-of-freedom parameter shared across all features and observations, and $\sigma_{e,p} > 0$ is the feature-specific scale. The Student-$t$ distribution with $\nu$ degrees of freedom, location zero, and scale $\sigma$ has density
+\begin{equation}
+f(\varepsilon;\, \nu,\, \sigma) \;=\; \frac{\Gamma\!\left(\tfrac{\nu+1}{2}\right)}{\Gamma\!\left(\tfrac{\nu}{2}\right)\sqrt{\nu\pi}\;\sigma} \left(1 + \frac{\varepsilon^2}{\nu\sigma^2}\right)^{\!-(\nu+1)/2}.
+\label{eq:t_density}
+\end{equation}
+\end{definition}
+
+\begin{proposition}[Variance of the Student-$t$ residual]
+\label{prop:t_variance}
+Under Definition~\ref{def:student_t}, the variance of $\varepsilon_{np}$ is
+\begin{equation}
+\mathrm{Var}(\varepsilon_{np}) \;=\; \sigma_{e,p}^2\;\frac{\nu}{\nu - 2},
+\label{eq:t_variance}
+\end{equation}
+which is finite for $\nu > 2$ and converges to $\sigma_{e,p}^2$ as $\nu \to \infty$.
+\end{proposition}
+\begin{proof}
+The variance of a Student-$t$ random variable with $\nu$ degrees of freedom and scale $\sigma$ is $\sigma^2 \nu/(\nu - 2)$, valid for $\nu > 2$. As $\nu \to \infty$, $\nu/(\nu-2) \to 1$.
+\end{proof}
+
+The tail-weight parameter $\nu$ has a direct substantive interpretation: small values of $\nu$ produce heavier tails and greater robustness to extreme residuals; large values recover the Gaussian behaviour \cite{lange1989robust,geweke1993bayesian}. The degrees-of-freedom parameter is treated as unknown and estimated from the data; its posterior summarises the evidence in favour of heavy-tailed residuals conditional on the model specification and the prior.
+
+\subsection{Observation-level variance scaling}
+\label{sec:phi}
+
+The residual scale $\sigma_{e,p}$ in \eqref{eq:normal_resid} and \eqref{eq:t_resid} is constant across observations. This is a simplification. The performance features $\mathbf{y}_n$ are constructed as per-90 rates or efficiency ratios, both of which are ratio estimators: for a player who accumulated $m_n$ minutes, the sampling variance of the per-90 estimate of feature $p$ is approximately proportional to $m_n^{-1}$, independently of any structural player or season effects. An observation with 600 minutes of playing time is therefore inherently noisier than one with 2{,}500 minutes, even if both belong to players with identical latent profiles.
+
+Failing to account for this heteroscedasticity may cause the model to attribute the elevated variance of low-minute observations either to heavy residual tails (via a smaller $\nu$) or to player-level idiosyncrasy, both of which would represent misspecification. A natural extension introduces an observation-level scaling of the residual variance.
+
+\begin{definition}[Minutes-weighted residual scale]
+\label{def:phi}
+Let $m_{\mathrm{ref}} > 0$ denote a reference exposure level, taken as the sample median of the minutes-played values $\{m_n\}_{n=1}^N$. Define the observation-level residual standard deviation for observation $n$ and feature $p$ as
+\begin{equation}
+\sigma_{e,n,p} \;=\; \sigma_{e,p} \cdot \left(\frac{m_{\mathrm{ref}}}{m_n}\right)^{\!\phi},
+\label{eq:phi_scaling}
+\end{equation}
+where $\phi \geq 0$ is the scaling exponent. The Student-$t$ model with minutes-weighting replaces $\sigma_{e,p}$ in \eqref{eq:t_resid} with $\sigma_{e,n,p}$.
+\end{definition}
+
+Three canonical values of $\phi$ are immediately interpretable. Setting $\phi = 0$ recovers the base model \eqref{eq:t_resid}, in which the residual scale is constant. Setting $\phi = 1/2$ corresponds to a square-root scaling analogous to the standard deviation of a Poisson count: variance grows linearly with event rate and standard deviation grows as the square root of inverse minutes. Setting $\phi = 1$ imposes full inverse-minutes scaling, so that the residual standard deviation is proportional to $m_n^{-1/2}$, as it would be for a simple average estimator under a constant-intensity Poisson process.
+
+\begin{remark}[Fixed or estimated $\phi$]
+\label{rem:phi}
+The exponent $\phi$ may be handled in two ways. If $\phi$ is fixed at a pre-specified value $\phi_0$ (for example, $\phi_0 = 1/2$), no additional parameters are introduced and the model remains as otherwise described; the choice of $\phi_0$ encodes a prior judgement about the degree of heteroscedasticity due to playing time. If $\phi$ is treated as a free parameter, it is assigned a prior and sampled jointly with the remaining parameters. Identifiability of a free $\phi$ rests on the contrast between the residuals of high- and low-minute observations: given estimates of $\mathbf{a}_i$ and $\mathbf{b}_j$, the relationship between $|\varepsilon_{np}|$ and $m_n$ is informative about $\phi$. However, $\phi$ must be identified against $\sigma_{e,p}$ and $\nu$ simultaneously, since all three govern the scale and shape of the marginal residual distribution. Whether the fixed or estimated treatment is more appropriate for the present data is a diagnostic question addressed in Chapter~\ref{chap:results}.
+\end{remark}
+
+\section{Model identification}
+\label{sec:identification}
+
+The factor model \eqref{eq:sigma_a} introduces a structural non-identifiability in the loading matrix $\boldsymbol{\Lambda}$ that must be resolved before Bayesian inference is well-defined.
+
+\subsection{Rotational non-identifiability}
+
+\begin{proposition}[Rotation equivalence]
+\label{prop:rotation}
+For any orthogonal matrix $\mathbf{Q} \in \mathbb{R}^{K \times K}$ satisfying $\mathbf{Q}\mathbf{Q}^\top = \mathbf{I}_K$, the loading matrices $\boldsymbol{\Lambda}$ and $\boldsymbol{\Lambda}\mathbf{Q}$ generate the same covariance:
+\begin{equation}
+(\boldsymbol{\Lambda}\mathbf{Q})(\boldsymbol{\Lambda}\mathbf{Q})^\top = \boldsymbol{\Lambda}\mathbf{Q}\mathbf{Q}^\top\boldsymbol{\Lambda}^\top = \boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top,
+\label{eq:rotation_equiv}
+\end{equation}
+and consequently $(\boldsymbol{\Lambda}\mathbf{Q})(\boldsymbol{\Lambda}\mathbf{Q})^\top + \boldsymbol{\Psi}_a = \boldsymbol{\Sigma}_a$.
+\end{proposition}
+\begin{proof}
+Direct expansion using $\mathbf{Q}\mathbf{Q}^\top = \mathbf{I}_K$.
+\end{proof}
+
+Proposition~\ref{prop:rotation} implies that the map $(\boldsymbol{\Lambda}, \boldsymbol{\Psi}_a) \mapsto \boldsymbol{\Sigma}_a$ is many-to-one: any element of the orbit $\{\boldsymbol{\Lambda}\mathbf{Q} : \mathbf{Q} \in O(K)\}$ produces the same covariance, where $O(K)$ denotes the group of $K \times K$ orthogonal matrices. The group $O(K)$ has dimension $K(K-1)/2$, corresponding to the degrees of freedom of a $K$-dimensional rotation; it also includes reflections, so that there are $2^K$ discrete sign symmetries in addition to the continuous rotational freedom. Without constraints, the posterior distribution over $\boldsymbol{\Lambda}$ is multimodal and the sampler cannot mix across symmetry-equivalent modes.
+
+\subsection{Lower-triangular positive-diagonal parametrisation}
+\label{sec:ltpd}
+
+A classical and computationally convenient solution to the non-identifiability described above is to impose a structural constraint on $\boldsymbol{\Lambda}$ that selects exactly one representative from each equivalence class under $O(K)$.
+
+\begin{definition}[LT-PD constraint]
+\label{def:ltpd}
+A matrix $\boldsymbol{\Lambda} \in \mathbb{R}^{P \times K}$ satisfies the \emph{lower-triangular positive-diagonal} (LT-PD) constraint if:
+\begin{enumerate}
+\item[(i)] $\Lambda_{pk} = 0$ for all $p < k$ \quad (lower-triangular structure), and
+\item[(ii)] $\Lambda_{kk} > 0$ for all $k = 1, \ldots, K$ \quad (positive diagonal).
+\end{enumerate}
+\end{definition}
+
+\begin{proposition}[Identification via LT-PD]
+\label{prop:ltpd_ident}
+Suppose $P \geq K$ and let $\mathcal{L}$ denote the set of $P \times K$ matrices satisfying the LT-PD constraint. Then the map
+\[
+\mathcal{L} \times \{\boldsymbol{\Psi}_a : \psi_{a,p} > 0\;\forall\, p\} \;\longrightarrow\; \mathcal{S}^+_P, \qquad (\boldsymbol{\Lambda},\boldsymbol{\Psi}_a) \mapsto \boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top + \boldsymbol{\Psi}_a,
+\]
+is injective, where $\mathcal{S}^+_P$ denotes the cone of $P \times P$ positive definite matrices. The factor covariance model is therefore identified under the LT-PD constraint.
+\end{proposition}
+
+The result in Proposition~\ref{prop:ltpd_ident} is established in \cite{anderson1956statistical}; the lower-triangular structure eliminates the continuous rotational freedom by zeroing out the $K(K-1)/2$ upper-triangular entries, while the positive-diagonal constraint eliminates the $2^K$ discrete sign symmetries. An accessible treatment in the Bayesian factor analysis context is given in \cite{geweke1996measuring}.
+
+\begin{remark}[The LT-PD constraint is not an interpretive rotation]
+\label{rem:ltpd_notinterp}
+The LT-PD constraint resolves the mathematical non-identifiability, but it does not produce loadings that are interpretable in a football sense. A simple-structure rotation such as varimax or oblimin minimises cross-loadings and maximises the separation of features across factors, yielding loading patterns that correspond to recognisable dimensions. The LT-PD constraint does neither: it fixes a coordinate system by zeroing out the upper triangle of $\boldsymbol{\Lambda}$, a choice determined by feature ordering rather than by football-domain structure. The resulting columns of $\boldsymbol{\Lambda}$ do not correspond to canonical latent directions and should not be reported or interpreted as such. Interpretable factor directions are recovered through the post-processing procedure described in Section~\ref{sec:pca_postprocessing}.
+\end{remark}
+
+\section{Non-centred parametrisation}
+\label{sec:noncentred}
+
+\begin{definition}[Non-centred player effects]
+\label{def:noncentred}
+Rather than sampling $\mathbf{a}_i$ directly from $\mathcal{N}(\mathbf{0}, \boldsymbol{\Sigma}_a)$, the model introduces auxiliary standardised variables $\boldsymbol{\eta}_i \in \mathbb{R}^K$ and $\mathbf{z}_{u,i} \in \mathbb{R}^P$ and constructs the player effect as
+\begin{equation}
+\mathbf{a}_i = \boldsymbol{\Lambda}\,\boldsymbol{\eta}_i + \boldsymbol{\psi}_a \odot \mathbf{z}_{u,i},
+\label{eq:noncentred}
+\end{equation}
+where $\boldsymbol{\eta}_i \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_K)$, $\mathbf{z}_{u,i} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_P)$, $\boldsymbol{\eta}_i$ and $\mathbf{z}_{u,i}$ are mutually independent, and $\boldsymbol{\psi}_a = (\psi_{a,1}, \ldots, \psi_{a,P})^\top$ is the vector of uniqueness standard deviations. The symbol $\odot$ denotes elementwise multiplication.
+\end{definition}
+
+\begin{proposition}[Equivalence of the non-centred form]
+\label{prop:noncentred_equiv}
+Under Definition~\ref{def:noncentred}, $\mathbf{a}_i \sim \mathcal{N}(\mathbf{0}, \boldsymbol{\Sigma}_a)$.
+\end{proposition}
+\begin{proof}
+Since $\boldsymbol{\eta}_i \perp \mathbf{z}_{u,i}$, the cross-covariance $\mathrm{Cov}(\boldsymbol{\Lambda}\boldsymbol{\eta}_i,\, \boldsymbol{\psi}_a \odot \mathbf{z}_{u,i}) = \boldsymbol{\Lambda}\,\mathrm{Cov}(\boldsymbol{\eta}_i,\, \mathbf{z}_{u,i})\,\mathrm{diag}(\boldsymbol{\psi}_a) = \mathbf{0}$. Therefore,
+\begin{align*}
+\mathrm{Cov}(\mathbf{a}_i)
+&= \boldsymbol{\Lambda}\,\mathrm{Cov}(\boldsymbol{\eta}_i)\,\boldsymbol{\Lambda}^\top + \mathrm{Cov}(\boldsymbol{\psi}_a \odot \mathbf{z}_{u,i}) \\
+&= \boldsymbol{\Lambda}\,\mathbf{I}_K\,\boldsymbol{\Lambda}^\top + \mathrm{diag}(\psi_{a,1}^2, \ldots, \psi_{a,P}^2) \\
+&= \boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top + \boldsymbol{\Psi}_a = \boldsymbol{\Sigma}_a.
+\end{align*}
+The mean is zero since both $\boldsymbol{\eta}_i$ and $\mathbf{z}_{u,i}$ have zero means.
+\end{proof}
+
+The non-centred form \eqref{eq:noncentred} is therefore statistically equivalent to the centred form, but it has substantially better computational properties when used with gradient-based samplers.
+
+\begin{remark}[Posterior geometry and the Neal funnel]
+\label{rem:funnel}
+The centred parametrisation creates a posterior geometry in which the player effects $\mathbf{a}_i$ and the global parameters $(\boldsymbol{\Lambda}, \boldsymbol{\Psi}_a)$ are strongly coupled: when the loading magnitudes are small, the player effects are constrained to be small regardless of the observed data. In the vicinity of $\boldsymbol{\Lambda} \approx \mathbf{0}$, the posterior contracts into a narrow funnel in the joint parameter space that gradient-based samplers traverse poorly, yielding large step-size adaptation failures, many divergent transitions, and very low effective sample sizes. The non-centred form decouples the global variance parameters from the individual standardised scores: $\boldsymbol{\eta}_i$ and $\mathbf{z}_{u,i}$ are always $\mathcal{O}(1)$ random variables regardless of the current values of $\boldsymbol{\Lambda}$ and $\boldsymbol{\psi}_a$, so the sampler explores their space with stable step sizes while the likelihood gradients guide the global parameters. This reparametrisation strategy is described in the general hierarchical model context by \cite{papaspiliopoulos2007general} and its interaction with Hamiltonian Monte Carlo is analysed in \cite{neal2011mcmc}.
+\end{remark}
+
+\begin{remark}[Sum-to-zero centring of raw scores]
+\label{rem:sumtozero}
+The non-centred form \eqref{eq:noncentred} introduces a translational degeneracy: for any constants $c_k \in \mathbb{R}$, replacing $\eta_{i,k}$ by $\eta_{i,k} + c_k$ for all $i$ simultaneously shifts all player effects by $\boldsymbol{\Lambda}(c_1, \ldots, c_K)^\top$, which cannot be distinguished from a corresponding shift in the season effects. To eliminate this degeneracy, the model enforces sum-to-zero constraints on the raw scores:
+\begin{equation}
+\sum_{i=1}^{I} \eta_{i,k} = 0 \;\text{ for each } k = 1, \ldots, K, \qquad
+\sum_{i=1}^{I} z_{u,i,p} = 0 \;\text{ for each } p = 1, \ldots, P.
+\label{eq:sumtozero}
+\end{equation}
+This is implemented by subtracting the cross-player mean from the raw score draws in the model's transformed-parameters block, which is equivalent to a linear reparametrisation and does not restrict the marginal distribution of $\mathbf{a}_i$.
+\end{remark}
+
+\section{Prior specification}
+\label{sec:priors}
+
+All model parameters are assigned priors that are weakly informative relative to the scale of the Z-standardised outcome $\mathbf{y}_n$. Because the features have unit variance by construction, a loading of magnitude $|\Lambda_{pk}| = 1$ represents a one-standard-deviation shift in feature $p$ per unit change in the $k$-th factor score, which is already a large effect for a Z-scored performance variable. Priors concentrated near zero with tails extending to values of order one are therefore practically and scientifically reasonable.
+
+\begin{definition}[Priors on the loading matrix]
+\label{def:prior_lambda}
+The diagonal entries of $\boldsymbol{\Lambda}$ are assigned
+\begin{equation}
+\Lambda_{kk} \;\sim\; \mathrm{Half\text{-}Normal}(0,\, 1), \qquad k = 1, \ldots, K,
+\label{eq:prior_lambda_diag}
+\end{equation}
+consistent with the LT-PD positivity constraint. The free lower-triangular entries are assigned
+\begin{equation}
+\Lambda_{pk} \;\sim\; \mathcal{N}(0,\, 1), \qquad 1 \leq k < p \leq P.
+\label{eq:prior_lambda_off}
+\end{equation}
+\end{definition}
+
+\begin{definition}[Priors on variance parameters]
+\label{def:prior_variances}
+The uniqueness standard deviations, the season standard deviations, and the residual standard deviations are each assigned independent Half-Normal priors:
+\begin{equation}
+\psi_{a,p} \;\sim\; \mathrm{Half\text{-}Normal}(0,\, 1), \quad
+\sigma_{b,p} \;\sim\; \mathrm{Half\text{-}Normal}(0,\, 1), \quad
+\sigma_{e,p} \;\sim\; \mathrm{Half\text{-}Normal}(0,\, 1), \quad p = 1, \ldots, P.
+\label{eq:prior_variances}
+\end{equation}
+\end{definition}
+
+The Half-Normal$(0,1)$ prior for scale parameters concentrates most mass near zero while permitting values of order one with positive probability; it is recommended for variance components in hierarchical models as a weakly informative alternative to flat or improper priors, which can produce improper posteriors in hierarchical settings \cite{gelman2006prior}.
+
+\begin{definition}[Prior on the degrees-of-freedom parameter]
+\label{def:prior_nu}
+The Student-$t$ degrees-of-freedom parameter is assigned
+\begin{equation}
+\nu \;\sim\; \mathrm{Gamma}(2,\, 0.1),
+\label{eq:prior_nu}
+\end{equation}
+supported on $\nu > 2$ to ensure finite residual variance. The $\mathrm{Gamma}(2, 0.1)$ distribution has mean $20$ and standard deviation approximately $14$. It places substantial mass below $\nu = 10$---the regime of visibly heavy tails---while also allowing the posterior to concentrate near larger values if the data support behaviour close to Gaussian. The prior does not artificially favour either the Gaussian limit $\nu \to \infty$ or the extreme heavy-tail regime $\nu \to 2^+$\cite{juarez2010model}.
+\end{definition}
+
+\begin{definition}[Prior on the scaling exponent]
+\label{def:prior_phi}
+If the minutes-weighted residual scale of Definition~\ref{def:phi} is used with $\phi$ treated as an unknown parameter, it is assigned
+\begin{equation}
+\phi \;\sim\; \mathrm{Half\text{-}Normal}(0,\, 1),
+\label{eq:prior_phi}
+\end{equation}
+which places most mass on moderate scaling effects ($\phi \lesssim 1$) while permitting stronger heteroscedasticity if supported by the data.
+\end{definition}
+
+The joint prior is the product of all terms in Definitions~\ref{def:prior_lambda}--\ref{def:prior_phi}, since all parameters are treated as independent a priori:
+\begin{equation}
+p\!\left(\boldsymbol{\Lambda}, \boldsymbol{\psi}_a, \boldsymbol{\sigma}_b, \boldsymbol{\sigma}_e, \nu, \phi\right)
+\;=\;
+\prod_{k=1}^{K} p_{\mathrm{HN}}(\Lambda_{kk})
+\prod_{\substack{p=1\\p>k}}^{P} \mathcal{N}(\Lambda_{pk};\, 0, 1)
+\prod_{p=1}^{P} p_{\mathrm{HN}}(\psi_{a,p})\,p_{\mathrm{HN}}(\sigma_{b,p})\,p_{\mathrm{HN}}(\sigma_{e,p})
+\;\times\;
+p_{\mathrm{Ga}}(\nu)\;p_{\mathrm{HN}}(\phi),
+\label{eq:joint_prior}
+\end{equation}
+where $p_{\mathrm{HN}}$ denotes the Half-Normal$(0,1)$ density and $p_{\mathrm{Ga}}$ denotes the Gamma$(2,0.1)$ density. The term involving $\phi$ is omitted when $\phi$ is held fixed.
+
+\section{Rank selection}
+\label{sec:rank}
+
+The factor rank $K$ governs the dimension of the latent space used to model the player covariance $\boldsymbol{\Sigma}_a$. Unlike the parameters $\boldsymbol{\Lambda}$, $\boldsymbol{\Psi}_a$, and $\nu$, the rank $K$ is not a continuous model parameter that can be assigned a prior and sampled within a single model: it determines the parametric family itself. The selection of $K$ is therefore a model comparison problem.
+
+\subsection{The rank as a model selection problem}
+
+For any fixed value of $K \in \{0, 1, 2, \ldots\}$, the model specification in Sections~\ref{sec:covariance}--\ref{sec:priors} is complete. The case $K = 0$ is a meaningful special case: it sets $\boldsymbol{\Sigma}_a = \boldsymbol{\Psi}_a$ (diagonal player covariance), corresponding to the assumption that all player-level cross-feature correlation is zero. This \emph{diagonal model} serves as a natural baseline; the gain in predictive performance relative to it quantifies the value of modelling shared player-level covariance structure.
+
+The rank $K^*$ is selected by comparing models at $K = 0, 1, 2, \ldots$ on out-of-sample predictive performance. Because the parameter space grows with $K$ and overfitting is possible, in-sample criteria such as the log-likelihood are insufficient; out-of-sample evaluation on data not used in fitting is necessary.
+
+\subsection{Hold-out cross-validation}
+\label{sec:holdout}
+
+The preferred criterion for rank selection is the out-of-sample expected log predictive density (ELPD), evaluated on a held-out test set. A random fifteen per cent of the $N$ rows are reserved as the test set $\mathcal{T}$ before any model fitting begins; the remaining eighty-five per cent constitute the training set $\mathcal{T}^c$. The split is stratified by season to ensure that each season contributes observations to both partitions.
+
+\begin{definition}[Hold-out expected log predictive density]
+\label{def:elpd}
+For a model $\mathcal{M}_K$ fitted to the training set $\mathcal{T}^c$, the expected log predictive density for a test observation $\mathbf{y}_{n^*}$ with player index $i^*$ and season index $j^*$ is
+\begin{equation}
+\mathrm{elpd}(\mathbf{y}_{n^*};\, \mathcal{M}_K) \;=\; \mathbb{E}_{p(\theta \mid \mathbf{y}_{\mathcal{T}^c},\, \mathcal{M}_K)}\!\left[\log p(\mathbf{y}_{n^*} \mid \theta,\, \mathcal{M}_K)\right],
+\label{eq:elpd}
+\end{equation}
+approximated by the Monte Carlo average over $S_{\mathrm{mc}}$ posterior draws $\theta^{(1)}, \ldots, \theta^{(S_{\mathrm{mc}})}$ from the training posterior. The total hold-out ELPD for model $\mathcal{M}_K$ is
+\begin{equation}
+\mathrm{ELPD}_K \;=\; \sum_{n^* \in \mathcal{T}} \mathrm{elpd}(\mathbf{y}_{n^*};\, \mathcal{M}_K).
+\label{eq:total_elpd}
+\end{equation}
+\end{definition}
+
+The hold-out approach is preferred to $K$-fold cross-validation here because fitting the full hierarchical model requires several hours of computation per run; the cost of $K_{\mathrm{fold}}$-fold cross-validation, which requires $K_{\mathrm{fold}}$ complete re-fits, would be prohibitive. A single fifteen per cent hold-out provides a clean separation between model calibration and evaluation that is sufficient to discriminate between candidate ranks in the range $K = 0, 1, 2, \ldots$ examined.
+
+\subsection{Selecting the rank}
+\label{sec:rank_selection}
+
+Models $\mathcal{M}_0, \mathcal{M}_1, \mathcal{M}_2, \ldots$ are compared by their total hold-out ELPD \eqref{eq:total_elpd}. The preferred rank $K^*$ is the smallest $K$ such that $\mathrm{ELPD}_{K+1} < \mathrm{ELPD}_K$, that is, the first rank at which adding a further latent dimension no longer improves out-of-sample predictive performance. This \emph{reversal criterion} is conservative: it prefers a smaller $K$ whenever the marginal contribution of an additional factor is zero or negative.
+
+\begin{remark}[PSIS-LOO as a secondary diagnostic]
+\label{rem:psissloo}
+In addition to the hold-out ELPD, Pareto-smoothed importance-sampling leave-one-out cross-validation (PSIS-LOO) \cite{vehtari2017practical} is computed post hoc on the full-sample fit at each candidate $K$. PSIS-LOO provides an asymptotically consistent estimate of the leave-one-out predictive distribution without re-fitting, but its reliability depends on the Pareto-$\hat{k}$ diagnostic for each observation: when $\hat{k} > 0.7$ for a non-negligible fraction of observations, the importance-weighting approximation is unreliable. In such cases---which arise here due to the hierarchical nature of the model and the limited number of seasons per player---the hold-out ELPD remains the primary criterion and PSIS-LOO is reported as a supplementary check.
+\end{remark}
+
+\section{Variance decomposition and intraclass correlation}
+\label{sec:icc}
+
+A key inferential output of the model is a decomposition of the total variance of each feature into contributions from the player, season, and residual components. Under the additive model \eqref{eq:additive} and the mutual independence of $\mathbf{a}_i$, $\mathbf{b}_j$, and $\boldsymbol{\varepsilon}_n$, the marginal variance of feature $p$ in any observation is
+\begin{equation}
+\mathrm{Var}(y_{np}) \;=\; [\boldsymbol{\Sigma}_a]_{pp} + \sigma_{b,p}^2 + \mathrm{Var}(\varepsilon_{np}),
+\label{eq:total_variance}
+\end{equation}
+where $[\boldsymbol{\Sigma}_a]_{pp}$ is given by \eqref{eq:sigma_diag}, and $\mathrm{Var}(\varepsilon_{np}) = \sigma_{e,p}^2 \cdot \nu/(\nu-2)$ by Proposition~\ref{prop:t_variance} for the Student-$t$ model, or $\sigma_{e,p}^2$ for the Normal model.
+
+\begin{definition}[Intraclass correlation coefficients]
+\label{def:icc}
+The player, season, and residual intraclass correlation coefficients for feature $p$ are, respectively,
+\begin{align}
+\mathrm{ICC}_{a,p} &= \frac{[\boldsymbol{\Sigma}_a]_{pp}}{[\boldsymbol{\Sigma}_a]_{pp} + \sigma_{b,p}^2 + \mathrm{Var}(\varepsilon_{np})},
+\label{eq:icc_a} \\[4pt]
+\mathrm{ICC}_{b,p} &= \frac{\sigma_{b,p}^2}{[\boldsymbol{\Sigma}_a]_{pp} + \sigma_{b,p}^2 + \mathrm{Var}(\varepsilon_{np})},
+\label{eq:icc_b} \\[4pt]
+\mathrm{ICC}_{e,p} &= \frac{\mathrm{Var}(\varepsilon_{np})}{[\boldsymbol{\Sigma}_a]_{pp} + \sigma_{b,p}^2 + \mathrm{Var}(\varepsilon_{np})},
+\label{eq:icc_e}
+\end{align}
+satisfying $\mathrm{ICC}_{a,p} + \mathrm{ICC}_{b,p} + \mathrm{ICC}_{e,p} = 1$ for all $p$.
+\end{definition}
+
+The quantity $\mathrm{ICC}_{a,p}$ measures the proportion of total variance in feature $p$ that is attributable to stable differences among players. It is directly interpretable as the reliability of the feature as a measure of stable player style: features with $\mathrm{ICC}_{a,p}$ close to one are dominated by stable player characteristics, while features with small $\mathrm{ICC}_{a,p}$ are dominated by season-level context or observation-level noise. This framing of variance decomposition in terms of intraclass correlation follows \cite{shrout1979intraclass}.
+
+\begin{remark}[Bayesian ICC]
+\label{rem:bayesian_icc}
+Because all variance parameters are sampled from the posterior, the quantities defined in Definition~\ref{def:icc} are themselves posterior quantities. For each posterior draw, a value of $\mathrm{ICC}_{a,p}$ can be computed from the sampled values of $\boldsymbol{\Lambda}$, $\boldsymbol{\Psi}_a$, $\sigma_{b,p}$, $\sigma_{e,p}$, and $\nu$, yielding a full posterior distribution over each coefficient. Posterior medians and $95\%$ credible intervals are reported in Chapter~\ref{chap:results}. The ICC framing is preferred over the raw variance decomposition because it is scale-free and comparable across features with different marginal variances.
+\end{remark}
+
+\section{Canonical factor directions via spectral decomposition}
+\label{sec:pca_postprocessing}
+
+\subsection{Why the identification constraint does not yield interpretable directions}
+
+The LT-PD constraint of Definition~\ref{def:ltpd} resolves the rotational non-identifiability by fixing a particular coordinate system in the $K$-dimensional factor space, but it does so in a way that is mathematically convenient rather than substantively meaningful. Specifically, the first column of $\boldsymbol{\Lambda}$ is constrained to load only on features 1 through $P$ with feature 1 carrying the positive diagonal; the second column is constrained to load on features 2 through $P$ with feature 2 carrying the positive diagonal; and so on. This triangular structure is a consequence of zeroing out the upper triangle of $\boldsymbol{\Lambda}$, not of any reasoning about football-domain structure. A different ordering of the $P$ features would produce a different fitted $\boldsymbol{\Lambda}$, even though the resulting $\boldsymbol{\Sigma}_a$ would be unchanged. The columns of the fitted LT-PD loading matrix therefore cannot be reported or interpreted as football archetypes.
+
+\subsection{Spectral decomposition of the common variance matrix}
+\label{sec:spectral}
+
+A rotation-invariant representation of the factor structure is obtained by working directly with the common variance matrix $\mathbf{C} = \boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top$, which is uniquely determined by the model regardless of which identification constraint was used.
+
+\begin{definition}[Spectral post-processing]
+\label{def:pca_postproc}
+For each posterior draw $s = 1, \ldots, S_{\mathrm{mc}}$, let $\boldsymbol{\Lambda}^{(s)}$ denote the sampled loading matrix. Compute the common variance matrix
+\begin{equation}
+\mathbf{C}^{(s)} = \boldsymbol{\Lambda}^{(s)}\!\left(\boldsymbol{\Lambda}^{(s)}\right)^\top \in \mathcal{S}^+_P,
+\label{eq:common_variance}
+\end{equation}
+and perform its spectral decomposition
+\begin{equation}
+\mathbf{C}^{(s)} = \mathbf{V}^{(s)}\mathbf{D}^{(s)}\!\left(\mathbf{V}^{(s)}\right)^\top,
+\label{eq:spectral}
+\end{equation}
+where $\mathbf{D}^{(s)} = \mathrm{diag}\!\left(d_1^{(s)} \geq \cdots \geq d_K^{(s)} \geq 0\right)$ and $\mathbf{V}^{(s)} \in \mathbb{R}^{P \times K}$ has orthonormal columns. The $k$-th column $\mathbf{v}_k^{(s)}$ of $\mathbf{V}^{(s)}$ is the $k$-th principal eigenvector of $\mathbf{C}^{(s)}$; the corresponding eigenvalue $d_k^{(s)}$ is the amount of player-effect common variance explained by the $k$-th canonical factor direction. The rotated factor score for player $i$ in draw $s$ is
+\begin{equation}
+\mathbf{f}_i^{(s)} \;=\; \left(\mathbf{V}^{(s)}\right)^\top \boldsymbol{\eta}_i^{(s)} \;\in\; \mathbb{R}^K.
+\label{eq:rotated_scores}
+\end{equation}
+\end{definition}
+
+\begin{proposition}[Invariance of the spectral decomposition]
+\label{prop:spectral_inv}
+The eigenvalues $\{d_k^{(s)}\}_{k=1}^K$ and the common variance matrix $\mathbf{C}^{(s)}$ are invariant to any orthogonal transformation of the loading matrix. Replacing $\boldsymbol{\Lambda}^{(s)}$ by $\boldsymbol{\Lambda}^{(s)}\mathbf{Q}$ for any $\mathbf{Q} \in O(K)$ yields the same $\mathbf{C}^{(s)}$ and hence the same spectral decomposition \eqref{eq:spectral}.
+\end{proposition}
+\begin{proof}
+By Proposition~\ref{prop:rotation}, $(\boldsymbol{\Lambda}^{(s)}\mathbf{Q})(\boldsymbol{\Lambda}^{(s)}\mathbf{Q})^\top = \boldsymbol{\Lambda}^{(s)}\boldsymbol{\Lambda}^{(s)\top} = \mathbf{C}^{(s)}$.
+\end{proof}
+
+Proposition~\ref{prop:spectral_inv} is the key justification for reporting the eigenvectors $\mathbf{V}^{(s)}$ and eigenvalues $\{d_k^{(s)}\}$ as the canonical factor structure: their values depend only on the posterior common variance $\mathbf{C}^{(s)}$, not on which identification constraint was used to fit $\boldsymbol{\Lambda}$.
+
+\begin{remark}[Sign convention]
+\label{rem:sign}
+Eigenvectors are defined up to sign: if $\mathbf{v}$ is an eigenvector of $\mathbf{C}^{(s)}$, so is $-\mathbf{v}$. A sign convention is applied draw-by-draw before computing posterior summaries: for each canonical factor $k$, the sign of $\mathbf{v}_k^{(s)}$ is chosen so that the feature with the largest absolute loading on that eigenvector has a positive loading. This convention ensures that the posterior mean of $\mathbf{v}_k^{(s)}$ reflects a coherent direction rather than cancelling between draws of opposite sign.
+\end{remark}
+
+\subsection{Interpretation of canonical factor directions}
+
+The posterior mean of the eigenvectors $\mathbf{V}^{(s)}$, together with $95\%$ credible intervals computed from the draw-by-draw quantiles, provides the canonical factor loading profile. For canonical factor $k$, the loading of feature $p$ is $V_{pk}^{(s)}$; features whose credible intervals exclude zero can be interpreted as having a robust association with that latent dimension after integrating over posterior uncertainty.
+
+The eigenvalue share $d_k^{(s)} / \sum_{k'=1}^K d_{k'}^{(s)}$ measures the fraction of player-effect common variance attributed to canonical factor $k$ in draw $s$. This share is itself a posterior quantity; its posterior median summarises how the $K$ latent dimensions partition the shared player-level variation.
+
+The rotated factor scores $\mathbf{f}_i^{(s)} \in \mathbb{R}^K$ from \eqref{eq:rotated_scores} locate each player in the canonical factor space. Their posterior distribution quantifies the uncertainty in each player's latent position as a function of the number of seasons in which that player is observed and of how precisely the data identify the relevant latent dimensions.
