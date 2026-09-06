@@ -1,0 +1,4 @@
+N (subset) = 900
+n_pairs_sampled = 30000
+Pearson(d_euclid, d_cosine) = 0.7459
+Spearman(d_euclid, d_cosine) = 0.7745

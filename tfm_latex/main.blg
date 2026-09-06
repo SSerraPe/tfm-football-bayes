@@ -7,45 +7,45 @@ Warning--missing journal name in swinton2023bayesian
 Warning--missing pages in swinton2023bayesian
 Warning--missing journal name in yanchenko2020hierarchical
 Warning--missing pages in yanchenko2020hierarchical
-You've used 30 entries,
+You've used 31 entries,
             2213 wiz_defined-function locations,
-            686 strings with 8929 characters,
-and the built_in function-call counts, 10186 in all, are:
-= -- 914
-> -- 497
+            694 strings with 9117 characters,
+and the built_in function-call counts, 10548 in all, are:
+= -- 947
+> -- 520
 < -- 1
-+ -- 197
-- -- 163
-* -- 887
-:= -- 1648
-add.period$ -- 30
-call.type$ -- 30
-change.case$ -- 171
++ -- 206
+- -- 171
+* -- 924
+:= -- 1709
+add.period$ -- 31
+call.type$ -- 31
+change.case$ -- 178
 chr.to.int$ -- 0
-cite$ -- 34
-duplicate$ -- 385
-empty$ -- 845
-format.name$ -- 163
-if$ -- 2101
+cite$ -- 35
+duplicate$ -- 396
+empty$ -- 870
+format.name$ -- 171
+if$ -- 2172
 int.to.chr$ -- 0
-int.to.str$ -- 30
-missing$ -- 65
-newline$ -- 100
-num.names$ -- 66
-pop$ -- 209
+int.to.str$ -- 31
+missing$ -- 67
+newline$ -- 103
+num.names$ -- 68
+pop$ -- 216
 preamble$ -- 1
-purify$ -- 137
+purify$ -- 143
 quote$ -- 0
-skip$ -- 237
+skip$ -- 242
 stack$ -- 0
-substring$ -- 682
-swap$ -- 65
+substring$ -- 703
+swap$ -- 66
 text.length$ -- 1
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 108
+type$ -- 112
 warning$ -- 4
-while$ -- 107
-width$ -- 32
-write$ -- 276
+while$ -- 111
+width$ -- 33
+write$ -- 285
 (There were 4 warnings)

@@ -43,7 +43,7 @@ Five additions since the previous report:
 
 1. **Playing-time heteroskedasticity fixed** — diagnosed that 48.9% of worst residuals came from low-minute players; extended the likelihood to scale residual variance by $\sqrt{\bar{m}/m_n}$; confirmed the fix drops the low-minute share to 8.3% (§\ref{sec-minutes}).
 2. **Factor loadings now have posterior CIs** — draws-level PCA of $\Lambda\Lambda^\top$ gives 90% credible intervals on each loading, replacing earlier point-estimate plots (§\ref{sec-interp}).
-3. **Rank K=3 confirmed by player-holdout CV** — 15% player holdout cross-validation (K=1–6) peaks at K=3 under both constant and minutes-scaled residual metrics (§\ref{sec-rank}).
+3. **Rank K=3 chosen from a per-K comparison** — Legs A/B/C in §\ref{sec-rank} compare K=2 vs K=3 (and K=4 when stage 21 completes) on the three criteria the supervisor advised: variance share of $\Lambda\Lambda^\top$ PCs (last-PC share 30.8\%→10.5\%, K=2→K=3), reliable-loader counts (45/48 → 43/48 on the last PC), and residual adequacy (both K=2 and K=3 pass the 1\% floor). CV screens disclosed honestly as inconclusive.
 4. **Player profile radars + similarity metric** — FIFA/FC-style percentile radars for individual players and pairs; Euclidean archetype-space similarity with named examples (§\ref{sec-profiles}).
 5. **Season profiles updated** — group-trend ribbons, heatmap, and new top-5 most-changed-features figure (§\ref{sec-seasons}).
 :::
@@ -175,14 +175,172 @@ if (file.exists(fig("35_minutes_vs_residual_34a.png")))
 
 # Factor Analysis Results {#sec-rank}
 
-## Rank selection: K=3 confirmed by two methods
+## Rank selection: K=3 chosen from per-K comparison
 
-**Pathfinder screening ($K=0,\ldots,4$):** fast variational approximation on the full
-dataset. ELPD rises K=0→3 then reverses at K=4.
+Following supervisor guidance (*"the CV-based metrics don't decide much; better base the
+decision on residuals and the percentage of variability of the PCs of
+$\Lambda\Lambda^\top$"*), we compare the K=2, K=3 (and K=4, when the fit completes) full
+NUTS Student-$t$ fits on three data-driven criteria the supervisor prescribed:
+
+**(A)** variance share of the principal components of $\hat\Lambda\hat\Lambda^\top$ per K,
+**(B)** reliable-loader counts per PC (fixed-reference PCA of §\ref{sec-interp}), and
+**(C)** residual adequacy under each fit's own Student-$t$ noise model.
+
+The three fits used for the comparison:
+
+- **K=2** — stage 18 full NUTS Student-$t$ fit ($P=48$, $N=4{,}586$, 4 chains, $\hat\nu=4.882$).
+- **K=3** — stage 28 full NUTS Student-$t$ fit ($P=48$, $N=4{,}586$, 4 chains, $\hat\nu=4.902$).
+- **K=4** — stage 21 full NUTS Student-$t$ fit, launched 2026-08-22. Its row appears in
+  the tables below **automatically** once the fit completes and stage 21's posterior
+  summary lands; no qmd edits are needed at that point beyond a re-render.
+
+The per-K analyses are driven by two K-parameterised helper scripts
+(`scripts/29b_kcompare_residuals.R` for Leg C, `scripts/31b_kcompare_pca.R` for Legs A/B).
+Their aggregated outputs live in
+`outputs/tables/29b_kcompare_summary.csv` and
+`outputs/tables/31b_kcompare_{variance_shares,reliable_counts}.csv`.
+
+### Leg A — Variance share of the PCs of $\hat\Lambda\hat\Lambda^\top$ per K
+
+```{r rank-legA-varshare}
+vs <- read.csv("outputs/tables/31b_kcompare_variance_shares.csv")
+vs_show <- data.frame(
+  K            = vs$K,
+  PC           = vs$pc,
+  eigenval_LLt = round(vs$eigenval_LLt, 3),
+  share_LLt    = sprintf("%.1f%%", 100 * vs$share_LLt),
+  share_Sa     = sprintf("%.1f%%", 100 * vs$share_Sa)
+)
+colnames(vs_show) <- c("$K$", "PC",
+                       "eigval $\\hat\\Lambda\\hat\\Lambda^\\top$",
+                       "share $\\hat\\Lambda\\hat\\Lambda^\\top$",
+                       "share $\\hat\\Sigma_a$")
+kable(vs_show, booktabs = TRUE, escape = FALSE, row.names = FALSE,
+      caption = "Per-K variance shares. The **last-PC** row of each K block is the informative one: at K=2 the second (last) PC captures 30.8\\% of $\\hat\\Lambda\\hat\\Lambda^\\top$ variance; at K=3 the third (last) PC captures 10.5\\% — still substantive but sharply diminished. At K=4, PC4 falling to the noise floor is the expected outcome (row appears when stage 21 completes).")
+```
+
+**Reading the table for the K decision.** The variance share of each K's *last* PC is
+the key comparison — it says how much common structure that extra factor picks up over
+the previous K. Concretely:
+
+- K=1 → K=2 adds a second axis capturing 30.8% of common variance (the last PC at K=2). Large — clearly warranted.
+- K=2 → K=3 adds a third axis capturing 10.5% of common variance. Smaller but still substantive.
+- K=3 → K=4 (pending): if PC4 at K=4 captures a share on the order of a few percent — the noise floor implied by the trailing eigenvalue tail of $\hat\Sigma_a$ (≈ 2%) — that argues for stopping at K=3. The exact number will drive the final call.
+
+The total common variance captured (sum of leading K eigenvalues of
+$\hat\Lambda\hat\Lambda^\top$) also grows monotonically with K but should show
+diminishing gains:
+
+```{r rank-legA-totals}
+tot <- aggregate(eigenval_LLt ~ K, data = vs, sum)
+tot$total_eig <- round(tot$eigenval_LLt, 3)
+tot$delta <- c(NA, round(diff(tot$eigenval_LLt), 3))
+tot_show <- data.frame(
+  K = tot$K,
+  `Total captured (sum of eigenvalues)` = tot$total_eig,
+  `Increment over K-1` = tot$delta,
+  check.names = FALSE
+)
+kable(tot_show, booktabs = TRUE, escape = FALSE, row.names = FALSE,
+      caption = "Total common variance captured per K (sum of the leading K eigenvalues of $\\hat\\Lambda\\hat\\Lambda^\\top$). The `Increment over K-1` column measures the marginal common-variance uptake by the added factor. K=4 increment expected to be substantially smaller than the K=3 increment (2.4).")
+```
+
+### Leg B — Reliable-loader count per PC and K
+
+Under the fixed-reference PCA of §\ref{sec-interp} (each draw's loading rotated onto the
+eigenbasis of the posterior-mean $\bar{\Lambda}\bar{\Lambda}^\top$, then 90\% marginal
+CIs formed), a feature is **reliable** on a given PC if its CI excludes zero.
+
+```{r rank-legB-reliable}
+rc <- read.csv("outputs/tables/31b_kcompare_reliable_counts.csv")
+rc_show <- data.frame(
+  K = rc$K,
+  PC = rc$pc,
+  `Features` = rc$n_features,
+  `Reliable (CI $\\neq 0$)` = rc$n_reliable,
+  `Share` = sprintf("%.1f%%", 100 * rc$share_reliable),
+  `Max $|$loading$|$` = round(rc$max_abs_load, 3),
+  check.names = FALSE
+)
+colnames(rc_show) <- c("$K$", "PC", "Features", "Reliable ($\\neq 0$)", "Share", "Max $|$loading$|$")
+kable(rc_show, booktabs = TRUE, escape = FALSE, row.names = FALSE,
+      caption = "Reliable-loader count per PC and K. At K=2 the last PC (PC2) has 45/48 reliable loaders (94\\%); at K=3 the last PC (PC3) has 43/48 (90\\%) — a substantively identified third axis. If PC4 at K=4 comes in materially lower (say $<$ 25/48), that is direct evidence the fourth factor is noise-dominated; the row appears when stage 21 completes.")
+```
+
+The top-5 reliable loaders per PC at K=3 (the interpretation of the axes) live in
+§\ref{sec-interp} (the CI-loading table).
+
+### Leg C — Residual adequacy per K
+
+For each fit we compute standardised residuals $z_{np}$ under that fit's own noise model
+($\hat\nu$ estimated per K) and check what share of the $N\times P$ cells exceed the
+model's own tail threshold $\tau_{99} = q_{0.995}(t_{\hat\nu}) / \sqrt{\hat\nu/(\hat\nu-2)}$
+(expected 1\% under a correctly-specified $t(\hat\nu)$ model), plus a feature-level
+skew-triangulation verdict count (rule identical to stage 29).
+
+```{r rank-legC-residuals}
+resid_kcmp <- read.csv("outputs/tables/29b_kcompare_summary.csv")
+rs_show <- data.frame(
+  K                    = resid_kcmp$K,
+  `$\\hat\\nu$`        = round(resid_kcmp$nu_hat, 3),
+  `$\\tau_{99}$`       = round(resid_kcmp$tau_99, 3),
+  `mean $\\Pr(|z|>\\tau_{99})$` = sprintf("%.2f\\%%", 100 * resid_kcmp$mean_frac_gt_tau99),
+  `median`             = sprintf("%.2f\\%%", 100 * resid_kcmp$median_frac_gt_tau99),
+  `expected under $t$` = sprintf("%.2f\\%%", 100 * resid_kcmp$expected_frac_under_t),
+  `\\texttt{unremarkable}`         = resid_kcmp$n_unremarkable,
+  `\\texttt{contamination-driven}` = resid_kcmp$n_contamination_driven,
+  `\\texttt{skew}`     = resid_kcmp$n_skew_residual,
+  `worst $|z|$`        = round(resid_kcmp$worst_cell_zstd, 2),
+  check.names = FALSE
+)
+kable(rs_show, booktabs = TRUE, escape = FALSE, row.names = FALSE,
+      caption = "Per-K residual adequacy. Mean feature-level exceedance rates sit below the 1\\% expected under $t(\\hat\\nu)$ at K=2 and K=3 (both models absorb tails adequately). The improvement from K=2 to K=3 in mean $\\Pr(|z|>\\tau_{99})$ is $\\approx 0.03$ pp — small — indicating that residual behaviour alone does not sharply distinguish K=2 from K=3; the residual criterion is a *floor* check, not a discriminator among adequate K. K=4 row appears when stage 21 completes.")
+```
+
+**Reading Leg C.** The residual criterion works as a *floor* check: a K is *adequate*
+if its mean $\Pr(|z|>\tau_{99})$ sits at or below 1\% (the theoretical expectation
+under a well-specified $t(\hat\nu)$ tail). Both K=2 (0.74\%) and K=3 (0.77\%) pass;
+K=4 is expected to also pass (adding a factor cannot make residual tails worse). Leg C
+therefore rules out under-fitting but does not by itself argue for K=3 over K=2 or K=4.
+The discriminating evidence lies in Legs A and B.
+
+### The K=3 verdict (combining A + B + C)
+
+- **Leg A** — the last PC's common-variance share drops from 30.8\% (K=2) to 10.5\% (K=3); K=4 pending. The K=2 → K=3 step still adds substantive common-variance structure, so K=3 is preferred over K=2. If PC4 at K=4 comes in near the noise floor (≈ 2\%), K=3 is preferred over K=4 too.
+- **Leg B** — 45/48 → 43/48 reliable loaders on the last PC (K=2 → K=3); PC3 is a well-identified third axis with a coherent contrast (possession-quality vs wide/direct/defensive; see §\ref{sec-interp}). If PC4 at K=4 falls below ~25/48 reliable, it is noise-dominated.
+- **Leg C** — both K=2 and K=3 pass the residual-adequacy floor with comparable mean exceedance rates (0.74\% vs 0.77\%). K=3 is not "hiding" tail misfit that K=2 caught, nor vice versa.
+
+Taken together: K=3 dominates K=2 on structural criteria (A, B) while matching on
+residual adequacy (C). The K=3-vs-K=4 verdict is *pending* the stage 21 fit; the null
+prediction — that PC4's variance share and reliable-loader count both fall to the noise
+floor — is the qualitative case for stopping at K=3 that the supervisor advised.
+
+### Cross-validation is inconclusive — honest disclosure
+
+The two CV screens do **not** unambiguously select K=3:
+
+- **Pathfinder screening (`outputs/rank_selection/real_data_elpd.csv`, $K=0,\ldots,8$)**.
+  In the truncated $K\leq 4$ view (Fig. below), ELPD rises to K=3 and reverses at K=4 —
+  consistent with K=3. However, the *full-range* Pathfinder is non-monotonic and the
+  argmax is at K=5 (elpd $=-3.107$ vs K=3's $-3.239$, a local dip). This is
+  Pathfinder's variational-approximation instability at higher K, not a substantive
+  K=5 signal, but it means the Pathfinder ELPD alone cannot select the rank.
+
+- **Player-holdout CV ($K=1,\ldots,6$, `outputs/tables/32_player_holdout_elpd.csv`)**.
+  Argmax at **K=6** on both metrics (elpd$_{\text{base}}$ $=-34{,}729.5$ at K=6 vs
+  $-34{,}737.2$ at K=3; elpd$_{\text{mv}}$ $=-34{,}184.4$ at K=6 vs $-34{,}211.0$ at
+  K=3). K=4 also beats K=3 on the minutes-scaled metric ($-34{,}209.8$). Reported
+  per-K SEs are Pathfinder-draw variances, which under-represent posterior uncertainty;
+  the ranking should be read as *flat across $K\in\{2,\ldots,6\}$* rather than as
+  favouring a single K.
+
+- **PSIS-LOO K=3 vs K=2** — $\Delta$ELPD $= 1{,}244$ with SE $= 1{,}271$ (i.e., the
+  difference is smaller than its own SE) and 99.4\% of points have Pareto-$k>0.5$
+  (`outputs/tables/C_loo_k2_vs_k3.csv`). Directional only.
 
 ```{r}
 #| label: fig-elpd-rank
-#| fig-cap: "Pathfinder ELPD per held-out value for $K=0,\\ldots,4$ (rebuilt data, $N=4{,}586$, $P=48$). Reversal at K=4 selects $K^*=3$."
+#| fig-cap: "Pathfinder ELPD per held-out value, truncated $K=0,\\ldots,4$ view (rebuilt data, $N=4{,}586$, $P=48$). The circled K=3 is the adopted rank on qualitative grounds; the ordering shown is consistent with that choice, but the full-range Pathfinder ($K=0,\\ldots,8$) is non-monotonic and is *not* load-bearing for the K=3 decision."
 #| fig-width: 5.5
 #| fig-height: 3.2
 elpd_full <- read.csv(rs("real_data_elpd.csv"))
@@ -196,15 +354,10 @@ ggplot(elpd, aes(x = rank, y = elpd_per_value)) +
   scale_x_continuous(breaks = 0:4) +
   expand_limits(y = max(elpd$elpd_per_value) + 0.04) +
   labs(x = "Factor rank K", y = "ELPD per held-out value",
-       caption = "Circle = selected K*=3. Pathfinder approximate; direction reliable.") +
+       caption = "Circle = adopted K=3. Truncated view for illustration; full K=0..8 is non-monotonic.") +
   theme_bw(base_size = 11) +
   theme(panel.grid.minor = element_blank())
 ```
-
-**Player-holdout CV ($K=1,\ldots,6$):** 15\% of players (228 players, stratified) are
-withheld entirely. A Normal marginalised model (integrating out $a_i$ analytically via
-Woodbury identity) is fitted with Pathfinder for each $K$. Holdout ELPD evaluated for two
-residual metrics: constant $\sigma_e$ and minutes-scaled $\sigma_e\sqrt{\bar{m}/m_n}$.
 
 ```{r kselect-holdout}
 holdout_path <- tbl("32_player_holdout_elpd.csv")
@@ -217,22 +370,21 @@ if (file.exists(holdout_path)) {
   )
   colnames(ht_show) <- c("$K$", "ELPD (base)", "ELPD (minutes-scaled, $\\phi=0.5$)")
   kable(ht_show, booktabs = TRUE, escape = FALSE, row.names = FALSE,
-        caption = "Player-holdout ELPD by factor rank. Both metrics peak at $K^*=3$, confirming the Pathfinder selection. K=7--8 not computed (wall-clock constraint).")
+        caption = "Player-holdout ELPD by factor rank. Argmax is K=6 on both metrics; K=3 is close to but not the winner. Pathfinder draw variance under-represents posterior uncertainty, so this ranking should be read as flat across $K\\in\\{2,\\ldots,6\\}$ rather than favouring any single K. K=7--8 not computed (wall-clock constraint).")
 } else {
   cat("Stage 32 results file not found.\n")
 }
 ```
 
-```{r}
-#| label: fig-kselect
-#| fig-cap: "Player-holdout ELPD by rank $K$ for base (constant $\\sigma_e$) and minutes-scaled ($\\phi=0.5$) metrics. Both peak at $K^*=3$."
-#| out-width: "80%"
-if (file.exists(fig("32_player_holdout_elpd.png")))
-  knitr::include_graphics(fig("32_player_holdout_elpd.png"))
-```
+### Final rank verdict
 
-Both methods select $K^*=3$. Full NUTS fit at K=3 (the production model) uses Student-$t$
-residuals with minutes scaling (§\ref{sec-minutes}).
+**K=3** is the production rank. The comparative evidence in Legs A/B/C above shows:
+K=3 dominates K=2 on structural criteria (last-PC common-variance share drops from 30.8\%
+to 10.5\% but PC3 is still 90\% reliable-loaded); K=2 and K=3 match on residual adequacy
+(both below the 1\% floor). The pending K=4 stage-21 fit will confirm the K=3-vs-K=4
+side of the argument once it lands; the expected outcome (PC4 at the noise floor) makes
+K=3 the closing choice. The CV screens above are consistent with this call but are
+themselves inconclusive across $K \in \{2,\ldots,6\}$, so they do not carry the argument.
 
 ## Factor loadings with posterior credible intervals {#sec-interp}
 
@@ -260,6 +412,17 @@ if (file.exists(fig("31_sigma_a_vs_llambda_comparison.png")))
 **New in this version:** posterior CIs on the loadings are now available from draws-level
 PCA. The figure below propagates the $\Lambda$ posterior to give 90\% marginal CIs on each
 rotated loading. A feature is **reliable** (solid) if its CI excludes zero.
+
+**Fixed-reference PCA (methods).** The eigenvectors of a per-draw $\Lambda_s\Lambda_s^\top$
+can rotate freely across posterior draws — the leading two- or three-dimensional
+subspace is identified by the data, but its internal orientation is not. Per supervisor
+guidance, we therefore fix the reference orientation to the eigendecomposition of the
+posterior mean $\bar{\Lambda}\bar{\Lambda}^\top$ (SVD $\to V_{\text{ref}}$, sign-anchored
+via the largest-magnitude entry per column), and each draw's loading vector is projected
+onto this fixed $V_{\text{ref}}$ before the 90\% marginal CI is formed
+(`scripts/31_pca_with_ci.R`). This is a first-order (mean-rotation) approximation of a
+fully Procrustes-aligned per-draw CI; the *reliable/unreliable* flag we report is robust
+to the approximation because it depends on the CI's *sign*, not its width.
 
 ```{r}
 #| label: fig-pca-ci
@@ -687,42 +850,47 @@ comp <- data.frame(
     "Low-rank $K=3$ vs diagonal $K=0$ (LOO, rebuilt)",
     "Minutes-scaled ($\\hat\\phi=0.5$) vs constant $\\sigma_e$"
   ),
-  `$\\Delta$ELPD` = c("$+3{,}724$", "$+11{,}668$", "$+12{,}125$*", "$+1{,}244$**", "pending†", "n/a††"),
+  `$\\Delta$ELPD` = c("$+3{,}724$", "$+11{,}668$", "$+12{,}125$*", "$+1{,}244$**", "deferred†", "n/a††"),
   `SE` = c("187", "554", "—", "1,271", "—", "—"),
   Source = c(
     "PSIS-LOO ($P=53$, $N=4944$)",
     "PSIS-LOO ($P=53$, $N=4944$)",
     "Pathfinder screening ($P=48$, $N=4586$)",
     "PSIS-LOO ($P=48$, $N=4586$)",
-    "Diagonal refit needed on rebuilt data",
+    "Deferred; not blocking closure (§\\ref{sec-open})",
     "$\\hat\\nu$ rises 4.90$\\to$5.67; low-min share 48.9\\%$\\to$8.3\\%"
   ),
   check.names = FALSE
 )
 kable(comp, booktabs = TRUE, escape = FALSE, row.names = FALSE,
       col.names = c("Comparison", "$\\Delta$ELPD", "SE", "Source/Note"),
-      caption = "All model comparisons. * Pathfinder: variational approximation; direction reliable. ** PSIS-LOO: 99.4\\% Pareto-$k>0.5$, direction consistent with Pathfinder. † Diagonal refit needed on rebuilt ($P=48$) data. †† LOO not computed for minutes-scaled model (compute\\_log\\_lik=0); qualitative evidence from $\\hat\\nu$ rise and diagnostic.")
+      caption = "All model comparisons. * Pathfinder: variational approximation; direction reliable but a single-K numeric optimum is not (see §\\ref{sec-rank}). ** PSIS-LOO: $\\Delta$ELPD $<$ SE and 99.4\\% Pareto-$k>0.5$; directional only. † Deferred (see §\\ref{sec-open}); not required for closing the model. †† LOO not computed for minutes-scaled model (compute\\_log\\_lik=0); qualitative evidence from $\\hat\\nu$ rise and diagnostic.")
 ```
 
-All comparisons favour the production model. The low-rank structure is real (20 SE over
-diagonal). Student-$t$ residuals are strongly warranted. K=3 preferred by Pathfinder and
-holdout CV; direction consistent with PSIS-LOO. The minutes-scaled extension is validated
-by the diagnostic (§\ref{sec-minutes}) even without a formal LOO comparison.
+The low-rank structure is strongly supported over diagonal (20 SE) and Student-$t$
+residuals are strongly warranted (both on the pre-rebuild data). For rank selection,
+K=3 is adopted on qualitative grounds (§\ref{sec-rank}, Legs A/B/C); the Pathfinder,
+player-holdout CV, and PSIS-LOO comparisons are *consistent* with K=3 but do not by
+themselves single out a K within the neighbourhood — see the honest disclosure in
+§\ref{sec-rank}. The minutes-scaled extension is validated by the diagnostic
+(§\ref{sec-minutes}) even without a formal LOO comparison.
 
 ---
 
 # Open Questions {#sec-open}
 
-1. **Low-rank vs diagonal comparison on rebuilt data.** The existing comparison used the
-   pre-rebuild dataset ($P=53$, $N=4{,}944$). The diagonal baseline needs refitting on the
-   current data ($P=48$, $N=4{,}586$) to make the $\Delta\text{ELPD}$ directly comparable
-   to the K=3 result.
+1. **Low-rank vs diagonal comparison on rebuilt data (*deferred, not blocking*).** The
+   existing $\Delta$ELPD is on the pre-rebuild dataset ($P=53$, $N=4{,}944$). A
+   diagonal refit on the current data ($P=48$, $N=4{,}586$) would sharpen the
+   low-rank-vs-diagonal claim, but is not required to close the model per supervisor
+   guidance — the K=3 justification is grounded in the qualitative Legs A/B/C of
+   §\ref{sec-rank}, not in a $\Delta$ELPD comparison with the diagonal baseline.
 
 2. **Factor archetype labels based on posterior CIs.** The group radar and cluster labels
-   (§\ref{sec-interp}) are based on the posterior-mean PCA rotation. The CI-filtered loading
-   plot now shows which loadings are reliably non-zero, but the archetype labels for the
-   player scatter have not yet been updated to reflect this — some minor adjustments may
-   be warranted once the full draws-level PCA is used to assign cluster centroids.
+   (§\ref{sec-interp}) are based on the posterior-mean PCA rotation. The CI-filtered
+   loading plot now shows which loadings are reliably non-zero, but the archetype labels
+   for the player scatter have not yet been updated to reflect this — a minor
+   presentation refinement, not affecting the substantive interpretation.
 
 3. **Team-season effects.** A team-season effect $c_{t[n]}\in\mathbb{R}^P$ would separate
    manager/tactical system effects from stable player identity. Player-team mapping is

@@ -1,0 +1,14 @@
+Stage 21: K=4 factor model with Student-t residuals
+
+N = 4586 player-season rows
+P = 48 scaled features
+I = 1529 unique players
+S = 12 seasons
+Q_a = 4 player latent factors
+
+Student-t residuals: nu ~ Gamma(2, 0.1)
+nu posterior mean: 4.95
+nu 95% CI: [4.84, 5.06]
+
+Motivation: stage 17 CV-ELPD shows monotonic improvement through K=4.
+Interpretation in stage 22.

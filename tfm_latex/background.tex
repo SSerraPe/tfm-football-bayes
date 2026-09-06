@@ -49,7 +49,7 @@ These two measures are not intended to exhaust the set of reasonable comparisons
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.8\textwidth]{images/scatter_distances.png}
-    \caption{Pairwise Euclidean vs. cosine dissimilarities for the player-season subset (N = 900, ~30,000 sampled pairs). The two metrics show moderate-to-strong agreement (Pearson = 0.744, Spearman = 0.764).}
+    \caption{Pairwise Euclidean vs. cosine dissimilarities for the player-season subset (N = 900, ~30,000 sampled pairs). The two metrics show moderate-to-strong agreement (Pearson = 0.746, Spearman = 0.774).}
     \label{fig:scatter_dist}
 \end{figure}
 
@@ -65,7 +65,7 @@ These methods serve different but complementary purposes. PCA works directly on 
 
 \subsection{Principal component analysis}
 
-Let $\mathbf{X}=(x_{ij})\in\mathbb{R}^{n\times p}$ denote the feature matrix, where $n$ is the number of player--season observations and $p$ is the number of transformed and standardised football features retained for the analysis. In the present application, $n=4256$, corresponding to player--season rows, and the columns of $\mathbf{X}$ represent season-level statistics derived from Wyscout event data, including variables related to shooting, finishing, progression, passing, dribbling, defensive actions, recoveries, duels, and aerial involvement.
+Let $\mathbf{X}=(x_{ij})\in\mathbb{R}^{n\times p}$ denote the feature matrix, where $n$ is the number of player--season observations and $p$ is the number of transformed and standardised football features retained for the analysis. In the present application, $n=4586$, corresponding to player--season rows, and the columns of $\mathbf{X}$ represent season-level statistics derived from Wyscout event data, including variables related to shooting, finishing, progression, passing, dribbling, defensive actions, recoveries, duels, and aerial involvement.
 
 Principal component analysis (PCA) is a classical dimension-reduction technique that seeks linear combinations of the observed variables with maximal sample variance under orthogonality constraints \cite{jolliffe2002pca}. It is useful here as an exploratory device because it reveals whether the player--season feature space is dominated by a small number of broad directions of variation, and because it helps identify which football variables contribute most strongly to those directions.
 
@@ -122,11 +122,11 @@ PCA is used as an exploratory instrument applied only to the transformed footbal
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.8\textwidth]{images/scree_pca.png}
-    \caption{Scree plot of the first 30 principal components. PC1 and PC2 jointly explain approximately \(52\%\) of the variance, while the first ten components explain approximately \(91\%\). The dashed line marks the first component count reaching at least \(90\%\) cumulative explained variance.}
+    \caption{Scree plot of the first 30 principal components. PC1 and PC2 jointly explain approximately \(48\%\) of the variance, while the first ten components explain approximately \(79\%\). The dashed line marks the first component count reaching at least \(90\%\) cumulative explained variance (nineteen components).}
     \label{fig:scree_plot}
 \end{figure}
 
-The exploratory results suggest that the data are structured but not trivially so. In particular, \autoref{fig:scree_plot} shows that the first two principal components explain \(51.8\%\) of the total sample variance, the first five around \(76.0\%\), and the first ten roughly \(90.9\%\). Using \(90\%\) cumulative explained variance as a descriptive threshold therefore suggests retaining about ten principal components for a high-fidelity linear summary. This indicates that a low-dimensional summary is plausible, but also that the player--season feature space cannot be reduced to a single simple axis without substantial information loss. To interpret the leading components beyond their explained variance, the variables with the largest absolute loadings were inspected. \autoref{tab:pca_loadings} reports the five largest absolute loadings for each of the first five principal components.
+The exploratory results suggest that the data are structured but not trivially so. In particular, \autoref{fig:scree_plot} shows that the first two principal components explain \(48.3\%\) of the total sample variance, the first five around \(66.2\%\), and the first ten roughly \(79.1\%\). Using \(90\%\) cumulative explained variance as a descriptive threshold requires about nineteen principal components for a high-fidelity linear summary. This indicates that a low-dimensional summary is plausible, but also that the player--season feature space cannot be reduced to a single simple axis without substantial information loss: with \(P=48\) engineered features spanning finishing, passing, carrying, defending, and duelling, considerably more shared structure remains beyond the first few directions than a smaller, coarser feature set would suggest. To interpret the leading components beyond their explained variance, the variables with the largest absolute loadings were inspected. \autoref{tab:pca_loadings} reports the five largest absolute loadings for each of the first five principal components.
 
 \begin{table}[h]
 \centering
@@ -136,35 +136,35 @@ The exploratory results suggest that the data are structured but not trivially s
 \toprule
 Component & Feature & Loading \\
 \midrule
-PC1 & \texttt{dribbles\_p90}     &  0.394 \\
-PC1 & \texttt{recov\_p90}        & -0.280 \\
-PC1 & \texttt{prog\_passes\_p90} & -0.275 \\
-PC1 & \texttt{aerial\_win}       & -0.255 \\
-PC1 & \texttt{duels\_p90}        &  0.249 \\
+PC1 & \texttt{per90\_dribbles}          &  0.318 \\
+PC1 & \texttt{per90\_touch\_in\_box}    &  0.251 \\
+PC1 & \texttt{per90\_shots}             &  0.244 \\
+PC1 & \texttt{per90\_accelerations}     &  0.229 \\
+PC1 & \texttt{per90\_progressive\_run}  &  0.225 \\
 \midrule
-PC2 & \texttt{dribbles\_p90}     &  0.450 \\
-PC2 & \texttt{prog\_pass\_acc}   &  0.384 \\
-PC2 & \texttt{aerial\_p90}       & -0.379 \\
-PC2 & \texttt{passes\_p90}       &  0.347 \\
-PC2 & \texttt{prog\_passes\_p90} &  0.302 \\
+PC2 & \texttt{per90\_head\_shots}       & -0.298 \\
+PC2 & \texttt{per90\_progressive\_run}  &  0.295 \\
+PC2 & \texttt{per90\_accelerations}     &  0.279 \\
+PC2 & \texttt{per90\_aerial\_duels}     & -0.242 \\
+PC2 & \texttt{per90\_dribbles}          &  0.215 \\
 \midrule
-PC3 & \texttt{dribble\_succ}     & -0.786 \\
-PC3 & \texttt{duel\_win}         & -0.302 \\
-PC3 & \texttt{def\_actions\_p90} &  0.239 \\
-PC3 & \texttt{xg\_p90}           & -0.202 \\
-PC3 & \texttt{goals\_p90}        & -0.202 \\
+PC3 & \texttt{per90\_defensive\_duels}      & -0.342 \\
+PC3 & \texttt{per90\_fouls}                 & -0.341 \\
+PC3 & \texttt{rate\_successful\_dribbles}   &  0.303 \\
+PC3 & \texttt{per90\_loose\_ball\_duels}    & -0.268 \\
+PC3 & \texttt{per90\_dribbles\_against}     & -0.263 \\
 \midrule
-PC4 & \texttt{duels\_p90}        & -0.491 \\
-PC4 & \texttt{aerial\_p90}       & -0.357 \\
-PC4 & \texttt{dribble\_succ}     & -0.357 \\
-PC4 & \texttt{pass\_acc}         &  0.336 \\
-PC4 & \texttt{def\_actions\_p90} & -0.308 \\
+PC4 & \texttt{rate\_successful\_dribbles}       &  0.308 \\
+PC4 & \texttt{per90\_accelerations}             & -0.299 \\
+PC4 & \texttt{per90\_progressive\_run}          & -0.286 \\
+PC4 & \texttt{per90\_passes\_to\_final\_third}  &  0.228 \\
+PC4 & \texttt{per90\_through\_passes}           &  0.223 \\
 \midrule
-PC5 & \texttt{duel\_win}         &  0.486 \\
-PC5 & \texttt{dribble\_succ}     & -0.406 \\
-PC5 & \texttt{aerial\_p90}       &  0.383 \\
-PC5 & \texttt{aerial\_win}       &  0.358 \\
-PC5 & \texttt{prog\_pass\_acc}   &  0.268 \\
+PC5 & \texttt{rate\_successful\_dribbles}   &  0.754 \\
+PC5 & \texttt{rate\_offensive\_duels\_won}  &  0.281 \\
+PC5 & \texttt{per90\_accelerations}         &  0.217 \\
+PC5 & \texttt{per90\_progressive\_run}      &  0.177 \\
+PC5 & \texttt{per90\_dribbles}              &  0.171 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -211,25 +211,25 @@ Unlike PCA and CMDS, factor analysis is already a probabilistic model. For this 
 
 In the exploratory analysis conducted here, after removing a constant feature with zero sample standard deviation, maximum-likelihood exploratory factor analysis was fitted for several candidate numbers of factors, followed by oblique rotation using an oblimin-type criterion in order to allow correlated factors \cite{bartholomew2011latent,jennrich1966rotation}.
 
-The number of factors was guided in part by parallel analysis \cite{horn1965parallel}. Parallel analysis compares the observed eigenvalues of the empirical correlation matrix with eigenvalues obtained from random datasets of the same size. Factors are retained while the observed eigenvalues exceed a chosen simulated reference, here the simulated \(95\)th percentile. As shown in \autoref{fig:parallel_analysis}, the observed eigenvalues dominate the simulated reference eigenvalues up to the sixth factor, after which the empirical curve falls below the simulated $95$th percentile. This provides empirical support for retaining six factors as a reasonable working dimension for the latent covariance structure. Competing specifications were then compared using standard fit diagnostics.
+The number of factors was guided in part by parallel analysis \cite{horn1965parallel}. Parallel analysis compares the observed eigenvalues of the empirical correlation matrix with eigenvalues obtained from random datasets of the same size. Factors are retained while the observed eigenvalues exceed a chosen simulated reference, here the simulated \(95\)th percentile. As shown in \autoref{fig:parallel_analysis}, the observed eigenvalues dominate the simulated reference eigenvalues up to the eleventh factor, after which the empirical curve falls below the simulated $95$th percentile. This provides empirical support for retaining eleven factors as a reasonable working dimension for the latent covariance structure; the larger count relative to a coarser feature set is expected, since \(P=48\) engineered features resolve considerably more distinct football sub-skills (e.g.\ separate passing-distance, duel-type, and defensive-action categories) than a smaller feature set would. Competing specifications were then compared using standard fit diagnostics.
 
 More specifically, the root mean square residual (RMSR) summarises the average size of the residual correlations left unexplained by the fitted factor model, while the root mean square error of approximation (RMSEA) measures lack of fit per degree of freedom at the covariance-structure level \cite{bartholomew2011latent,browne1992fit}. Model comparison also considered the Bayesian information criterion (BIC), defined in the sense of Schwarz \cite{schwarz1978bic}, which balances model fit against complexity.
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.8\textwidth]{images/scree_fa.png}
-    \caption{Parallel analysis scree plot for factor analysis. The observed eigenvalues are compared with the $95$th percentile of eigenvalues obtained from simulated random datasets. The vertical dashed line indicates the suggested number of retained factors, $k=6$, corresponding to the point after which the observed eigenvalues no longer exceed the simulated reference values.}
+    \caption{Parallel analysis scree plot for factor analysis. The observed eigenvalues are compared with the $95$th percentile of eigenvalues obtained from simulated random datasets. The vertical dashed line indicates the suggested number of retained factors, $k=11$, corresponding to the point after which the observed eigenvalues no longer exceed the simulated reference values.}
     \label{fig:parallel_analysis}
 \end{figure}
 
-The exploratory results support the presence of non-trivial latent structure. Parallel analysis suggested a six-factor solution, while a four-factor model provided a more compressed but clearly rougher summary. The six-factor specification improved the fit statistics relative to the four-factor one, with lower RMSEA and RMSR and a markedly improved BIC, although the overall fit still indicates that the latent structure should be viewed as an approximation rather than a complete explanation of the dependence in the data. Taken together, the pattern in \autoref{fig:parallel_analysis} and the fit comparisons suggest that six factors offer a reasonable compromise between parsimony and interpretability.
+The exploratory results support the presence of non-trivial latent structure. Parallel analysis suggested an eleven-factor solution, while a nine-factor model provided a more compressed but rougher summary. The eleven-factor specification improved the fit statistics relative to the nine-factor one (TLI rising from \(0.804\) to \(0.843\); RMSEA falling from \(0.101\) to \(0.090\); RMSR falling from \(0.0256\) to \(0.0227\); BIC falling from approximately \(28{,}630\) to \(19{,}420\)), although the overall fit still indicates that the latent structure should be viewed as an approximation rather than a complete explanation of the dependence in the data. Taken together, the pattern in \autoref{fig:parallel_analysis} and the fit comparisons suggest that eleven factors offer a reasonable compromise between parsimony and interpretability for this larger, \(P=48\) feature set.
 
-Substantively, the rotated loading structure reveals several interpretable latent dimensions; see \autoref{fig:fa_loadings}. In particular, the six-factor solution separates in the following dimensions: goal-threat, pass-circulation, defensive-work, duel-efficiency, physical-activity-oriented, and a mixed creativity-versus-aerial profile. While these labels are necessarily interpretive, the loading pattern shows that the latent dimensions are not arbitrary mathematical artefacts, but correspond to recognisable football behaviours. Importantly, the estimated factor correlations are not negligible, which reinforces the idea that football style may be better described through related latent traits than through a small set of orthogonal descriptive axes.
+Substantively, the rotated loading structure reveals several interpretable latent dimensions; see \autoref{fig:fa_loadings}. Ordered by the variance each factor accounts for, the eleven-factor solution separates: chance creation and assists; goal threat and finishing; carrying and offensive duelling; general passing volume and circulation; defensive duel-winning and ball recovery; defensive duel exposure (1v1 defending workload); progressive and vertical passing; physical engagement and possession risk; high/pressing recoveries; passing accuracy versus crossing risk; and deep build-up circulation. While these labels are necessarily interpretive, the loading pattern shows that the latent dimensions are not arbitrary mathematical artefacts, but correspond to recognisable football behaviours -- including a clear separation, absent from a coarser feature set, between winning defensive duels and simply being exposed to them, and between general passing volume and specifically progressive, forward-directed passing. Importantly, the estimated factor correlations are not negligible (the strongest, between the chance-creation and carrying/offensive-duelling factors, reaches \(0.63\), and goal threat correlates negatively with both defensive factors at around \(-0.5\)), which reinforces the idea that football style may be better described through related latent traits than through a small set of orthogonal descriptive axes.
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.8\textwidth]{images/loadings_fa.png}
-    \caption{Rotated factor loadings for the six-factor oblimin solution, displaying variables with $|\mathrm{loading}|\geq 0.30$. Blue and red bars indicate positive and negative loadings, respectively. The loading pattern supports an interpretation of the factors in terms of goal threat, duel efficiency, physical activity, pass circulation, creativity versus aerial profile, and defensive work.}
+    \caption{Rotated factor loadings for the eleven-factor oblimin solution, displaying variables with $|\mathrm{loading}|\geq 0.30$. Blue and red bars indicate positive and negative loadings, respectively. The loading pattern supports an interpretation of the factors in terms of chance creation, goal threat, carrying and offensive duelling, passing volume, defensive duel-winning, defensive duel exposure, progressive passing, physical engagement/possession risk, high-press recoveries, passing accuracy versus crossing, and deep build-up circulation.}
     \label{fig:fa_loadings}
 \end{figure}
 
@@ -281,11 +281,11 @@ This representation is useful for exploratory purposes. It allows one to inspect
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.8\textwidth]{images/cmds_extreme_obs.png}
-    \caption{CMDS map with extreme observations labelled. The four groups of extremes correspond to high and low values along each displayed dimension. Dimension 1 is mainly anchored by defensive profiles on the positive side and attacking profiles on the negative side, while Dimension 2 contrasts aerial or box-reference forwards with more technical circulation/progression profiles.}
+    \caption{CMDS map with extreme observations labelled. The four groups of extremes correspond to high and low values along each displayed dimension. Dimension 1 is mainly anchored by wide attacking profiles on the positive side and centre-back profiles on the negative side, while Dimension 2 contrasts aerial or box-reference forwards with attacking full-back profiles.}
     \label{fig:cmds_extremes}
 \end{figure}
 
-The labelled extremes in \autoref{fig:cmds_extremes} help interpret the two displayed dimensions. The positive side of Dimension 1 is anchored mainly by centre-back profiles, such as Jorge Cuenca, Fernando Calero, Yeray Álvarez, N. Araújo, and Alejandro Gálvez, whereas the negative side contains more attacking or forward-oriented profiles, such as Iñaki Williams, Oihan Sancet, José Luis Morales, Ángel Correa, and Álex Berenguer. Dimension 2 separates aerial or penalty-box reference forwards, such as S. Rondón, Hugo Duro, Y. En-Nesyri, Juanmi Latasa, and V. Muriqi, from more technical circulation or progression profiles, such as É. Banega, André Almeida, Marcelo, Filipe Luís, and M. Kovačić. These labels should be interpreted descriptively: they identify the observed profiles anchoring the CMDS axes, not fixed universal football roles.  For these reasons, CMDS is best viewed here as an exploratory geometric benchmark rather than as the final model. It indicates whether the chosen dissimilarity admits a coherent low-dimensional approximation, and it provides a descriptive precursor to more structured probabilistic latent-space models, including Bayesian and hierarchical extensions \cite{oh2001bayesian,yanchenko2020hierarchical}.
+The labelled extremes in \autoref{fig:cmds_extremes} help interpret the two displayed dimensions. The positive side of Dimension 1 is anchored mainly by wide attacking profiles, such as F. Orellana, Mikel Oyarzabal, Iñaki Williams, and I. Cavaleiro, whereas the negative side contains centre-back profiles, such as G. Cabral, Carlos Domínguez, David López, David Costas, and S. Savić. Dimension 2 separates aerial or penalty-box reference forwards, such as A. Véliz, S. Rondón, Hugo Duro, and Y. En-Nesyri, from attacking full-back profiles with substantial progression involvement, such as Dani Carvajal, Filipe Luís, M. Acuña, and Sergi Roberto. These labels should be interpreted descriptively: they identify the observed profiles anchoring the CMDS axes, not fixed universal football roles.  For these reasons, CMDS is best viewed here as an exploratory geometric benchmark rather than as the final model. It indicates whether the chosen dissimilarity admits a coherent low-dimensional approximation, and it provides a descriptive precursor to more structured probabilistic latent-space models, including Bayesian and hierarchical extensions \cite{oh2001bayesian,yanchenko2020hierarchical}.
 
 \subsection{Summary of the exploratory role of PCA, FA, and CMDS}
 

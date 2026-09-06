@@ -3,7 +3,7 @@
 
 \section{Motivation and overview}
 
-The exploratory analyses presented in Chapter~\ref{chap:background} establish that the player--season feature space contains meaningful lower-dimensional structure. Principal component analysis revealed that approximately ten components are needed to account for ninety per cent of the total sample variance, while a six-factor oblimin solution provided an interpretable account of the empirical correlation structure through recognisable football dimensions such as goal threat, pass circulation, defensive work, and duel efficiency. Classical multidimensional scaling applied to the cosine-based dissimilarity confirmed that the pairwise similarity structure admits a coherent low-dimensional Euclidean approximation. Taken together, these findings support the view that player--season performance profiles are governed by a small number of shared latent traits, and that the feature space is rich enough for such traits to be recoverable from the data.
+The exploratory analyses presented in Chapter~\ref{chap:background} establish that the player--season feature space contains meaningful lower-dimensional structure. Principal component analysis revealed that approximately nineteen components are needed to account for ninety per cent of the total sample variance, while an eleven-factor oblimin solution provided an interpretable account of the empirical correlation structure through recognisable football dimensions such as goal threat, chance creation, pass circulation, defensive work, and duel efficiency. Classical multidimensional scaling applied to the cosine-based dissimilarity confirmed that the pairwise similarity structure admits a coherent low-dimensional Euclidean approximation. Taken together, these findings support the view that player--season performance profiles are governed by a moderate number of shared latent traits, and that the feature space is rich enough for such traits to be recoverable from the data; Section~\ref{sec:rank} and Remark~\ref{rem:k_not_comparable} discuss why the Bayesian model's own rank, once selected, need not match this exploratory factor count.
 
 What the exploratory analyses cannot do, however, is quantify uncertainty in the latent structure. PCA scores and factor loadings are point estimates computed from the sample; they carry no natural notion of sampling variability, posterior distribution, or credible interval. This matters especially in a longitudinal setting, where the same player is observed in multiple seasons. The exploratory analyses treat all player--season rows as exchangeable, whereas a proper account of the data-generating process recognises that two observations belonging to the same player are not independent: they share the player's stable latent characteristics. Ignoring this structure risks conflating player-level persistence with season-to-season noise, and overstating the precision of latent-dimension estimates.
 
@@ -106,7 +106,7 @@ In the factor-analysis literature, the quantity $\sum_{k=1}^K \Lambda_{pk}^2$ is
 
 The off-diagonal entries in \eqref{eq:sigma_offdiag} reflect the pairwise covariance between features $p$ and $q$ induced by the shared factors: two features co-vary at the player level only to the extent that they share common loadings on the $K$ dimensions. A player who scores highly on a latent factor tends to score highly on all features with positive loadings on that factor, creating positive covariance among those features. The uniqueness matrix $\boldsymbol{\Psi}_a$ contributes nothing to off-diagonal entries, reflecting the assumption that, conditional on the $K$ shared factors, feature-specific residuals are uncorrelated.
 
-This covariance structure is motivated directly by the exploratory findings of Chapter~\ref{chap:background}. Factor analysis of the player--season feature matrix suggested that approximately six correlated latent traits are needed to reproduce the empirical correlation structure. A low-rank $\boldsymbol{\Sigma}_a$ directly encodes this empirical finding within a fully probabilistic model \cite{lopes2004bayesian}.
+This covariance structure is motivated directly by the exploratory findings of Chapter~\ref{chap:background}. Factor analysis of the player--season feature matrix suggested that a number of correlated latent traits---eleven, by parallel analysis---are needed to reproduce the empirical correlation structure of the raw, unpartitioned observations. A low-rank $\boldsymbol{\Sigma}_a$ directly encodes this qualitative finding (shared covariance is real and worth modelling with a factor structure) within a fully probabilistic model \cite{lopes2004bayesian}; the rank $K$ actually adopted for $\boldsymbol{\Sigma}_a$ is selected separately in Section~\ref{sec:rank}, and Remark~\ref{rem:k_not_comparable} explains why it need not, and does not, match the raw factor count above.
 
 \subsection{Season covariance: diagonal}
 
@@ -322,12 +322,12 @@ consistent with the LT-PD positivity constraint. The free lower-triangular entri
 \begin{definition}[Priors on variance parameters]
 \label{def:prior_variances}
 The uniqueness standard deviations, the season standard deviations, and the residual standard deviations are each assigned independent Half-Normal priors:
-\begin{equation}
-\psi_{a,p} \;\sim\; \mathrm{Half\text{-}Normal}(0,\, 1), \quad
-\sigma_{b,p} \;\sim\; \mathrm{Half\text{-}Normal}(0,\, 1), \quad
-\sigma_{e,p} \;\sim\; \mathrm{Half\text{-}Normal}(0,\, 1), \quad p = 1, \ldots, P.
+\begin{align}
+\psi_{a,p} &\;\sim\; \mathrm{Half\text{-}Normal}(0,\, 1), \notag \\
+\sigma_{b,p} &\;\sim\; \mathrm{Half\text{-}Normal}(0,\, 1), \notag \\
+\sigma_{e,p} &\;\sim\; \mathrm{Half\text{-}Normal}(0,\, 1), \qquad p = 1, \ldots, P.
 \label{eq:prior_variances}
-\end{equation}
+\end{align}
 \end{definition}
 
 The Half-Normal$(0,1)$ prior for scale parameters concentrates most mass near zero while permitting values of order one with positive probability; it is recommended for variance components in hierarchical models as a weakly informative alternative to flat or improper priors, which can produce improper posteriors in hierarchical settings \cite{gelman2006prior}.
@@ -353,16 +353,17 @@ which places most mass on moderate scaling effects ($\phi \lesssim 1$) while per
 \end{definition}
 
 The joint prior is the product of all terms in Definitions~\ref{def:prior_lambda}--\ref{def:prior_phi}, since all parameters are treated as independent a priori:
-\begin{equation}
+\begin{align}
 p\!\left(\boldsymbol{\Lambda}, \boldsymbol{\psi}_a, \boldsymbol{\sigma}_b, \boldsymbol{\sigma}_e, \nu, \phi\right)
 \;=\;
-\prod_{k=1}^{K} p_{\mathrm{HN}}(\Lambda_{kk})
-\prod_{\substack{p=1\\p>k}}^{P} \mathcal{N}(\Lambda_{pk};\, 0, 1)
-\prod_{p=1}^{P} p_{\mathrm{HN}}(\psi_{a,p})\,p_{\mathrm{HN}}(\sigma_{b,p})\,p_{\mathrm{HN}}(\sigma_{e,p})
-\;\times\;
+&\prod_{k=1}^{K} p_{\mathrm{HN}}(\Lambda_{kk})
+\prod_{\substack{p=1\\p>k}}^{P} \mathcal{N}(\Lambda_{pk};\, 0, 1) \notag \\
+&\;\times\;
+\prod_{p=1}^{P} p_{\mathrm{HN}}(\psi_{a,p})\,p_{\mathrm{HN}}(\sigma_{b,p})\,p_{\mathrm{HN}}(\sigma_{e,p}) \notag \\
+&\;\times\;
 p_{\mathrm{Ga}}(\nu)\;p_{\mathrm{HN}}(\phi),
 \label{eq:joint_prior}
-\end{equation}
+\end{align}
 where $p_{\mathrm{HN}}$ denotes the Half-Normal$(0,1)$ density and $p_{\mathrm{Ga}}$ denotes the Gamma$(2,0.1)$ density. The term involving $\phi$ is omitted when $\phi$ is held fixed.
 
 \section{Rank selection}
@@ -376,10 +377,10 @@ For any fixed value of $K \in \{0, 1, 2, \ldots\}$, the model specification in S
 
 The rank $K^*$ is selected by comparing models at $K = 0, 1, 2, \ldots$ on out-of-sample predictive performance. Because the parameter space grows with $K$ and overfitting is possible, in-sample criteria such as the log-likelihood are insufficient; out-of-sample evaluation on data not used in fitting is necessary.
 
-\subsection{Hold-out cross-validation}
+\subsection{Hold-out and leave-one-out cross-validation: an inconclusive screen}
 \label{sec:holdout}
 
-The preferred criterion for rank selection is the out-of-sample expected log predictive density (ELPD), evaluated on a held-out test set. A random fifteen per cent of the $N$ rows are reserved as the test set $\mathcal{T}$ before any model fitting begins; the remaining eighty-five per cent constitute the training set $\mathcal{T}^c$. The split is stratified by season to ensure that each season contributes observations to both partitions.
+A first candidate criterion for rank selection is the out-of-sample expected log predictive density (ELPD), evaluated on a held-out test set. A random fifteen per cent of the $N$ rows are reserved as the test set $\mathcal{T}$ before any model fitting begins; the remaining eighty-five per cent constitute the training set $\mathcal{T}^c$. The split is stratified by season to ensure that each season contributes observations to both partitions.
 
 \begin{definition}[Hold-out expected log predictive density]
 \label{def:elpd}
@@ -393,18 +394,40 @@ approximated by the Monte Carlo average over $S_{\mathrm{mc}}$ posterior draws $
 \mathrm{ELPD}_K \;=\; \sum_{n^* \in \mathcal{T}} \mathrm{elpd}(\mathbf{y}_{n^*};\, \mathcal{M}_K).
 \label{eq:total_elpd}
 \end{equation}
+A natural \emph{reversal criterion} would select the smallest $K$ such that $\mathrm{ELPD}_{K+1} < \mathrm{ELPD}_K$: the first rank at which adding a further latent dimension no longer improves out-of-sample predictive performance.
 \end{definition}
 
-The hold-out approach is preferred to $K$-fold cross-validation here because fitting the full hierarchical model requires several hours of computation per run; the cost of $K_{\mathrm{fold}}$-fold cross-validation, which requires $K_{\mathrm{fold}}$ complete re-fits, would be prohibitive. A single fifteen per cent hold-out provides a clean separation between model calibration and evaluation that is sufficient to discriminate between candidate ranks in the range $K = 0, 1, 2, \ldots$ examined.
+The hold-out approach is preferred here to $K$-fold cross-validation on computational grounds: fitting the full hierarchical model requires several hours per run, so $K_{\mathrm{fold}}$-fold cross-validation, which requires $K_{\mathrm{fold}}$ complete re-fits, would be prohibitive. Pareto-smoothed importance-sampling leave-one-out cross-validation (PSIS-LOO) \cite{vehtari2017practical} was also computed post hoc on full-sample fits at each candidate $K$, as a check that does not require a held-out split; a fast Pathfinder-based variational screen \cite{zhang2022pathfinder} was additionally run across a wider range of candidate ranks to explore the rank axis more cheaply than repeated full NUTS fits allow.
 
-\subsection{Selecting the rank}
+\begin{remark}[Why this screen does not, by itself, decide $K$]
+\label{rem:cv_inconclusive}
+Two practical problems undermine the reversal criterion as a stand-alone decision rule here. First, PSIS-LOO's reliability depends on the Pareto-$\hat{k}$ diagnostic for each observation, and in this application $\hat{k} > 0.5$ for the great majority of observations---a consequence of the hierarchical structure and the limited number of seasons per player---so the importance-weighting approximation is only directionally informative, not a precise estimator of $\mathrm{ELPD}_K$. Second, and more importantly, neither the player-holdout ELPD (evaluated for $K = 1, \ldots, 6$ on a $15\%$ player-level holdout) nor the wider Pathfinder screen (evaluated for $K = 0, \ldots, 8$) produces a clean reversal: the player-holdout ELPD is maximised at $K = 6$, with $K = 3$ and $K = 4$ both competitive and separated from the maximum by an amount comparable to the run-to-run variability of the approximation, while the Pathfinder screen peaks at $K = 5$ with $K = 3$ a local dip rather than a clear optimum. Read honestly, both screens are best summarised as \emph{flat across $K \in \{2, \ldots, 6\}$} rather than as pointing to a single preferred rank. Reporting a specific $K^*$ from either screen alone would overstate the precision these approximate, high-variance predictive estimates actually offer. The cross-validation evidence is retained here as a supplementary, non-deciding check---by contrast, the comparison of $K=0$ (diagonal) against $K \geq 1$ (low-rank) is decisive by the same ELPD-based reasoning, and is reported in Chapter~\ref{chap:results}---rather than as the basis for choosing among $K \geq 1$.
+\end{remark}
+
+\subsection{A qualitative argument for the rank}
+\label{sec:rank_qualitative}
+
+Because the cross-validation screen of \S\ref{sec:holdout} does not discriminate among the candidate ranks $K \in \{2, \ldots, 6\}$, the rank actually adopted for the production model is selected on qualitative, structural grounds instead: the adequacy of each fit's own residuals, and the extent to which the shared player-effect covariance $\boldsymbol{\Sigma}_a$ is still adding well-identified structure as $K$ increases. This mirrors standard practice in exploratory and confirmatory factor analysis, where the number of retained factors is routinely set by fit diagnostics and interpretability rather than by a single automated rule, and is consistent with the professional statistical guidance received during supervision of this thesis: that a qualitative argument, grounded in residuals and in the variance structure of $\boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top$, is an appropriate and sufficient basis for closing the choice of $K$.
+
+\begin{remark}[Anchoring to the posterior mean, not to per-draw estimates]
+\label{rem:posterior_mean_anchor}
+Both criteria below require the eigendecomposition of the common-variance matrix $\boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top$ introduced in Section~\ref{sec:pca_postprocessing}. Proposition~\ref{prop:spectral_inv} shows that, \emph{for a fixed posterior draw}, this eigendecomposition is invariant to the identification constraint used to fit $\boldsymbol{\Lambda}$. It is not, however, invariant \emph{across} posterior draws in the sense needed to build a credible interval directly: sampling variability in $\boldsymbol{\Lambda}^{(s)}$ can rotate the leading eigenvectors within the subspace they span from one draw to the next, so naively comparing $\mathbf{V}^{(s)}$ across draws risks comparing different rotations of the same subspace rather than a stable estimate of one direction. To avoid this, the analyses below fix a single reference orientation---the eigendecomposition of the \emph{posterior-mean} common-variance matrix $\bar{\boldsymbol{\Lambda}}\bar{\boldsymbol{\Lambda}}^\top$, where $\bar{\boldsymbol{\Lambda}} = \tfrac{1}{S_{\mathrm{mc}}}\sum_s \boldsymbol{\Lambda}^{(s)}$---and project each draw's loadings onto this fixed reference before summarising uncertainty. This is a first-order (mean-rotation) approximation to a fully Procrustes-aligned per-draw analysis; it is adequate for the two qualitative judgements made here (whether a component's common-variance share is small, and whether its loadings are reliably non-zero), since both depend on the sign and approximate magnitude of the projected loadings rather than on precise per-draw geometry.
+\end{remark}
+
+\begin{description}
+\item[Criterion A: variance share of the PCs of $\bar{\boldsymbol{\Lambda}}\bar{\boldsymbol{\Lambda}}^\top$.] For a candidate rank $K$, the eigenvalue $d_K$ of the \emph{last} (smallest) canonical factor, expressed as a share of $\sum_{k=1}^K d_k$, measures how much additional common-variance structure the $K$-th dimension contributes. A last-component share close to the trailing eigenvalues of the full uniqueness spectrum indicates that dimension is not resolving substantive shared structure.
+\item[Criterion B: reliable-loader count under the fixed-reference PCA.] For the last canonical factor at rank $K$, the number of features whose $90\%$ credible interval (computed under Remark~\ref{rem:posterior_mean_anchor}'s fixed reference) excludes zero indicates whether that dimension is a well-identified axis with broad support across features, or a weakly identified direction loaded on by only a handful of features.
+\item[Criterion C: residual adequacy under the fit's own $t(\hat\nu)$ noise model.] For each candidate fit, the standardised residuals $z_{np} = (y_{np} - \hat a_{i[n],p} - \hat b_{j[n],p})/(\hat\sigma_{e,p}\sqrt{\hat\nu/(\hat\nu-2)})$ are compared against the $99$th-percentile threshold $\tau_{99}$ implied by $t(\hat\nu)$. If the empirical exceedance rate across all $N \times P$ cells is at or below the nominal $1\%$, the residual distribution is adequate under the fitted noise model; this is a floor check on model misspecification, not a criterion that discriminates between two ranks that both pass it.
+\end{description}
+
+\subsection{Selected rank}
 \label{sec:rank_selection}
 
-Models $\mathcal{M}_0, \mathcal{M}_1, \mathcal{M}_2, \ldots$ are compared by their total hold-out ELPD \eqref{eq:total_elpd}. The preferred rank $K^*$ is the smallest $K$ such that $\mathrm{ELPD}_{K+1} < \mathrm{ELPD}_K$, that is, the first rank at which adding a further latent dimension no longer improves out-of-sample predictive performance. This \emph{reversal criterion} is conservative: it prefers a smaller $K$ whenever the marginal contribution of an additional factor is zero or negative.
+Applying Criteria A--C to the $K=2$ and $K=3$ production fits gives: the last canonical factor's common-variance share drops from $30.8\%$ at $K=2$ to $10.5\%$ at $K=3$---still a substantive contribution, not yet at the noise floor---while its reliable-loader count falls only modestly, from $45/48$ to $43/48$ features, indicating a well-identified third axis rather than a spurious one (Criteria A and B); mean residual exceedance under $\tau_{99}$ is $0.74\%$ at $K=2$ and $0.77\%$ at $K=3$, both comfortably below the $1\%$ floor, so residual adequacy holds at both ranks and does not itself discriminate between them (Criterion C). Taken together, $K=3$ is preferred over $K=2$ on structural grounds (A, B) while matching it on residual adequacy (C), and is adopted as the production rank $K^*=3$ used throughout the remainder of this chapter and in Chapter~\ref{chap:results}. Rank $K=4$ is not yet compared on Criteria A and B against $K=2$/$K=3$ at the time of writing and is therefore not asserted to be dominated or preferred; the reversal noted in Remark~\ref{rem:cv_inconclusive}'s cross-validation screens (where $K=4$ is occasionally competitive with $K=3$) means this comparison is left as an open extension rather than settled here.
 
-\begin{remark}[PSIS-LOO as a secondary diagnostic]
-\label{rem:psissloo}
-In addition to the hold-out ELPD, Pareto-smoothed importance-sampling leave-one-out cross-validation (PSIS-LOO) \cite{vehtari2017practical} is computed post hoc on the full-sample fit at each candidate $K$. PSIS-LOO provides an asymptotically consistent estimate of the leave-one-out predictive distribution without re-fitting, but its reliability depends on the Pareto-$\hat{k}$ diagnostic for each observation: when $\hat{k} > 0.7$ for a non-negligible fraction of observations, the importance-weighting approximation is unreliable. In such cases---which arise here due to the hierarchical nature of the model and the limited number of seasons per player---the hold-out ELPD remains the primary criterion and PSIS-LOO is reported as a supplementary check.
+\begin{remark}[Comparability with the exploratory factor count of Chapter~\ref{chap:background}]
+\label{rem:k_not_comparable}
+Chapter~\ref{chap:background} reports an eleven-factor solution from classical, maximum-likelihood factor analysis of the raw player--season feature matrix. It is natural to ask why the Bayesian model's rank, $K^*=3$, is so much smaller. The two quantities are not estimates of the same object. The exploratory factor analysis of Chapter~\ref{chap:background} is fit directly to the raw player--season observations $\mathbf{y}_n$, treated as exchangeable rows with no player/season structure: its factor count therefore describes the rank of the \emph{total, unpartitioned} covariance of $\mathbf{y}_n$, in which any two features that co-vary for any reason---shared stable player skill, a league-wide tactical shift common to a subset of seasons, or coincidental season-to-season drift---contribute jointly to the recovered factor structure. The additive decomposition of Definition~\ref{def:additive}, by contrast, first partitions this total covariance into player ($\boldsymbol{\Sigma}_a$), season ($\boldsymbol{\Sigma}_b$), and residual ($\boldsymbol{\Sigma}_e$) components, and the rank $K$ studied in this section governs only $\boldsymbol{\Sigma}_a$: the covariance of what is stable about a player once season-level drift and observation-level noise have already been subtracted out. Since $\boldsymbol{\Sigma}_b$ is diagonal by construction (\S\ref{sec:covariance}, justified there on identifiability grounds given only $S=12$ seasons), any genuine cross-feature covariance that is specifically season-driven cannot be absorbed by $\boldsymbol{\Sigma}_b$ and is instead either left in the residual or folded into $\boldsymbol{\Sigma}_a$'s estimate; either way, $K$ is not required to reproduce the rank of a covariance matrix that additionally contains season-level and idiosyncratic sources of dependence. A smaller $K$ for the player-only covariance than the raw factor count is therefore the expected outcome of conditioning on more structure, not evidence against either analysis. This reasoning is offered as an explanation for the direction of the discrepancy; it has not been separately validated (for instance, by fitting a raw factor analysis restricted to a player-only, season-averaged version of the data to check whether its factor count moves closer to three), and should be read as such.
 \end{remark}
 
 \section{Variance decomposition and intraclass correlation}

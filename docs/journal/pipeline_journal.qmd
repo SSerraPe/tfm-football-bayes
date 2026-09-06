@@ -2446,6 +2446,144 @@ in per-90 rates that the factor structure partially explains.
 
 ---
 
+## Entry 12 — 2026-08-22..25 — Session 14: closing K=3 (rank-selection reframed per supervisor)
+
+### Configuration
+
+| Parameter | Value |
+|---|---|
+| Fits used | stage 18 (K=2 t), stage 28 (K=3 t), stage 21 (K=4 t; running) |
+| N / P / I / S | 4586 / 48 / 1529 / 12 |
+| Prior on Q_a (stage 21) | Same as stages 18/28: HN(1) on diag, N(0,1) on free |
+| Sampler (stage 21) | 4 chains, 1000 warmup + 1000 sampling, adapt_delta 0.92, max_treedepth 10 |
+
+### Motivation
+
+Supervisor's email (translated): *"The CV-based metrics don't decide much. Better base
+the decision on residuals, percentage of variability of the PCs of $\Lambda\Lambda'$,
+etc. If you use uncertainty in the PCs, be careful because the spaces can vary
+iteration-to-iteration — that's why I told you to fix the posterior mean of
+$\Lambda\Lambda'$. We can now focus on closing the model. The argument for choosing 3
+factors can be qualitative. No problem."*
+
+On-disk audit (2026-08-22) revealed that the previous `professor_summary.qmd` claimed
+K=3 was "confirmed by both CV metrics", but the CSV it cited (`32_player_holdout_elpd.csv`)
+actually has argmax at K=6, and stage-17's full-range Pathfinder (`real_data_elpd.csv`,
+K=0..8) has argmax at K=5 with K=3 as a *local minimum*. The claim was false and had to
+be corrected regardless. The supervisor's prescription (qualitative residual + variance
+argument) provides the substitute framing.
+
+### Stages Run
+
+- **Session 14a (2026-08-22) — initial rewrite (K=3-only "adequacy" framing):**
+  - Rewrote `§sec-rank` in `professor_summary.qmd` with three legs grounded in stage-29
+    and stage-31 outputs at K=3.
+  - Added a fixed-reference PCA methods paragraph in `§sec-interp` addressing the
+    supervisor's iteration-to-iteration warning.
+  - Deprecated `outputs/notes/32_recommended_k.txt` in place (previous "3" replaced with
+    a note explaining the CSV argmax is K=6). Stage 32 CSV/figure kept as archived
+    inconclusive-CV evidence.
+  - Fixed intro callout (line 46) and Open Question #1 (marked deferred).
+
+- **Session 14b (2026-08-25) — extension to comparative K argument:**
+  - User (correctly) pointed out that Session 14a argued "K=3 is *adequate*" not "K=3
+    is *preferred over neighbouring K*". Scope extended.
+  - Wrote `scripts/29b_kcompare_residuals.R` — K-parameterised residual analysis with
+    auto-discovered A/B parameter column indices from the CSV header, so it works at
+    any K without hardcoded offsets.
+  - Wrote `scripts/31b_kcompare_pca.R` — K-parameterised PCA-with-CI analysis (same
+    mean-rotation approximation as stage 31, applied per K).
+  - Ran both at K=2 (stage 18 fit) and K=3 (stage 28 fit); results append to three
+    kcompare CSVs (`29b_kcompare_summary.csv`, `31b_kcompare_variance_shares.csv`,
+    `31b_kcompare_reliable_counts.csv`).
+  - Launched stage 21 (K=4 NUTS+t fit, `scripts/21_fit_k4_t.R`) — reached sampling
+    phase by end of session (chain 1 finished, chains 2-4 at 75-95% sampling).
+  - Watcher script `scripts/run_when_stage21_done.sh` polls for stage-21 posterior
+    summary and auto-runs the two K=4 analyses on arrival — appends K=4 row to all
+    three kcompare CSVs.
+  - Rewrote `§sec-rank` again into a **comparative K=2 vs K=3 (vs K=4 pending)** form
+    driven by `read.csv()` on the kcompare CSVs — no qmd edit needed when K=4 lands,
+    only a re-render.
+  - Full qmd chunk-by-chunk validation (`knitr::purl` + `source()`) confirms no errors.
+
+### Results (K=2 vs K=3, K=4 pending)
+
+**Leg A — Variance share of $\Lambda\Lambda^\top$ PCs (`outputs/tables/31b_kcompare_variance_shares.csv`):**
+
+| K | PC | Eigenvalue | Share of ΛΛ' | Share of Σ_a |
+|---|---|---|---|---|
+| 2 | PC1 | 14.13 | 69.2% | 45.5% |
+| 2 | PC2 | 6.28 | 30.8% | 20.6% |
+| 3 | PC1 | 14.29 | 61.8% | 45.6% |
+| 3 | PC2 | 6.40 | 27.7% | 20.7% |
+| 3 | PC3 | 2.42 | 10.5% | 8.1% |
+
+Total common variance captured (sum of leading K eigenvalues): 20.4 (K=2) → 23.1 (K=3),
+an increment of +2.7 units. K=4's increment expected to be substantially smaller (noise
+floor).
+
+**Leg B — Reliable-loader count per PC (`outputs/tables/31b_kcompare_reliable_counts.csv`):**
+
+| K | PC | Reliable / 48 | Share | Max \|loading\| |
+|---|---|---|---|---|
+| 2 | PC1 | 47 | 97.9% | 0.892 |
+| 2 | PC2 | 45 | 93.8% | 0.680 |
+| 3 | PC1 | 47 | 97.9% | 0.900 |
+| 3 | PC2 | 47 | 97.9% | 0.655 |
+| 3 | PC3 | 43 | 89.6% | 0.560 |
+
+**Leg C — Residual adequacy (`outputs/tables/29b_kcompare_summary.csv`):**
+
+| K | ν̂ | τ₉₉ | Mean Pr(\|z\|>τ₉₉) | Median | unremarkable | contam-driven | skew | worst \|z\| |
+|---|---|---|---|---|---|---|---|---|
+| 2 | 4.882 | 3.137 | 0.74% | 0.51% | 34 / 48 | 13 | 1 | 16.54 |
+| 3 | 4.902 | 3.135 | 0.77% | 0.67% | 35 / 48 | 12 | 1 | 16.66 |
+
+Both K's residual behaviour is below the 1% floor expected under $t(\hat\nu)$; the
+K=2 → K=3 mean shift is only +0.03 pp. Leg C therefore **does not** discriminate K=2
+from K=3 — residuals rule out under-fitting but do not pick between adequate K.
+
+**Verdict on evidence to hand:** K=3 dominates K=2 on structural criteria (A, B) — Leg
+A shows a meaningful common-variance uptake (+2.7 eigenvalue units) and Leg B shows
+PC3 is a substantively identified axis (43/48 reliable loaders). Leg C matches. K=3
+vs K=4 verdict pending stage 21; the expected outcome (PC4 falling to the noise
+floor) is what would make K=3 the closing choice.
+
+### Notes and Interpretation
+
+- **Residuals as a floor check, not a rank selector.** Both K=2 and K=3 pass the
+  1% floor. Leg C is best understood as an adequacy criterion (must be satisfied for
+  a K to be viable) rather than a ranking criterion. The rank selection load is on
+  Legs A and B.
+- **Machine sleep is the wall-clock bottleneck.** Stage 21 has accumulated ~91 min of
+  CPU per chain but wall clock is 3+ days because macOS sleeps overnight. `caffeinate`
+  would collapse this to ~2 h wall.
+- **The auto-append pattern**: the qmd's kable chunks read from the kcompare CSVs
+  directly, so when the K=4 row appends nothing about the qmd needs to change — just
+  re-render.
+
+### Bugs Fixed This Run
+
+- **Purl-time variable shadowing**: my Leg C chunk originally assigned
+  `rs <- read.csv(...)`, which shadowed the setup-chunk helper `rs <- function(name)
+  file.path("outputs", "rank_selection", name)`. Downstream chunks using `rs()`
+  (e.g., `fig-elpd-rank`) then failed with "could not find function rs". Renamed to
+  `resid_kcmp`.
+- **Stale claim in `professor_summary.qmd`**: "both CV metrics peak at K=3" was
+  factually false against the on-disk CSV. Corrected.
+
+### Next Steps
+
+1. Wait for stage 21 (K=4) to complete → watcher runs K=4 analyses → kcompare CSVs
+   fully populated.
+2. Sanity-check K=4 row: PC4 variance share and reliable-loader count expected at
+   the noise floor. If PC4 is > ~5% common variance and > ~25/48 reliable, K=3 vs K=4
+   becomes ambiguous and warrants supervisor discussion.
+3. Re-render `professor_summary.pdf` (Quarto CLI not installed locally; use RStudio or
+   `brew install quarto && quarto render`).
+
+---
+
 # Entry Template (Reference for Future Updates)
 
 The following template should be used for each new journal entry appended to this document.

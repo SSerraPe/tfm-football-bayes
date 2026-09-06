@@ -228,15 +228,66 @@ the fit, with fallback discovery if stored paths are stale (e.g. after moving th
 
 ---
 
-## 8. Current state & known issues (as of 2026-08-08)
+## 8. Current state & known issues (as of 2026-08-25)
 
-**State:** Full rebuild (Tasks K–Q) complete. Production fits: stage 10 (Normal, K=2, P=48,
-N=4586, 3 chains), stage 18 (Student-t, K=2, P=48, N=4586, 4 chains, ν=4.882), stage 28
-(Student-t, **K=3**, P=48, N=4586, 4 chains, ν=4.902). Rank selection: Pathfinder K=0-4
-and player-holdout CV (stage 32, K=1..6) both confirm K*=3. Stage 34 complete (2026-08-08):
-variant A (fixed φ=0.5) ν̂=5.667, variant B (estimated φ) ν̂=5.979, φ̂=0.366. Stage 35
-(minutes diagnostic on stage-34a residuals) complete: low-minute worst-cell share
-8.3% (14/168 obs) vs 48.9% at stage 28. Verdict: CORRECTED.
+**State:** **Model near closure — K=3 comparative justification in progress.** Full
+rebuild (Tasks K–Q) complete. Production fits: stage 10 (Normal, K=2, P=48, N=4586,
+3 chains), stage 18 (Student-t, K=2, P=48, N=4586, 4 chains, ν=4.882), stage 28
+(Student-t, **K=3**, P=48, N=4586, 4 chains, ν=4.902), stage 21 (Student-t, K=4, P=48,
+N=4586, 4 chains — sampling in progress as of 2026-08-25; launched 2026-08-22).
+Minutes-scaled fits (stage 34): variant A (fixed φ=0.5) ν̂=5.667, variant B (estimated
+φ) ν̂=5.979, φ̂=0.366. Stage 35 minutes diagnostic: low-minute worst-cell share 8.3%
+(14/168 obs) vs 48.9% at stage 28. Verdict: CORRECTED.
+
+**Rank selection (Session 14 extended, 2026-08-25 — per-K comparison):**
+K=3 justified from a per-K comparison of K=2 (stage 18), K=3 (stage 28), and K=4
+(stage 21, pending) on the three criteria the supervisor prescribed:
+(A) variance shares of ΛΛ' PCs — at K=2 last-PC = 30.8% common; at K=3 last-PC = 10.5%;
+K=4 last-PC pending (expected near noise floor).
+(B) reliable-loader count per PC under fixed-reference PCA — K=2 last-PC 45/48 reliable;
+K=3 last-PC 43/48 reliable; K=4 last-PC pending.
+(C) residual adequacy under each fit's own t(ν̂) noise model — K=2 mean frac 0.74%,
+K=3 mean frac 0.77% (both below the 1% floor, so residuals adequate at both K and NOT a
+discriminator between them; K=4 mean frac pending).
+CV disclosed honestly as inconclusive across K ∈ {2..6}: stage-32 CSV argmax is K=6,
+stage-17 full-range argmax is K=5 (K=3 a local dip); the earlier qmd claim of "both
+metrics peak at K=3" was **incorrect** and has been corrected.
+
+**Implemented Session 14 (2026-08-22 initial + 2026-08-25 extension):**
+
+*Initial rewrite (2026-08-22):*
+- **§sec-rank rewritten** in `docs/professor/professor_summary.qmd`: three-legged
+  qualitative K=3 argument (variance share / reliable-loader count / residual adequacy)
+  plus honest CV disclosure paragraph. Callout at line 46 and model-comparison table
+  updated accordingly. Open Questions #1 (diagonal-vs-K3 LOO on rebuilt data) marked
+  deferred as not blocking closure.
+- **§sec-interp** in the qmd: added fixed-reference PCA methods paragraph explicitly
+  citing the posterior-mean $\bar{\Lambda}\bar{\Lambda}^\top$ as the anchor
+  orientation for CI computation (addresses supervisor's iteration-to-iteration warning).
+- **`outputs/notes/32_recommended_k.txt`** deprecated in place — previous single-line
+  "3" replaced with a note explaining the CSV argmax is K=6 and K=3 is retained on
+  qualitative grounds. Stage-32 CSV and figure kept as archived CV-inconclusiveness
+  evidence.
+
+*Extension (2026-08-25) — user noted the initial rewrite argued "K=3 adequate", not "K=3
+preferred over neighbouring K". Scope extended to per-K comparison:*
+- **`scripts/29b_kcompare_residuals.R`** — K-parameterised residual analysis. Reads a
+  fit's posterior summary for σ_e and ν, auto-discovers A/B parameter column indices
+  from the CSV header (they differ across K because lambda_a_free size changes), runs
+  the same streaming column-pass extractor as stage 29, and appends a row to
+  `outputs/tables/29b_kcompare_summary.csv`.
+- **`scripts/31b_kcompare_pca.R`** — K-parameterised PCA-with-CI analysis. Same
+  mean-rotation approximation as stage 31; appends to
+  `outputs/tables/31b_kcompare_{variance_shares,reliable_counts}.csv`.
+- **Stage 21 launched** (2026-08-22 16:14 CEST): K=4 NUTS+t fit, `Q_a=4`,
+  `max_treedepth=10`, `adapt_delta=0.92`. As of 2026-08-25 chain 1 has entered sampling
+  (~50% overall); progress limited by intermittent macOS sleep.
+- **§sec-rank rewritten again** — now a comparative argument (K=2 vs K=3, with K=4 row
+  auto-appearing when the fit lands). Tables are driven by `read.csv()` on the kcompare
+  CSVs, so no qmd edits are needed once stage 21 completes and the K=4 analyses run.
+  Final "K=3 verdict" subsection replaces the previous adequacy-framed conclusion.
+- **PDF re-render pending**: after K=4 fit completes and 29b/31b run at K=4, one
+  `quarto render` call produces the final PDF.
 
 **Implemented Session 13 (2026-08-08):**
 - **Stage 34 complete** (`scripts/34_fit_minutes_scaled_t.R`): both variants fit successfully.

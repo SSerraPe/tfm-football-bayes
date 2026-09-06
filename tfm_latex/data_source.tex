@@ -5,15 +5,15 @@ The pillars of this master's thesis is a longitudinal player--season dataset bui
 
 The scope of the dataset is deliberately restricted to historical LaLiga data. This is not intended as a deficiency of the analysis, but as a substantive design choice. The goal of the thesis is to study latent stylistic structure over time within a single competition, thereby avoiding the additional layer of heterogeneity introduced by cross-league differences in tempo, officiating, tactical distributions, data coverage, and competitive context. Extending the framework to several leagues is possible and potentially valuable, but such an extension would constitute a modelling problem of its own, rather than a harmless enlargement of the sample.
 
-The final analytical object is a matrix of player--season observations. Each row corresponds to one outfield player in one LaLiga season, and each column corresponds to an engineered football feature. After filtering and aggregation, the working dataset contains \(n=4256\) player--season observations and \(p = 23\) transformed football features. Player identifiers, player names, season identifiers, competition identifiers, minutes played, and matches were retained as metadata, but were not used as active variables in the feature matrix for PCA, factor analysis, or dissimilarity construction.
+The final analytical object is a matrix of player--season observations. Each row corresponds to one outfield player in one LaLiga season, and each column corresponds to an engineered football feature. After filtering and aggregation, the working dataset contains \(N=4586\) player--season observations, \(I = 1529\) unique players, and \(P = 48\) transformed football features. Player identifiers, player names, season identifiers, competition identifiers, minutes played, and matches were retained as metadata, but were not used as active variables in the feature matrix for PCA, factor analysis, dissimilarity construction, or the Bayesian model of Chapter~\ref{chap:methodology}.
 
 Operationally, the starting point was a staged Redshift table at the match--player level, with one row per player and match. This table contained event-derived counts, success counts, averages, and percentages. It was joined to auxiliary competition, season, and player metadata tables in order to identify LaLiga seasons and recover player-level descriptors. The variables available at this stage included goals, assists, shots, passes, progressive passes, dribbles, duels, aerial duels, recoveries, pressing duels, touches in the box, and expected-goals-related quantities. The complete SQL extraction query is reported in Appendix~\ref{lst:sql_extraction}.
 
-The staged data were then restricted to LaLiga seasons from 2014/15 until 2024/25. Goalkeeper observations were removed before constructing the similarity representation. Rather than relying only on position labels, match-level rows with goalkeeper-specific activity---such as shots faced, saves, conceded goals, clean sheets, or goalkeeper exits---were excluded. This restriction is methodological: goalkeepers occupy a different action space from outfield players, so including them would make part of the distance structure reflect positional incomparability rather than stylistic similarity among comparable profiles.
+The staged data cover the twelve LaLiga seasons available in the extraction, from 2011/12 through 2022/23. Goalkeeper observations were removed before constructing the similarity representation. Rather than relying only on position labels, match-level rows with goalkeeper-specific activity---such as shots faced, saves, conceded goals, clean sheets, or goalkeeper exits---were excluded. This restriction is methodological: goalkeepers occupy a different action space from outfield players, so including them would make part of the distance structure reflect positional incomparability rather than stylistic similarity among comparable profiles.
 
-The remaining match--player rows were aggregated to the player--season level. Match-level quantities were summed or combined into season totals for minutes, matches, starts, goals, assists, shots, expected goals, expected assists, passes, progressive passes, dribbles, defensive actions, duels, aerial duels, pressing duels, recoveries, opponent-half recoveries, and touches in the box. A minimum exposure filter of 600 minutes was then imposed. This reduces the influence of player--season observations whose per-90 or ratio summaries are unstable because they are based on very limited playing time.
+The remaining match--player rows were aggregated to the player--season level. Match-level quantities were summed or combined into season totals for minutes, matches, starts, goals, assists, shots, expected goals, expected assists, passes (including forward, back, lateral, long, smart, progressive, and through passes), crosses, dribbles, progressive runs, accelerations, defensive actions (interceptions, clearances, blocked shots, sliding tackles), duels (defensive, offensive, aerial, pressing, and loose-ball), recoveries, opponent-half recoveries, possession losses, touches in the box, fouls, and cards. A minimum exposure filter of 600 minutes was then imposed. This reduces the influence of player--season observations whose per-90 or ratio summaries are unstable because they are based on very limited playing time.
 
-From the aggregated player--season table, the final modelling features were constructed using four preprocessing steps.
+From the aggregated player--season table, the final modelling features were constructed using five preprocessing steps.
 
 \begin{definition}[Per-90 normalisation]
 For count variables, per-90 features were computed as
@@ -32,22 +32,30 @@ Examples include pass accuracy, progressive-pass accuracy, dribble success, defe
 \end{definition}
 
 \begin{definition}[Log transformation]
-For highly skewed non-negative volume variables, a \(\log(1+x)\) transformation was applied:
+For a small number of strongly right-skewed non-negative volume variables, a \(\log(1+x)\) transformation was applied:
 \[
 x^{(\log)}_{ij}=\log(1+x_{ij}).
 \]
-This reduces the influence of extreme observations while preserving the ordering of non-negative values.
+This reduces the influence of extreme observations while preserving the ordering of non-negative values. Five features received this transform: goals, expected goals per shot, expected assists, shot assists, and key passes, all per 90 minutes.
+\end{definition}
+
+\begin{definition}[Square-root transformation]
+A second group of moderately right-skewed volume variables received a milder \(\sqrt{x}\) transformation instead:
+\[
+x^{(\sqrt{\ })}_{ij}=\sqrt{x_{ij}}.
+\]
+The square root compresses the upper tail less aggressively than \(\log(1+x)\) and was preferred for variables whose skew, while still non-negligible, did not warrant a logarithmic transform. Eighteen features received this transform, spanning most of the passing volume block (total passes, forward, back, lateral, and long passes, received passes, crosses, through passes, progressive passes, smart passes) together with shots, headed shots, shot blocks, recoveries, clearances, interceptions, and fouls suffered, all per 90 minutes. The remaining twenty-five features were left untransformed.
 \end{definition}
 
 \begin{definition}[Standardisation]
-The selected features were standardised across the player--season sample using
+The (possibly transformed) features were standardised across the player--season sample using
 \[
 z_{ij}=\frac{x_{ij}-\bar{x}_{\cdot j}}{s_j},
 \]
-where \(\bar{x}_{\cdot j}\) and \(s_j\) are the sample mean and standard deviation of feature \(j\). This prevents variables measured on larger numerical scales from dominating covariance- or distance-based analyses.
+where \(\bar{x}_{\cdot j}\) and \(s_j\) are the sample mean and standard deviation of feature \(j\) on the transformed scale. This prevents variables measured on larger numerical scales from dominating covariance- or distance-based analyses, and is applied after the log/square-root transforms above rather than to the raw counts.
 \end{definition}
 
-The engineered variables were then grouped into football blocks: offensive production, progression and chance creation, carrying and 1v1 actions, defence and pressing, and duels/physical contests. Equal block weighting was applied so that blocks with more variables did not dominate the representation purely because of dimensionality. Missing values in the final feature matrix were handled at the matrix-construction stage before computing correlations, dissimilarities, and latent representations.
+For the exploratory descriptive analyses of Chapter~\ref{chap:background}, the engineered variables were additionally grouped into five football blocks: offensive production, progression and chance creation, carrying and 1v1 actions, defence and pressing, and duels/physical contests (with the small number of discipline-related features folded into the duels/physical block). Equal block weighting was applied so that blocks with more variables did not dominate the representation purely because of dimensionality. Missing values in the final feature matrix were handled at the matrix-construction stage before computing correlations, dissimilarities, and latent representations.
 
 \begin{table}[h]
 \centering
@@ -60,16 +68,17 @@ Item & Description \\
 Data provider & Wyscout-derived event data \\
 Storage layer & Professional Redshift warehouse \\
 Competition & LaLiga \\
-Seasons & 2014/15 onward \\
+Seasons & 2011/12 -- 2022/23 (12 seasons) \\
 Observational unit & Player--season \\
 Player population & Outfield players only \\
 Minimum exposure & 600 minutes per player--season \\
-Number of observations & \(4256\) player--seasons \\
-Number of active features & \(23\) engineered football features \\
+Number of observations & \(4586\) player--seasons \\
+Number of unique players & \(1529\) \\
+Number of active features & \(48\) engineered football features (5 log-transformed, 18 square-root-transformed, 25 untransformed, all Z-scaled) \\
 Metadata retained & Player ID, player name, season ID, competition ID, minutes, matches \\
-Active modelling matrix & Transformed, standardised, block-weighted football features \\
+Active modelling matrix & Transformed, standardised football features (additionally block-weighted for the exploratory analyses of Chapter~\ref{chap:background}) \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-The output of the pipeline is a transformed player--season feature matrix rather than a raw event table. Each row corresponds to one outfield player in one LaLiga season, and each active column corresponds to an engineered football feature after normalisation, transformation, standardisation, and block weighting. A summary of the final analytical dataset is given in \autoref{tab:dataset_summary}. This matrix is the input for the dissimilarity calculations, exploratory low-dimensional analyses, and later Bayesian modelling.
+The output of the pipeline is a transformed player--season feature matrix rather than a raw event table. Each row corresponds to one outfield player in one LaLiga season, and each active column corresponds to an engineered football feature after normalisation, transformation, and standardisation. A summary of the final analytical dataset is given in \autoref{tab:dataset_summary}. This matrix is the input for the dissimilarity calculations and exploratory low-dimensional analyses of Chapter~\ref{chap:background}, and for the Bayesian hierarchical model of Chapters~\ref{chap:methodology}--\ref{chap:results}.

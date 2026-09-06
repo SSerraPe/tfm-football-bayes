@@ -148,4 +148,9 @@ Aki Vehtari, Andrew Gelman, and Jonah Gabry, \emph{Practical {Bayesian} model
 Anna~K. Yanchenko and Peter~D. Hoff, \emph{Hierarchical multidimensional
   scaling for the comparison of musical performance styles},  (2020).
 
+\bibitem{zhang2022pathfinder}
+Lu~Zhang, Bob Carpenter, Andrew Gelman, and Aki Vehtari, \emph{Pathfinder:
+  Parallel quasi-newton variational inference}, Journal of Machine Learning
+  Research \textbf{23} (2022), no.~306, 1--49.
+
 \end{thebibliography}

@@ -1,0 +1,3 @@
+K,fit_id,nu_hat,tau_99,mean_frac_gt_tau99,median_frac_gt_tau99,max_frac_gt_tau99,expected_frac_under_t,n_unremarkable,n_contamination_driven,n_season_driven,n_skew_residual,n_mixed,worst_cell_zstd
+2,18_real_lowrank_a_diag_b_t,4.8823410154,3.136874263453661,0.0073638973688036,0.00512429132141299,0.01940689053641517,0.01,34,13,0,1,0,16.53764534220823
+3,28_real_lowrank_a_diag_b_t_k3,4.902319264125,3.134529247424469,0.007731865096671028,0.006650675970344527,0.01962494548626254,0.01,35,12,0,1,0,16.655722354719295

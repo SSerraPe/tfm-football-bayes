@@ -1,0 +1,7 @@
+N = 4586, P = 48
+PCA: PC1=33.1%, PC2=15.2%, PC3=7.2%
+PCA cumulative: PC1-2=48.3%, PC1-5=66.2%, PC1-10=79.1%
+PCs needed for 90% cumulative variance: 19
+FA parallel analysis suggested factors: 11
+FA fit comparison: k=9 (TLI=0.804, RMSEA=0.101, RMSR=0.0256, BIC=28633.5) vs k=11 (TLI=0.843, RMSEA=0.090, RMSR=0.0227, BIC=19423.8)
+Distance agreement (N=900 subset): Pearson=0.7459, Spearman=0.7745

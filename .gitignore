@@ -40,6 +40,8 @@ Rplots.pdf
 # LaTeX build intermediates and Quarto render caches
 *.aux
 *.out
+*.fls
+*.fdb_latexmk
 **/*_files/
 
 # Large, regenerable processed data
@@ -51,6 +53,17 @@ data/processed/model_feature_matrix_unscaled.csv
 data/processed/metadata_table.csv
 data/processed/model_row_mapping.csv
 data/processed/simulated_*
+# 145MB, exceeds GitHub's file-size limit; regenerable via
+# archive/exploratory_p23_similarity_analysis.R
+data/processed/archive_p23_distance_obj.rds
+
+# User's personal scratch project (~12GB incl. cached .RData and a BMDS fit);
+# relevant pieces migrated into scripts/, archive/, and stan/prototypes/ --
+# see archive/README_playground_migration.md
+tfm_playground/
+
+# Background-run process-tracking files
+*.pid
 
 # Compiled Stan executables (platform-specific build artifacts; keep .stan source only)
 rank comparison/stan/player_season_diagonal

@@ -1,1 +1,38 @@
-3
+DEPRECATED (2026-08-22).
+
+Previous content: single line "3".
+
+Reason for deprecation:
+  The CSV outputs/tables/32_player_holdout_elpd.csv shows argmax at K=6 on both
+  elpd_base and elpd_mv (K=6 wins by ~8 elpd units over K=3 on elpd_base and by
+  ~27 units on elpd_mv). K=4 also beats K=3 on elpd_mv. The per-K SEs are
+  Pathfinder-draw variances that under-represent posterior uncertainty, so the
+  ranking should be read as flat across K in {2..6} rather than as favouring a
+  single K. The single number "3" in this file was inconsistent with its own
+  CSV -- either stale (from an earlier K_max <= 4 run) or hand-edited.
+
+Current status of rank selection:
+  K=3 is retained as the production rank on qualitative grounds, per supervisor
+  guidance ("the CV-based metrics don't decide much; better base the decision on
+  residuals and the percentage of variability of the PCs of Lambda*Lambda').")
+  The three-legged argument is:
+    Leg A -- variance share of PCs of Lambda*Lambda'
+             (outputs/tables/31_sigma_a_pca.csv; PC3 = 10.5% common,
+             8.1% total player variance)
+    Leg B -- reliable-loader count per PC under fixed-reference PCA
+             (outputs/tables/31_pca_loading_ci.csv; PC3 has 43/48 features
+             with 90% CI excluding zero -- a substantively identified axis)
+    Leg C -- residual adequacy at K=3
+             (outputs/tables/29_residual_feature_summary.csv,
+             outputs/tables/29_residual_skew_triangulation.csv;
+             frac_gt_tau99 mean = 0.77% vs 1% expected under t(nu_hat);
+             35/48 features are 'unremarkable_p99')
+
+The CV outputs are retained (not deleted) as honest evidence of CV
+inconclusiveness:
+  outputs/tables/32_player_holdout_elpd.csv     -- ELPD table by K
+  outputs/tables/32_holdout_player_ids.csv      -- held-out player ids
+  outputs/figures/32_player_holdout_elpd.png    -- errorbar figure
+
+See docs/professor/professor_summary.qmd §sec-rank for the current
+justification (rewritten 2026-08-22).
