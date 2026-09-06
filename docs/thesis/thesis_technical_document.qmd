@@ -105,13 +105,19 @@ a low-rank factor model to discover latent player archetypes.
 
 ## Objectives
 
-1. Quantify how much of the variation in 53 performance features is attributable
-   to stable player quality vs. seasonal context vs. noise.
+1. Quantify how much of the variation in 48 performance features is attributable
+   to stable player quality vs. seasonal context vs. noise, expressed as
+   intraclass correlation coefficients (ICC).
 2. Model the **covariance structure** of player effects using a factor model
    $\bfSig_a = \bfLam_a \bfLam_a^\top + \bfPsi_a$, discovering axes of
-   correlated player style.
+   correlated player style, and select its rank $K$ on qualitative, structural
+   grounds (residual adequacy and the variance structure of $\bfLam_a\bfLam_a^\top$)
+   rather than by cross-validation, which is found inconclusive.
 3. Validate the model on simulated data with known ground truth.
-4. Interpret the discovered factors in football terms.
+4. Interpret the discovered factors in football terms via a rotation-invariant
+   post-processing step (spectral decomposition of $\bfLam_a\bfLam_a^\top$),
+   since the raw fitted loadings are an identification device, not directly
+   interpretable.
 
 ## Contribution of This Work
 
@@ -121,8 +127,18 @@ This thesis makes the following methodological contributions:
   No-U-Turn Sampler (NUTS) Hamiltonian Monte Carlo via Stan.
 - A **non-centred parameterisation** that avoids funnel pathologies in the
   posterior geometry.
-- An **anchor-constrained factor model** for the player covariance that resolves
-  sign and permutation indeterminacy.
+- A **lower-triangular, positive-diagonal (LT-PD) constrained factor model**
+  for the player covariance that resolves rotational, sign, and permutation
+  indeterminacy, combined with a **rotation-invariant spectral post-processing**
+  step (eigendecomposition of the posterior-mean $\bar{\bfLam}_a\bar{\bfLam}_a^\top$)
+  that recovers interpretable factor directions without relying on the
+  (arbitrary, feature-ordering-dependent) identification constraint itself.
+- **Student-$t$ residuals with minutes-scaled variance**, addressing both
+  heavy-tailed player-seasons and the heteroscedasticity induced by unequal
+  playing time.
+- A **qualitative rank-selection argument** (residual adequacy, common-variance
+  share, and reliable-loader count) adopted after cross-validation-based
+  screens were found inconclusive across $K \in \{2, \ldots, 6\}$.
 - A **simulation study** that validates recovery of the factor structure under
   realistic data dimensions.
 
@@ -148,11 +164,14 @@ Success rates (e.g.\ pass accuracy) are computed as:
 
 $$\text{rate}_{ij,k} = \frac{\text{successes}_{ij,k}}{\text{attempts}_{ij,k}}$$
 
-Goalkeeper rows are excluded throughout.
+Goalkeeper rows are excluded throughout: rather than relying on a position
+label, any player-season with nonzero goalkeeper-specific activity
+(`total_gk_saves > 0`) is dropped, removing 501 goalkeeper player-seasons
+(1,650 → 1,529 players).
 
 ## Eligibility Filter
 
-Only player-season rows with **at least 450 minutes** played are retained.
+Only player-season rows with **at least 600 minutes** played are retained.
 This ensures that per-90 rates are based on sufficient playing time and that
 extreme rate estimates (1 successful tackle from 1 attempt) are not included.
 
@@ -166,18 +185,32 @@ if (!is.null(dims)) knitr::kable(dims, digits = 0)
 
 ## Feature Engineering
 
-**53 features** are selected and retained after auditing for:
+**48 features** are selected and retained after auditing for:
 
 - Zero or near-zero variance (excluded)
 - Missing values: features with $>20\%$ missing are excluded; remaining
   missing values are filled by per-feature median imputation.
+- Low intraclass correlation with player identity (an ICC-based screen; 5
+  `rate_*` features with $\text{ICC}_{\text{player}} < 0.20$ were dropped from
+  an earlier 53-feature candidate set).
 
-The 53 features are grouped into eight football-meaningful categories:
+Before Z-scaling, a subset of features receives a variance-stabilising
+transform: **5 features** are $\log(1+x)$-transformed (goals, expected goals
+per shot, expected assists, shot assists, key passes) and **18 features** are
+square-root-transformed (most of the passing-volume block, plus shots, headed
+shots, blocked shots, recoveries, clearances, interceptions, and fouls
+suffered); the remaining 25 are left untransformed. This absorbed a
+substantial share of the residual heavy-tailedness later modelled by the
+Student-$t$ likelihood (§4): the fitted degrees-of-freedom $\hat\nu$ rose from
+$\approx 2.95$ pre-transform to $\approx 4.9$ post-transform.
+
+The 48 features are grouped into seven football-meaningful categories
+(an original eighth, "Shooting rates", was dropped entirely — see the note
+below the table):
 
 | Group | Example features |
 |-------|-----------------|
 | Attacking output | goals, shots, xG, touch in box, assists |
-| Shooting rates | shots on target rate, goal conversion rate |
 | Passing volume | passes, key passes, progressive passes, crosses |
 | Passing quality | pass success rate, progressive pass success rate |
 | Progressive actions | dribbles, progressive runs, accelerations |
@@ -185,17 +218,24 @@ The 53 features are grouped into eight football-meaningful categories:
 | Dueling | defensive/offensive/aerial/pressing duels, success rates |
 | Discipline | fouls, fouls suffered, yellow cards |
 
+Note: an original "Shooting rates" group (shots-on-target rate, goal-conversion
+rate) was dropped entirely in the ICC-based feature screen above; the SHOOT
+spoke used in later player-profile figures is instead populated by reassigning
+finishing features (goals, shots, xG per shot, headed shots) out of Attacking
+output, leaving Attacking output to measure chance creation specifically.
+
 ## Feature Scaling
 
-All 53 features are **standardised** (Z-scored) to zero mean and unit variance
-across all player-season rows:
+All 48 (transformed) features are **standardised** (Z-scored) to zero mean
+and unit variance across all player-season rows:
 
 $$\tilde{y}_{nk} = \frac{y_{nk} - \bar{y}_k}{s_k}$$
 
 where $\bar{y}_k$ and $s_k$ are the empirical mean and standard deviation of
-feature $k$ computed over all $N$ rows. Scaling ensures that all features
-contribute equally to the likelihood regardless of their original unit, and that
-prior scales are comparable across features.
+feature $k$ (on the transformed scale) computed over all $N$ rows — not within
+season. Scaling ensures that all features contribute equally to the likelihood
+regardless of their original unit, and that prior scales are comparable across
+features.
 
 \newpage
 
@@ -205,11 +245,11 @@ prior scales are comparable across features.
 
 | Symbol | Meaning |
 |--------|---------|
-| $N$ | Number of player-season rows |
-| $P$ | Number of scaled features ($P = 53$) |
-| $I$ | Number of unique players ($I = 1{,}650$) |
-| $S$ | Number of seasons ($S = 12$) |
-| $Q_a$ | Player factor rank ($Q_a = 2$) |
+| $N$ | Number of player-season rows ($N = 4{,}586$) |
+| $P$ | Number of scaled features ($P = 48$) |
+| $I$ | Number of unique players ($I = 1{,}529$) |
+| $S$ | Number of seasons ($S = 12$, 2011/12–2022/23) |
+| $Q_a$ | Player factor rank; $Q_a = 2$ was used in the initial validation fits below, $K = 3$ is the adopted production rank (@sec-newmodel) |
 | $i[n]$ | Player index for row $n$ |
 | $j[n]$ | Season index for row $n$ |
 
@@ -238,7 +278,8 @@ $$\bfa_i \sim \Normal(\mathbf{0},\; \bfSig_a), \qquad \bfSig_a = \diag(\sigma_{a
 $$\bfb_j \sim \Normal(\mathbf{0},\; \bfSig_b), \qquad \bfSig_b = \diag(\sigma_{b,1}^2, \ldots, \sigma_{b,P}^2)$$
 $$\bfeps_n \sim \Normal(\mathbf{0},\; \bfSig_\varepsilon), \qquad \bfSig_\varepsilon = \diag(\sigma_{\varepsilon,1}^2, \ldots, \sigma_{\varepsilon,P}^2)$$
 
-This model has $3P = 159$ variance parameters plus $P = 53$ mean parameters.
+This model has $3P = 144$ variance parameters plus $P = 48$ mean parameters
+(at the current $P = 48$; the historical fits below used $P = 53$).
 Each feature is modelled **independently**: the fact that a player who scores many
 goals also takes many shots is not captured by the player covariance — it emerges
 only from the marginal distributions.
@@ -262,8 +303,10 @@ captures the variance of feature $p$ not explained by the shared factors.
 **Why this model failed:** With only $S = 12$ seasons, the season factor loadings
 $\bfLam_b$ are severely under-identified. The sampler found many near-equivalent
 solutions and chains did not mix (maximum $\hat{R} = 1.739$, minimum bulk
-$\text{ESS} = 6$). The model is statistically correct but not estimable with
-this data.
+$\text{ESS} = 6$, at the historical $P = 53$ dimension this fit used). The model
+is statistically correct but not estimable with this data. This negative result
+is the direct justification, carried through every subsequent model in this
+thesis, for keeping $\bfSig_b$ diagonal.
 
 ## Model D: Low-Rank $\Sigma_a$ + Diagonal $\Sigma_b$ (Stages 09, 10)
 
@@ -275,12 +318,16 @@ $$\boxed{\bfSig_b = \diag(\sigma_{b,1}^2, \ldots, \sigma_{b,P}^2)}$$
 
 **Why this asymmetry makes sense:**
 
-- With $I = 1{,}650$ players, the player factor model is well-supported by the
-  data. We have enough observations per factor to estimate $P \times Q_a = 106$
-  loading parameters reliably.
+- With $I = 1{,}529$ players, the player factor model is well-supported by the
+  data. We have enough observations per factor to estimate $P \times K$
+  loading parameters reliably ($P \times K = 144$ at the production $K = 3$).
 - With $S = 12$ seasons, we cannot reliably estimate a $P \times Q_b$ season
   loading matrix. Keeping $\bfSig_b$ diagonal avoids the identifiability problems
   of Model B while still capturing feature-specific seasonal drift.
+
+This document validates Model D at $K = Q_a = 2$ (Stages 09–10, below) before the
+rank is revisited properly in @sec-newmodel, where the production model adopts
+$K = 3$, Student-$t$ residuals, and minutes-scaled residual variance.
 
 ### Factor Model Interpretation
 
@@ -338,35 +385,57 @@ $2! = 2$ equivalent solutions.
 $(\bfLam_a \mathbf{R}, \mathbf{R}^\top \bfeta_i)$ for $\mathbf{R}^\top \mathbf{R} = \mathbf{I}$
 is equivalent. This creates a continuous manifold of solutions.
 
-## Anchor Constraints (Pure-Variable Restriction)
+## Lower-Triangular, Positive-Diagonal (LT-PD) Constraint
 
-The identification strategy used in this model is the **pure-variable**
-(or anchor) constraint due to @anderson_rubin_1956:
+The identification strategy actually implemented in the production Stan models
+(and used from Stage 10 onward) is the **lower-triangular, positive-diagonal**
+(LT-PD) constraint, a classical device traceable to @anderson_rubin_1956:
 
-\begin{definition}[Anchor constraint]
-Feature $p$ is an \emph{anchor} for factor $q$ if:
-\begin{enumerate}
-  \item $\Lambda_{a,pq} > 0$ (positive loading on its own factor)
-  \item $\Lambda_{a,pk} = 0$ for all $k \neq q$ (zero loading on all other factors)
-\end{enumerate}
+\begin{definition}[LT-PD constraint]
+A matrix $\bfLam_a \in \R^{P \times K}$ satisfies the LT-PD constraint if:
+
+(i) $\Lambda_{a,pk} = 0$ for all $p < k$ (lower-triangular structure), and
+
+(ii) $\Lambda_{a,kk} > 0$ for all $k = 1, \ldots, K$ (positive diagonal).
 \end{definition}
 
-With $Q_a = 2$ factors, we designate features $p = 1$ and $p = 2$ as anchors
-for factors 1 and 2 respectively. The loading matrix then has the form:
+With $K$ factors, the loading matrix has the form:
 
 $$\bfLam_a = \begin{pmatrix}
-\lambda_{a,1}^+ & 0 \\
-0 & \lambda_{a,2}^+ \\
-\lambda_{a,31} & \lambda_{a,32} \\
-\vdots & \vdots \\
-\lambda_{a,P1} & \lambda_{a,P2}
+\lambda_{a,11}^+ & 0 & \cdots & 0 \\
+\lambda_{a,21} & \lambda_{a,22}^+ & \cdots & 0 \\
+\vdots & \vdots & \ddots & \vdots \\
+\lambda_{a,K1} & \lambda_{a,K2} & \cdots & \lambda_{a,KK}^+ \\
+\lambda_{a,K{+}1,1} & \lambda_{a,K{+}1,2} & \cdots & \lambda_{a,K{+}1,K} \\
+\vdots & \vdots & & \vdots \\
+\lambda_{a,P1} & \lambda_{a,P2} & \cdots & \lambda_{a,PK}
 \end{pmatrix}$$
 
-where $\lambda_{a,q}^+ > 0$ are the anchor diagonal elements and the remaining
-$(P - Q_a) \times Q_a = 51 \times 2 = 102$ entries are free.
+where the $K$ diagonal entries $\lambda_{a,kk}^+ > 0$ are the positive anchors
+and the remaining $P \times K - K(K+1)/2$ entries below the diagonal are free.
+(An earlier draft of this model used a two-feature "pure-variable" anchor
+scheme instead — designating exactly one feature per factor with zero
+cross-loadings; this was superseded by the LT-PD constraint below before any
+production fit, and is not what the Stan models in `stan/` implement.)
 
-This resolves sign and permutation indeterminacy. Rotation indeterminacy remains
-but is controlled by the priors.
+\begin{proposition}[Identification via LT-PD]
+Suppose $P \geq K$ and let $\mathcal{L}$ denote the set of $P \times K$
+matrices satisfying the LT-PD constraint. Then the map
+$$\mathcal{L} \times \{\bfPsi_a : \psi_{a,p} > 0\ \forall p\} \longrightarrow \mathcal{S}_P^+, \qquad (\bfLam_a, \bfPsi_a) \mapsto \bfLam_a\bfLam_a^\top + \bfPsi_a$$
+is injective, where $\mathcal{S}_P^+$ denotes the cone of $P \times P$ positive
+definite matrices. The factor covariance model is therefore identified under
+the LT-PD constraint [@anderson_rubin_1956].
+\end{proposition}
+
+The lower-triangular structure eliminates the continuous rotational freedom
+(the $K(K-1)/2$-dimensional orthogonal group $O(K)$) by zeroing the upper-
+triangular entries; the positive-diagonal constraint eliminates the $2^K$
+discrete sign symmetries. Unlike the anchor scheme, LT-PD does **not** require
+choosing which specific feature "belongs" to which factor a priori — but for
+the same reason, the resulting columns of $\bfLam_a$ are an artefact of
+feature ordering, not a substantively meaningful rotation, and must not be
+reported or interpreted directly (@sec-interpretation revisits this point and
+gives the rotation-invariant alternative actually used for interpretation).
 
 ## Non-Centred Parameterisation
 
@@ -402,15 +471,22 @@ standardised features (each of which has unit variance):
 
 | Parameter | Prior | Rationale |
 |-----------|-------|-----------|
-| $\bfmu$ | $\Normal(0, 1)$ | Population mean of a standardised variable |
-| $\lambda_{a,q}^+$ (anchor) | $\text{LogNormal}(\log 0.6,\, 0.35)$ | Positive diagonal, mode $\approx$ 0.6 |
-| $\lambda_{a,pk}$ (free) | $\Normal(0, 0.35)$ | Small shrinkage toward zero |
-| $\psi_{a,p}$ (uniqueness) | $\text{Half-Normal}(0, 0.4)$ | Small uniqueness SD |
-| $\sigma_{b,p}$ | $\text{Half-Normal}(0, 0.5)$ | Season SD, smaller than player |
-| $\sigma_{\varepsilon,p}$ | $\text{Half-Normal}(0, 0.7)$, floor $= 0.05$ | Residual SD with minimum |
+| $\lambda_{a,kk}^+$ (LT-PD diagonal) | $\text{Half-Normal}(0, 1)$ | Positive diagonal; a loading of magnitude 1 is already a large effect on a Z-scored feature |
+| $\lambda_{a,pk}$ (free, lower-triangular) | $\Normal(0, 1)$ | Weakly informative, concentrated near zero |
+| $\psi_{a,p}$ (uniqueness) | $\text{Half-Normal}(0, 1)$ | |
+| $\sigma_{b,p}$ | $\text{Half-Normal}(0, 1)$ | |
+| $\sigma_{\varepsilon,p}$ | $\text{Half-Normal}(0, 1)$, floor $= 0.05$ | Residual SD with minimum |
+| $\nu$ (Student-$t$ d.o.f., @sec-newmodel) | $\text{Gamma}(2,\, 0.1)$ | Mean 20, SD $\approx 14$; supported on $\nu > 2$; does not favour either the Gaussian limit or extreme heavy tails a priori |
+| $\phi$ (minutes-scaling exponent, @sec-newmodel) | $\text{Half-Normal}(0, 1)$ | Most mass on moderate heteroscedasticity effects |
 
 The floor of $0.05$ on $\sigma_\varepsilon$ prevents degeneracy for features
-with very low residual variance.
+with very low residual variance. Note that this production model has **no**
+$\bfmu$ parameter at all (see the note at the end of @sec-models): once
+features are Z-scored across the full sample, $\bfmu \approx \mathbf{0}$ and is
+absorbed into the standardisation step. Earlier fits (Models A/B/D as
+originally validated, above) did include $\bfmu \sim \Normal(0,1)$; it was
+dropped once the additive model's later, Student-$t$ production variants
+confirmed it added nothing once the data were properly centred.
 
 \newpage
 
@@ -483,10 +559,15 @@ geometric problem that can bias posterior estimates.
 
 ## Main Result — Diagonal Model (Stage 03)
 
-The primary scientific result is the **variance decomposition** from the diagonal
-additive model fit to real La Liga data. For each of the 53 features, we estimate
-the posterior proportion of total variance attributable to player, season, and
-residual effects.
+The variance decomposition below is from the earliest real-data fit, the
+diagonal additive model (Stage 03), historically at $P = 53$; it establishes the
+overall pattern that later, richer models (@sec-newmodel) preserve. For each
+feature, we estimate the posterior proportion of total variance attributable to
+player, season, and residual effects — reframed as intraclass correlation
+coefficients (ICC) in the production model, since ICC is scale-free and
+comparable across features with different marginal variances:
+
+$$\text{ICC}_{a,p} = \frac{[\bfSig_a]_{pp}}{[\bfSig_a]_{pp} + \sigma_{b,p}^2 + \Var(\varepsilon_{np})}, \quad \text{ICC}_{b,p}, \ \text{ICC}_{e,p} \text{ analogously}, \quad \sum \text{ICC} = 1.$$
 
 ```{r health-03}
 #| tbl-cap: "Sampler and posterior health — real diagonal model (stage 03)"
@@ -524,10 +605,39 @@ if (!is.null(vd_raw)) {
 ```
 
 ```{r vardecomp-fig}
-#| fig-cap: "Variance decomposition across all 53 features"
+#| fig-cap: "Variance decomposition across all features, historical Stage 03 fit"
 #| out-width: "100%"
-knitr::include_graphics(file.path(figures_dir, "07_real_empirical_variance_decomposition.png"))
+p <- file.path(figures_dir, "07_real_empirical_variance_decomposition.png")
+if (file.exists(p)) knitr::include_graphics(p)
 ```
+
+## ICC Decomposition — Current Production Model
+
+```{r icc-current}
+#| tbl-cap: "Top 10 features by player ICC (rebuilt data, P=48)"
+icc <- read_t("16_icc_summary.csv")
+if (!is.null(icc)) {
+  icc |>
+    arrange(desc(icc_player)) |>
+    slice(1:10) |>
+    select(feature, group, icc_player, icc_season, icc_residual) |>
+    mutate(across(starts_with("icc"), ~round(100 * .x, 1))) |>
+    knitr::kable(
+      col.names = c("Feature", "Group", "Player ICC (%)", "Season ICC (%)", "Residual ICC (%)")
+    )
+} else {
+  cat("(Stage 16 ICC output not yet available)")
+}
+```
+
+The pattern found in the original Stage 03 diagonal fit above is confirmed on
+the rebuilt, GK-excluded, $P=48$ dataset: defending and passing-volume features
+(recoveries, interceptions, back/lateral passes) are dominated by stable player
+identity (ICC$_{\text{player}}$ often $>80\%$), while season effects remain
+modest ($<5\%$ for most features) and residual noise dominates efficiency
+rates. ICC is computed under the Normal, $K=2$ model here; it is structurally
+identical for the Student-$t$, $K=3$ production model evaluated at the median
+minutes level.
 
 ## Interpretation by Feature Category
 
@@ -635,10 +745,10 @@ This motivates Model D.
 ## Motivation
 
 The failure of Model B (full low-rank) is entirely due to the season factor
-component. The player factor component is well-identified: with 1,650 players,
-we have far more data to estimate $P \times Q_a = 106$ loading parameters
-than the $P \times Q_b = 53$ season loading parameters estimated from 12
-seasons.
+component. The player factor component is well-identified: with 1,529 players,
+we have far more data to estimate $P \times K$ loading parameters (144 at the
+production $K=3$) than the $P \times Q_b$ season loading parameters that would
+be estimated from only 12 seasons.
 
 Model D resolves this by keeping $\Sigma_b$ diagonal — accepting a mild
 misspecification (the true $\Sigma_b$ has rank-1 structure) in exchange for
@@ -657,17 +767,76 @@ where $\bfeta_i^* \sim \Normal(\mathbf{0}, \mathbf{I}_{Q_a})$,
 $\bfxi_i^* \sim \Normal(\mathbf{0}, \mathbf{I}_P)$,
 $\mathbf{z}_{b,j} \sim \Normal(\mathbf{0}, \mathbf{I}_P)$.
 
-The total number of parameters is:
+The total number of parameters (in the original, $\bfmu$-including
+formulation validated here) is:
 
 $$P \cdot (1 + Q_a + 1 + 1) + I \cdot (Q_a + P) + S \cdot P + Q_a + (P - Q_a) \cdot Q_a$$
 
-With $P=53, Q_a=2, I=1650, S=12$:
+At the historical validation dimensions ($P=53, Q_a=2, I=1650, S=12$):
 $$= 53 \cdot 4 + 1650 \cdot (2+53) + 12 \cdot 53 + 2 + 102 = 212 + 90750 + 636 + 2 + 102 \approx 91{,}702$$
+
+At the current production dimensions ($P=48, K=3, I=1529, S=12$, and no
+$\bfmu$ term — see @sec-newmodel-prod below):
+$$P \cdot (K + 1) + I \cdot (K+P) + S \cdot P + K(K-1)/2 = 48 \cdot 4 + 1529 \cdot 51 + 12 \cdot 48 + 3 \approx 79{,}200$$
 
 However, due to the non-centred parameterisation, the sampler works directly
 with a much smaller set of **top-level** parameters: the $z/\eta$ arrays are
 each $\mathcal{O}(IP)$ but are fully determined by the normal prior and
-transformed via the scale parameters.
+transformed via the scale parameters. This $I \times P$ uniqueness block
+(the dominant term above) is also the primary driver of the model's runtime
+cost — see Appendix B.
+
+## Production Model: Student-$t$ Residuals, Minutes-Scaling, and $K=3$ {#sec-newmodel-prod}
+
+The model validated above (Stages 09–10, $K=2$, Normal residuals, with $\bfmu$)
+was extended in three steps to reach the production model actually used for the
+results reported from @sec-interpretation onward:
+
+**1. Student-$t$ residuals.** Some player-seasons are genuinely extreme (a
+player returning from injury with a handful of atypical matches; a breakout
+season). Replacing $\bfeps_n \sim \Normal(\mathbf{0}, \bfSig_\varepsilon)$ with
+$$\varepsilon_{np} \mid \nu, \sigma_{\varepsilon,p} \sim t(\nu,\, 0,\, \sigma_{\varepsilon,p}), \qquad \nu \sim \text{Gamma}(2, 0.1)$$
+down-weights these observations' influence on the shared parameters. Comparing
+$t$-errors against the Normal model by PSIS-LOO gives $\Delta\text{ELPD}
+\approx +11{,}668$ (SE 554) in favour of Student-$t$ — strongly warranted.
+
+**2. Minutes-scaled residual variance.** Per-90 rates are ratio estimators
+whose sampling variance is approximately proportional to $1/m_n$ (minutes
+played), independent of any structural effect — a diagnostic confirmed this
+directly: 48.9% of the worst 200 standardised residuals came from the
+bottom-20th-percentile of playing minutes (binomial $p < 10^{-17}$; expected
+20%). The fix scales the residual scale by playing time relative to the sample
+median $\bar m$:
+$$\sigma_{\varepsilon,n,p} = \sigma_{\varepsilon,p} \cdot (\bar m / m_n)^{\phi}, \qquad \phi \in \{0.5 \text{ (fixed, Poisson-rate theory)}, \text{ or estimated}\}.$$
+After this fix, the low-minute share of worst residuals drops to 8.3%
+(14/168 obs) — corrected. The fitted degrees-of-freedom $\hat\nu$ rises from
+$\approx 4.9$ (constant $\sigma_\varepsilon$) to $5.7$–$6.0$ (minutes-scaled),
+confirming that some of the apparent heavy-tailedness was in fact unmodelled
+heteroscedasticity, not genuine outlier contamination.
+
+**3. Rank $K=3$.** Cross-validation-based rank selection (hold-out ELPD,
+PSIS-LOO, and a Pathfinder variational screen across $K \in \{0,\ldots,8\}$) was
+found **inconclusive**: the player-holdout ELPD peaks at $K=6$ and the
+Pathfinder screen at $K=5$, with $K=3$ competitive but not dominant in either —
+best summarised as flat across $K \in \{2,\ldots,6\}$, not as pointing to a
+single rank. $K=3$ is instead adopted on **qualitative, structural grounds**:
+comparing $K=2$ and $K=3$ on (i) the common-variance share of the last
+canonical factor of $\bar{\bfLam}_a\bar{\bfLam}_a^\top$ (30.8% at $K=2$ → 10.5%
+at $K=3$: still substantive, not yet at the noise floor), (ii) the count of
+features with a reliable (90% CI excluding zero) loading on that last factor
+under a posterior-mean-anchored PCA (45/48 → 43/48: still a well-identified
+axis), and (iii) residual adequacy under each fit's own $t(\hat\nu)$ noise
+model (mean exceedance of the model's own 99th-percentile threshold: 0.74% at
+$K=2$, 0.77% at $K=3$, both below the 1% floor and hence not discriminating
+between the two). $K=3$ dominates $K=2$ on (i)–(ii) while matching it on
+(iii), and is adopted as $K^*=3$.
+
+The production likelihood therefore replaces the Normal specification above
+with:
+$$\bfy_n \mid \bfa_{i[n]}, \bfb_{j[n]}, \bfsig_\varepsilon, \nu, \phi \ \sim\ \prod_{p=1}^{P} t\!\left(\nu,\; a_{i[n],p} + b_{j[n],p},\; \sigma_{\varepsilon,n,p}\right)$$
+with **no $\bfmu$ term** (features are Z-scored across the full sample, so
+$\bfmu \approx \mathbf{0}$ and is dropped entirely rather than estimated), and
+$K=3$ in place of $Q_a=2$ throughout the loading matrix $\bfLam_a$.
 
 ## Posterior Health — Simulated Data Fit
 
@@ -701,10 +870,19 @@ if (!is.null(rec09)) {
 }
 ```
 
-## Loading Table — Real Data Fit
+## Raw Loading Table — Historical $K=2$ Validation Fit (Stage 10/11)
+
+> **Caution:** the table and heatmap below show the *raw*, LT-PD-constrained
+> $\bfLam_a$ from the early $K=2$ validation fit. As established in
+> @sec-ident, this raw loading matrix is an identification device only — its
+> columns are an artefact of feature ordering, not a substantively meaningful
+> rotation, and must **not** be interpreted as football archetypes directly.
+> They are shown here only as a validation artefact from the model's initial
+> real-data fit. The rotation-invariant, directly interpretable alternative is
+> given in the next section.
 
 ```{r loading-table}
-#| tbl-cap: "Top loadings on each factor — real La Liga data"
+#| tbl-cap: "Top raw loadings on each factor — historical K=2 validation fit"
 lt <- read_t("11_real_lambda_a_loading_table.csv")
 if (!is.null(lt)) {
   lt |>
@@ -721,16 +899,65 @@ if (!is.null(lt)) {
 ```
 
 ```{r heatmap-real}
-#| fig-cap: "Loading matrix heatmap — real La Liga data (stage 10)"
+#| fig-cap: "Raw loading matrix heatmap — historical K=2 validation fit (stage 10)"
 p <- file.path(figures_dir, "11_real_lambda_a_heatmap.png")
 if (file.exists(p)) knitr::include_graphics(p) else cat("(Figure not yet generated)")
 ```
 
-```{r top-loadings-real}
-#| fig-cap: "Top loadings per factor with 90% CI — real La Liga data"
-p <- file.path(figures_dir, "11_real_lambda_a_top_loadings.png")
-if (file.exists(p)) knitr::include_graphics(p) else cat("(Figure not yet generated)")
+## Canonical Factor Directions — Spectral Decomposition (Production, $K=3$)
+
+The interpretable alternative is the eigendecomposition of the common-variance
+matrix $\bfLam_a\bfLam_a^\top$, which — unlike the raw $\bfLam_a$ — is uniquely
+determined by the model regardless of which identification constraint was
+used to fit it (any orthogonal rotation $\bfLam_a\mathbf{Q}$ gives the same
+$\bfLam_a\bfLam_a^\top$). Because the leading eigenvectors can still rotate
+within their subspace from one posterior draw to the next, the reference
+orientation is fixed to the eigendecomposition of the **posterior mean**
+$\bar{\bfLam}_a\bar{\bfLam}_a^\top$ before computing credible intervals on the
+rotated (projected) loadings.
+
+```{r pca-variance-shares}
+#| tbl-cap: "Variance share per canonical factor, K=3 production model"
+pca_var <- read_t("31_sigma_a_pca.csv")
+if (!is.null(pca_var)) {
+  pca_var |>
+    mutate(across(starts_with("var_share"), ~round(100 * .x, 1))) |>
+    select(pc, var_share_LLt, var_share_Sa) |>
+    knitr::kable(col.names = c("Canonical factor", "Share of common variance ΛΛᵀ (%)",
+                                "Share of total player variance Σ_a (%)"))
+}
 ```
+
+```{r pca-loadings-ci}
+#| tbl-cap: "Top reliable loadings per canonical factor (90% CI excludes zero), K=3"
+pca_load <- read_t("31_pca_loading_ci.csv")
+if (!is.null(pca_load)) {
+  pca_load |>
+    filter(reliable) |>
+    group_by(pc) |>
+    slice_max(abs(loading), n = 5) |>
+    ungroup() |>
+    mutate(across(c(loading, ci_lo, ci_hi), ~round(.x, 3))) |>
+    select(pc, feature, group, loading, ci_lo, ci_hi) |>
+    knitr::kable(col.names = c("PC", "Feature", "Group", "Loading", "CI lo", "CI hi"))
+}
+```
+
+```{r pca-loading-heatmap}
+#| fig-cap: "PCA-rotated loading heatmap with 90% CI, K=3 production model"
+p <- file.path(figures_dir, "31_pca_loading_ci_plot.png")
+if (file.exists(p)) knitr::include_graphics(p)
+```
+
+The three canonical directions are interpretable as: **PC1**, defensive
+work-rate (positive) versus attacking output (negative); **PC2**, technical
+and pass-based play (positive) versus aerial and physical play (negative);
+**PC3**, possession quality (positive) versus wide/direct play (negative). PC1
+alone accounts for roughly 62% of the common ($\bfLam_a\bfLam_a^\top$)
+variance and 46% of total player variance $\Sigma_a$; the gap between the two
+figures is the per-feature uniqueness $\bfPsi_a$ — about a quarter of total
+player-level variance is feature-specific and not captured by the three shared
+factors.
 
 \newpage
 
@@ -738,57 +965,61 @@ if (file.exists(p)) knitr::include_graphics(p) else cat("(Figure not yet generat
 
 ## Reading Factor Loadings
 
-The loading matrix $\bfLam_a \in \R^{53 \times 2}$ provides the link between
-latent player archetypes and observed performance features. For each factor $q$
-and feature $p$:
+The **canonical** loadings $V_{pk}$ from the spectral decomposition of
+@sec-newmodel-prod (not the raw, LT-PD-constrained $\bfLam_a$) provide the
+link between latent player archetypes and observed performance features. For
+canonical factor $k$ and feature $p$:
 
-$$\Lambda_{a,pq} > 0 \implies \text{high } \eta_{i,q} \text{ predicts above-average } a_{i,p}$$
-$$\Lambda_{a,pq} < 0 \implies \text{high } \eta_{i,q} \text{ predicts below-average } a_{i,p}$$
-$$|\Lambda_{a,pq}| \approx 0 \implies \text{feature } p \text{ is not informative about factor } q$$
+$$V_{pk} > 0 \implies \text{high } f_{i,k} \text{ predicts above-average } a_{i,p}$$
+$$V_{pk} < 0 \implies \text{high } f_{i,k} \text{ predicts below-average } a_{i,p}$$
+$$|V_{pk}| \approx 0 \implies \text{feature } p \text{ is not informative about canonical factor } k$$
 
-The **communality** of feature $p$ is:
+where $f_{i,k}$ is player $i$'s rotated factor score on canonical factor $k$,
+obtained by projecting the raw factor scores $\eta_i$ onto the fixed reference
+eigenvectors $\mathbf{V}$ (as opposed to reading $\eta_i$ against the raw,
+uninterpretable $\bfLam_a$ directly).
 
-$$h_p^2 = \sum_{q=1}^{Q_a} \Lambda_{a,pq}^2$$
+The **communality** of feature $p$ under the $K=3$ production model is:
+
+$$h_p^2 = \sum_{k=1}^{K} \Lambda_{a,pk}^2 = \sum_{k=1}^{K} d_k V_{pk}^2$$
 
 It measures the proportion of the player-effect variance in feature $p$ that
 is shared with other features through the factor structure (as opposed to
-being unique/idiosyncratic).
+being unique/idiosyncratic) — invariant to whether it is computed from the raw
+$\bfLam_a$ or the rotated $\mathbf{V}$, since both give the same
+$\bfLam_a\bfLam_a^\top$.
 
 ## Group-Level Analysis
 
-```{r group-radar}
-#| fig-cap: "Mean absolute loading by feature group and factor"
-p <- file.path(figures_dir, "11_real_lambda_a_group_radar.png")
-if (file.exists(p)) knitr::include_graphics(p)
-```
-
-```{r factor-radar-12}
-#| fig-cap: "Football interpretation: factor group structure"
-p <- file.path(figures_dir, "12_real_factor_group_radar.png")
-if (file.exists(p)) knitr::include_graphics(p)
+```{r factor-radar-28}
+#| fig-cap: "Mean absolute canonical loading by feature group and PC, K=3 production model"
+p <- file.path(figures_dir, "28_factor_group_radar.png")
+if (file.exists(p)) knitr::include_graphics(p) else {
+  p_old <- file.path(figures_dir, "12_real_factor_group_radar.png")
+  if (file.exists(p_old)) knitr::include_graphics(p_old)
+}
 ```
 
 ## Player Archetypes
 
 ```{r archetype-scatter}
-#| fig-cap: "Player positions in factor score space"
-p <- file.path(figures_dir, "12_player_archetype_scatter.png")
-if (file.exists(p)) knitr::include_graphics(p) else cat("(Figure generated after stage 12)")
+#| fig-cap: "Player positions in canonical factor score space (PC1 x PC2), K=3, coloured by k-means cluster (k=5)"
+p <- file.path(figures_dir, "29_factor_score_scatter_clustered.png")
+if (file.exists(p)) {
+  knitr::include_graphics(p)
+} else {
+  p_old <- file.path(figures_dir, "12_player_archetype_scatter.png")
+  if (file.exists(p_old)) knitr::include_graphics(p_old) else cat("(Figure not yet generated)")
+}
 ```
 
-Players in the upper-right quadrant of the factor score scatter plot score high
-on both factors simultaneously. Players in the upper-left have high Factor 2
-but low Factor 1. These positions correspond to qualitatively different player
-profiles and can be used to characterise player archetypes beyond the one-dimensional
-ranking implied by a single performance index.
-
-## Comparison of Loading Patterns
-
-```{r loading-comparison}
-#| fig-cap: "Factor loadings per feature — direct comparison"
-p <- file.path(figures_dir, "12_real_loading_comparison.png")
-if (file.exists(p)) knitr::include_graphics(p) else cat("(Figure generated after stage 12)")
-```
+Projecting posterior-mean player effects onto the canonical (PCA-rotated)
+factor space and running $k$-means ($k=5$) on the PC1-PC2 plane identifies five
+archetypes, ordered by PC1 from high attacking output to high defensive
+work-rate. Players in the upper-right quadrant score high on both PC1 and PC2
+simultaneously; these positions correspond to qualitatively different player
+profiles and can be used to characterise player archetypes beyond the
+one-dimensional ranking implied by a single performance index.
 
 \newpage
 
@@ -807,19 +1038,28 @@ richer (low-rank) structure.
 
 **The new model (Model D)** solves the identifiability problem of Model B by
 keeping $\Sigma_b$ diagonal. The factor structure on the player side is
-well-supported by the data dimensionality ($I = 1{,}650$ vs.\ $S = 12$).
+well-supported by the data dimensionality ($I = 1{,}529$ vs.\ $S = 12$). Its
+production extension (@sec-newmodel-prod) further addresses heavy tails
+(Student-$t$) and playing-time heteroscedasticity (minutes-scaling), and its
+rank is justified qualitatively (@sec-newmodel-prod) once cross-validation was
+shown not to discriminate cleanly among $K \in \{2,\ldots,6\}$.
 
-## What Failed and Why
+## What Failed, What Was Only Partially Reliable, and Why
 
 **Model B (full low-rank)** failed because 12 seasons are insufficient to estimate
-53 season loading parameters. This is a general principle: factor models require
+season loading parameters. This is a general principle: factor models require
 the number of observations per factor to substantially exceed the number of
-features. Here $S / (P \cdot Q_b) = 12 / 53 \ll 1$.
+features. Here $S / (P \cdot Q_b) = 12 / 53 \ll 1$ at the dimensions this
+specific fit used.
 
-**PSIS-LOO model comparison** failed because hierarchical models create highly
-influential observations (players who appear only once). The PSIS approximation
-requires observations to have bounded influence on the posterior, which is
-violated by these single-season players.
+**PSIS-LOO as the sole model-comparison tool** is unreliable here, not
+outright unusable: hierarchical models create highly influential observations
+(players who appear only once), and the PSIS approximation requires
+observations to have bounded influence on the posterior. In practice, the
+Pareto-$\hat k$ diagnostic exceeds 0.5 for the majority of observations in this
+application, so PSIS-LOO is retained only as a *directional*, secondary check
+(and was found broadly consistent with a Pathfinder variational screen), never
+as the primary criterion for a decision such as rank selection.
 
 ## Season Effect Interpretation
 
@@ -839,12 +1079,18 @@ season factor from a larger panel of leagues.
 
 # Future Improvements {#sec-future}
 
-## 1. K-Fold Cross-Validation
+## 1. K-Fold Cross-Validation — Attempted, Found Inconclusive
 
-Replace PSIS-LOO with **exact $K$-fold cross-validation** ($K = 10$). This
-partitions players into folds and trains the model on $K-1$ folds, evaluating
-predictive performance on the held-out fold. It is computationally expensive
-($K$ Stan runs) but gives reliable model comparison scores.
+This was subsequently attempted: a 15% player-level holdout, evaluated for
+$K \in \{1,\ldots,6\}$ via a marginalised Normal approximation (Woodbury
+identity) fitted with Pathfinder for computational tractability. The result was
+not the clean win originally hoped for — the holdout ELPD peaked at $K=6$, with
+$K=3$ and $K=4$ competitive but not decisively separated, essentially flat
+across $K \in \{2,\ldots,6\}$ (@sec-newmodel-prod). A **remaining** open
+extension is a full, non-approximate $K$-fold cross-validation with exact NUTS
+refits per fold, rather than a Pathfinder-approximated, marginalised holdout;
+this would be substantially more expensive but would remove the
+approximation-driven uncertainty in the current ranking.
 
 ## 2. More Seasons / Multiple Leagues
 
@@ -890,6 +1136,17 @@ $$\bfa_{i,t} = \bfa_i + \boldsymbol{\delta}_i \cdot t + \bfzeta_{i,t}$$
 where $t$ is player age (or years since debut), $\boldsymbol{\delta}_i$ is a
 player-specific aging slope, and $\bfzeta_{i,t}$ is season-within-player noise.
 This would separate career arc from static quality.
+
+## 7. Team-Season Effects
+
+A team-season effect $\mathbf{c}_{t[n]} \in \R^P$, crossed with the existing
+player and league-season effects, would separate manager/tactical-system
+effects from stable player identity — currently, a manager change that shifts
+every player's pressing intensity in a given season is absorbed into the
+(diagonal) league-wide season effect $\bfb_j$ or into player-level noise,
+rather than attributed to the team context that actually caused it.
+Player-team mapping is available in the raw data; this is the primary
+modelling extension under consideration once the current model is closed.
 
 \newpage
 
@@ -956,7 +1213,22 @@ $$(\bfPsi + \bfLam\bfLam^\top)^{-1} = \bfPsi^{-1} - \bfPsi^{-1}\bfLam(\mathbf{I}
 reducing the $O(P^3)$ matrix inversion to $O(P \cdot Q_a^2 + Q_a^3)$. However,
 since we sample the random effects directly (not marginalising), this shortcut
 is not needed in the MCMC implementation — it would only be relevant for a
-variational or EM approach.
+variational or EM approach. It *is* used, however, in the marginalised-Normal
+approximation underlying the player-holdout rank-selection screen of
+@sec-newmodel-prod, where repeated re-fits across candidate $K$ made the exact,
+non-marginalised NUTS approach computationally infeasible.
+
+## A.5 Absence of $\bfmu$ in the Production Model
+
+Sections A.1–A.4 above derive results for the original model formulation,
+which included an explicit population mean $\bfmu$. The production model
+(@sec-newmodel-prod) omits $\bfmu$ entirely, rather than fixing it at an
+estimated value: because features are Z-scored across the full sample before
+any model is fit, $\mathbb{E}[y_{np}] \approx 0$ already holds in the data, and
+including $\bfmu$ alongside the column-centred random effects of A.3 would
+introduce a redundant, weakly identified degree of freedom. Every derivation
+above goes through unchanged with $\bfmu \equiv \mathbf{0}$ substituted
+throughout.
 
 \newpage
 
@@ -979,8 +1251,14 @@ sampler settings:
 ## B.2 Memory Management
 
 Each Stan chain writes its draws to a separate CSV file. The full posterior
-for a $688$-parameter model with $4 \times 1{,}000 = 4{,}000$ draws occupies
-roughly 200--500 MB per model. The four-model archive totals $\approx 12$ GB.
+for a several-hundred-parameter model with $4 \times 1{,}000 = 4{,}000$ draws
+occupies roughly 200 MB–2 GB per model, depending on $K$ and whether
+`log_lik` is retained (gated behind an environment variable, since it roughly
+doubles CSV size and is only needed for LOO). Across the full set of models
+now fitted (Normal and Student-$t$, $K=0$ through $K=6$, minutes-scaled
+variants, ablations), the archive totals well beyond the original four-model
+estimate of $\approx 12$ GB; CSV draws are excluded from version control
+entirely for this reason.
 
 To avoid loading all draws into R (which can exhaust available RAM), the
 pipeline uses a lightweight approach:
@@ -992,11 +1270,19 @@ pipeline uses a lightweight approach:
 
 ## B.3 Stan Model Files
 
-| File | Description | Parameters |
-|------|-------------|------------|
-| `additive_diagonal.stan` | Diagonal $\Sigma_a$, $\Sigma_b$, $\Sigma_\varepsilon$ | 531 |
-| `additive_lowrank_recovery.stan` | Full low-rank $\Sigma_a$ and $\Sigma_b$ | 688 |
-| `additive_lowrank_a_diag_b.stan` | Low-rank $\Sigma_a$, diagonal $\Sigma_b$ | approx. 640 |
+| File | Description |
+|------|-------------|
+| `additive_diagonal.stan` | Diagonal $\Sigma_a$, $\Sigma_b$, $\Sigma_\varepsilon$ (Model A) |
+| `additive_lowrank_recovery.stan` | Full low-rank $\Sigma_a$ and $\Sigma_b$ (Model B — negative result) |
+| `additive_lowrank_a_diag_b.stan` | Low-rank $\Sigma_a$, diagonal $\Sigma_b$, Normal residuals (Model D, historical $K=2$ validation) |
+| `additive_lowrank_a_diag_b_t.stan` | As above, **Student-$t$ residuals** — production likelihood ($K=2$ and $K=3$ fits) |
+| `additive_lowrank_a_diag_b_t_mv.stan` | Student-$t$ + minutes-scaled residual variance, fixed $\phi=0.5$ |
+| `additive_lowrank_a_diag_b_t_mv_phi.stan` | As above with $\phi$ estimated rather than fixed |
+| `player_season_lowrank_marginalized.stan` | Player effects marginalised out (Woodbury identity) — used only for the fast, approximate player-holdout rank-selection screen |
+| `prototypes/player_season_hier_factor.stan` | An early, materially simpler prototype (Normal likelihood, unconstrained/non-identified loadings, low-rank *season* effect) predating every choice above; preserved for provenance, not used |
+
+The current production model (@sec-newmodel-prod) is fit with
+`additive_lowrank_a_diag_b_t_mv.stan` at $K=3$.
 
 ## B.4 Reproducibility
 
@@ -1004,11 +1290,17 @@ The complete pipeline is controlled by environment variables and deterministic
 seeds. To fully reproduce all results from the processed data:
 
 ```bash
+# Reproduce the historical validation sequence described in this document
 BFA_RUN_STAN=true \
 BFA_REUSE_FIT=false \
 BFA_SEED=20260513 \
 Rscript model/run_pipeline.R 02 03 04 05 06 07 08 09 10 11 12
+
+# Reproduce the current production model (K=3, Student-t, minutes-scaled)
+BFA_RUN_STAN=true Rscript model/run_pipeline.R 34
 ```
 
 Note that stage 02 must be re-run to regenerate Stan data objects, and stages
-03/05/06/09/10 require Stan sampling (several hours each on standard hardware).
+03/05/06/09/10/34 require Stan sampling (several hours each on standard
+hardware; stage 34 the longest, given $K=3$ and Student-$t$ residuals). See
+`CLAUDE.md` §4 for the full, current pipeline stage map (30+ stages).
