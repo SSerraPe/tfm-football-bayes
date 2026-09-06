@@ -1,0 +1,86 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage[margin=1in]{geometry}
+
+\title{Bayesian Additive Player and Season Models}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Observed Data}
+
+The modelling unit is an observed player-season row. Missing player-seasons are not imputed. Let
+$y_n \in \mathbb{R}^P$ be the scaled feature vector for row $n$, with player index $i[n]$
+and season index $j[n]$.
+
+\section{Real-Data Diagonal Additive Model}
+
+\begin{align}
+y_n &= \mu + a_{i[n]} + b_{j[n]} + \epsilon_n, \\
+a_i &\sim \mathcal{N}_P(0, \Sigma_a), \\
+b_j &\sim \mathcal{N}_P(0, \Sigma_b), \\
+\epsilon_n &\sim \mathcal{N}_P(0, \Sigma_\epsilon).
+\end{align}
+
+For the real-data model, all covariance matrices are diagonal:
+
+\begin{align}
+\Sigma_a &= \operatorname{diag}(\sigma_{a1}^2,\ldots,\sigma_{aP}^2), \\
+\Sigma_b &= \operatorname{diag}(\sigma_{b1}^2,\ldots,\sigma_{bP}^2), \\
+\Sigma_\epsilon &= \operatorname{diag}(\sigma_{\epsilon1}^2,\ldots,\sigma_{\epsilon P}^2).
+\end{align}
+
+The Stan implementation uses non-centered standard-normal player and season effects. Columns are centered in transformed parameters:
+
+\begin{align}
+a_{ip} &= \sigma_{ap}\left(z^a_{ip} - \bar{z}^a_{\cdot p}\right), \\
+b_{jp} &= \sigma_{bp}\left(z^b_{jp} - \bar{z}^b_{\cdot p}\right).
+\end{align}
+
+This leaves $\mu_p$ as the population-level feature mean in scaled units.
+
+\section{Simulation Design}
+
+Simulated data use the observed player-season rows and index structure but generate player and
+season effects from known low-rank plus diagonal covariance:
+
+\begin{align}
+\Sigma_a &= \Lambda_a \Lambda_a^\top + \operatorname{diag}(\Psi_a), \\
+\Sigma_b &= \Lambda_b \Lambda_b^\top + \operatorname{diag}(\Psi_b), \\
+\Sigma_\epsilon &= \operatorname{diag}(\sigma_\epsilon^2).
+\end{align}
+
+The default ranks are $r_a = 2$ and $r_b = 1$, with $r_a > r_b$. Random effects are generated as
+
+\begin{align}
+a_i &= \Lambda_a \eta_i^a + \operatorname{diag}(\sqrt{\Psi_a}) u_i^a, \\
+b_j &= \Lambda_b \eta_j^b + \operatorname{diag}(\sqrt{\Psi_b}) u_j^b,
+\end{align}
+
+where the latent scores and uniqueness terms are standard normal and column-centered.
+
+\section{Low-Rank Recovery Model}
+
+The recovery model matches the simulation:
+
+\begin{align}
+y_n &= \mu + a_{i[n]} + b_{j[n]} + \epsilon_n, \\
+a_i &= \Lambda_a \eta_i^a + \operatorname{diag}(\psi_a) u_i^a, \\
+b_j &= \Lambda_b \eta_j^b + \operatorname{diag}(\psi_b) u_j^b.
+\end{align}
+
+Loadings use pure-anchor constraints. For a rank-$Q$ loading matrix, the first $Q$ variables are
+positive own-factor anchors and their off-factor loadings are fixed to zero. Non-anchor rows are
+estimated freely. This removes sign and rotation ambiguity enough for direct comparison with
+the saved simulation truth.
+
+\section{Recovery Targets}
+
+The diagnostics compare posterior summaries against saved values of
+$\Lambda_a$, $\Lambda_b$, $\Psi_a$, $\Psi_b$, $\operatorname{diag}(\Sigma_a)$,
+$\operatorname{diag}(\Sigma_b)$, $\sigma_\epsilon$, and $\mu$.
+
+\end{document}

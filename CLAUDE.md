@@ -32,8 +32,10 @@ y_n = a_{i[n]} + b_{j[n]} + ε_n          n = 1..N
 - `b_j ∈ R^P` — season effect, `j = 1..S`
 - `ε_n ∈ R^P` — residual
 
-Dimensions: **N = 4944** player-seasons, **I = 1650** players, **S = 12** seasons (2011–2023),
-**P = 53** Z-scaled performance features.
+Dimensions (current, post-rebuild — see Session 8 in §8): **N = 4586** player-seasons,
+**I = 1529** players, **S = 12** seasons (2011/12–2022/23), **P = 48** Z-scaled performance
+features (GK-excluded; earlier fits before the Session 8 rebuild used N = 4944, I = 1650,
+P = 53).
 
 ### Covariance structure
 
@@ -87,7 +89,7 @@ For the t-model, `Var(ε) = σ_e² · ν/(ν−2)` is used (see `generated quant
 | Lower-triangular `Λ_a` | Removes rotational non-identifiability; confirmed needed by the professor and by simulation recovery (Entry 3). |
 | PCA post-processing of `Λ_aΛ_a'` | The triangular `Λ` is an identification device, not interpretable. Eigendecomposing `ΛΛ'` per draw gives a canonical, rotation-invariant set of loadings + player scores (stage 13). |
 | PCA-based initialisation | `build_pca_init()` warm-starts chains from a classical factor-analysis solution of the player means. Materially eases convergence (professor's `make_crossed_init`, adapted). |
-| Data Z-scaled, no global `μ` | Features are standardised within season in stage 02, so `μ ≈ 0`. Newer models (stage 18+) drop the `μ` parameter entirely. |
+| Data Z-scaled, no global `μ` | Features are standardised across the full sample (not per season) in stage 02 (`scale()` on pooled `Y_raw`), so `μ ≈ 0`. Newer models (stage 18+) drop the `μ` parameter entirely. Corrected 2026-09-07: this row previously (incorrectly) said "within season" — verified against `scripts/02_prepare_model_objects.R`'s single-`scale()`-call implementation. |
 | Student-t residuals | A few player-seasons (breakouts, injury returns, odd tactical roles) are extreme; `ν ≈ 3` and ΔELPD ≈ +11,668 confirm heavy tails. **Default for future fits.** |
 | ICC framing of `prop_a/b/e` | Professor reframed the variance proportions as intraclass correlations — the natural "explained variability" quantity for the thesis. |
 

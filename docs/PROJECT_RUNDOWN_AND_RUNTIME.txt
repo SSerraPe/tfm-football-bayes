@@ -4,6 +4,15 @@ Plain-language companion to CLAUDE.md. Written 2026-06-26.
 Purpose: a standalone doc to chat about solutions/improvements, with a heavy
 focus on the model's RUNTIME problem. Nothing here has been implemented yet —
 this session was documentation-only.
+
+UPDATE (2026-09-07): the dataset dimensions quoted below (N=4,944, P=53,
+I=1,650) are the PRE-REBUILD numbers as of 2026-06-26. Session 8 (see
+CLAUDE.md §8) later excluded goalkeepers and dropped 5 low-ICC features,
+giving the current production dataset N=4,586, P=48, I=1,529. The runtime
+arithmetic below (parameter counts, timings) is left as originally written —
+it is illustrative of the underlying scaling problem, which is unchanged in
+kind, but the exact numbers would shrink modestly under the current P=48/
+I=1,529 dimensions. See CLAUDE.md for current, authoritative dimensions.
 ================================================================================
 
 
@@ -27,7 +36,8 @@ STEP 1 — Data preparation (stages 00–02).
 We start from Wyscout match-level data, roll it up to one row per player-season,
 engineer per-90 and success-rate features, and keep players with enough minutes.
 The result is a matrix Y of 4,944 rows (player-seasons) × 53 features. Every
-feature is Z-scaled (mean 0, SD 1) within season, so the model does not need a
+feature is Z-scaled (mean 0, SD 1) across the full sample (not within season —
+corrected 2026-09-07; see the update note above), so the model does not need a
 global mean. We also store index vectors telling the model which player and
 which season each row belongs to (1,650 players, 12 seasons).
 
