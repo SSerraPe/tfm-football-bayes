@@ -2584,6 +2584,92 @@ floor) is what would make K=3 the closing choice.
 
 ---
 
+## Entry 13 — 2026-09-07 — Session 15: closing two stale "pending" items (K=4 kcompare, stage 20 rebuild)
+
+### Context
+
+Asked "is there anything missing to be ran?" after a large documentation/thesis rebase
+session (tfm_latex Ch2-4, README/CLAUDE.md/docs/thesis staleness fixes — see git history
+`b9f8cef`, `a6be05a`, `d93fe30`). Two concrete, fully-unblocked gaps turned up on
+inspection, both flagged as "pending"/"deferred" in `CLAUDE.md` but actually resolvable
+without any new Stan sampling.
+
+### Gap 1: stage 21 (K=4) had finished 2026-08-26, but its kcompare row never landed
+
+`fits/21_real_k4_t_fit.rds` and `outputs/notes/21_real_k4_t_notes.txt` were dated
+2026-08-26 (ν̂=4.95), well past Entry 12's "chain 1 ~50%, 2026-08-25" status — the fit had
+actually completed. The watcher script meant to auto-trigger the follow-up analyses
+(`scripts/run_when_stage21_done.sh`, tracked via `k4_watcher.pid`/`stage21.pid`) had died:
+both PIDs were stale (no matching process), and `outputs/tables/21_real_k4_t_posterior_summary.csv`
+only ever had a 1-row (`lp__`-only) summary, not the full per-parameter extraction
+`29b_kcompare_residuals.R`/`31b_kcompare_pca.R` require.
+
+**Fix:** new `scripts/21b_build_k4_posterior_summary.R`, generalising
+`B_block_b_diagnostics_28.R`'s Python column-pass approach to K=4 (337 params: nu,
+Lambda_a ×192, psi_a ×48, sigma_b ×48, sigma_e ×48; ~80s per 4-chain set of 2.6GB CSVs).
+Then ran `BFA_K=4` for both kcompare scripts.
+
+**Result — K=4 does NOT produce the clean reversal the Session 14 extension hoped for:**
+
+| Criterion | K=2 | K=3 | K=4 |
+|---|---|---|---|
+| Leg A: last-PC common-variance share | 30.8% | 10.5% | **7.1%** (still declining, not at noise floor) |
+| Leg B: last-PC reliable-loader count | 45/48 | 43/48 | **45/48** (non-monotonic) |
+| Leg C: mean residual exceedance | 0.74% | 0.77% | 0.79% (flat, all below 1% floor) |
+
+K=3 is retained as the production rank on parsimony grounds (the evidence does not
+clearly separate K=3 from K=4, and the supervisor's guidance was to close the model
+rather than chase further comparisons). Written up in `tfm_latex/methodology.tex` §9.4
+and `docs/professor/professor_summary.qmd` §sec-rank.
+
+### Gap 2: stage 20 (diagonal vs low-rank LOO) was never rebuilt, despite stage 03 already being refit
+
+Stage 03 (diagonal) *was* refit on the rebuilt P=48/N=4586 data back on 2026-07-02
+(`d4fc4af`), and both stage 03 and stage 28 (K=3) already had `log_lik` in their CSV
+headers — but nobody had actually run the LOO comparison between them on the rebuilt data
+(`outputs/tables/20_loo_diagonal_vs_lowrank.csv` was still dated 7 June, pre-rebuild).
+
+**Fix, attempt 1** (`scripts/20b_diagonal_vs_k3_rebuilt.R`): extracted `log_lik` directly
+from both models' original CSVs via the standard Python column-pass. Diagonal came back
+with a plausible result (elpd_loo −182,134.5). **Stage 28's came back exactly zero for
+every observation** — `log_lik` is declared in the header but was never populated
+(`compute_log_lik=0` at fit time), a placeholder rather than a real value.
+
+**Fix, attempt 2** (`scripts/20c_fix_diagonal_vs_k3_loo.R`): reused the *already-cached*
+`generate_quantities()` output from Entry 9's Block C (`fits/csv/block_c_gq/k3/`, computed
+specifically to work around this exact problem for the K=2-vs-K=3 comparison) instead of
+stage 28's own CSVs — no new Stan run needed.
+
+**Result:** $\Delta$ELPD $= +5{,}820.2$ (SE $343.5$), diagonal vs K=3 on the rebuilt data
+— confirms the low-rank structure is strongly supported on the current dataset, not just
+the pre-rebuild one. Pareto-$\hat k > 0.7$ for ~90% of points at both models (consistent
+with the project's known systemic LOO-reliability issue); directional evidence, same
+caveat as every other PSIS-LOO comparison in this project. Written up in
+`docs/professor/professor_summary.qmd`'s model-comparison table and Open Question #1
+(now resolved).
+
+### Bugs Fixed This Run
+
+| Bug | Fix |
+|---|---|
+| K=4 watcher (`run_when_stage21_done.sh`) died silently; K=4 kcompare never ran despite the fit being done for ~12 days | `scripts/21b_build_k4_posterior_summary.R` rebuilds the missing full posterior summary directly |
+| Stage 28's `log_lik` columns are header-only placeholders (`compute_log_lik=0`), causing a degenerate all-zero LOO result | Reuse the real log_lik from the existing Block-C `generate_quantities()` cache instead |
+| Stale `k4_watcher.pid`/`stage21.pid` left on disk pointing at dead processes | Removed; `.gitignore` already excludes `*.pid` going forward |
+
+### Notes and Interpretation
+
+Both gaps were "should have auto-completed but silently didn't" failures (a dead
+background watcher; an unpopulated generated-quantities column) rather than missing
+methodology — the actual computations were already designed correctly and, in the LOO
+case, partially cached from prior work. Worth a general lesson: when a pipeline stage's
+follow-up work depends on a background watcher, check that the watcher's own process is
+still alive before assuming "pending" status is accurate, and when a `log_lik` (or any
+generated-quantities) column looks present, confirm it isn't a `compute_log_lik=0`
+placeholder before trusting a LOO result — a degenerate all-zero/all-identical result is a
+much more actionable red flag than a missing column would have been.
+
+---
+
 # Entry Template (Reference for Future Updates)
 
 The following template should be used for each new journal entry appended to this document.

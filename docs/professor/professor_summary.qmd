@@ -43,7 +43,7 @@ Five additions since the previous report:
 
 1. **Playing-time heteroskedasticity fixed** — diagnosed that 48.9% of worst residuals came from low-minute players; extended the likelihood to scale residual variance by $\sqrt{\bar{m}/m_n}$; confirmed the fix drops the low-minute share to 8.3% (§\ref{sec-minutes}).
 2. **Factor loadings now have posterior CIs** — draws-level PCA of $\Lambda\Lambda^\top$ gives 90% credible intervals on each loading, replacing earlier point-estimate plots (§\ref{sec-interp}).
-3. **Rank K=3 chosen from a per-K comparison** — Legs A/B/C in §\ref{sec-rank} compare K=2 vs K=3 (and K=4 when stage 21 completes) on the three criteria the supervisor advised: variance share of $\Lambda\Lambda^\top$ PCs (last-PC share 30.8\%→10.5\%, K=2→K=3), reliable-loader counts (45/48 → 43/48 on the last PC), and residual adequacy (both K=2 and K=3 pass the 1\% floor). CV screens disclosed honestly as inconclusive.
+3. **Rank K=3 chosen from a per-K comparison** — Legs A/B/C in §\ref{sec-rank} compare K=2, K=3, and K=4 on the three criteria the supervisor advised: variance share of $\Lambda\Lambda^\top$ PCs (last-PC share 30.8\%→10.5\%→7.1\%), reliable-loader counts (45/48 → 43/48 → 45/48 on the last PC, non-monotonic), and residual adequacy (K=2/3/4 all pass the 1\% floor, essentially flat). The K=3-vs-K=4 step is honestly not clean-cut; K=3 is retained on parsimony grounds. CV screens disclosed honestly as inconclusive.
 4. **Player profile radars + similarity metric** — FIFA/FC-style percentile radars for individual players and pairs; Euclidean archetype-space similarity with named examples (§\ref{sec-profiles}).
 5. **Season profiles updated** — group-trend ribbons, heatmap, and new top-5 most-changed-features figure (§\ref{sec-seasons}).
 :::
@@ -190,9 +190,9 @@ The three fits used for the comparison:
 
 - **K=2** — stage 18 full NUTS Student-$t$ fit ($P=48$, $N=4{,}586$, 4 chains, $\hat\nu=4.882$).
 - **K=3** — stage 28 full NUTS Student-$t$ fit ($P=48$, $N=4{,}586$, 4 chains, $\hat\nu=4.902$).
-- **K=4** — stage 21 full NUTS Student-$t$ fit, launched 2026-08-22. Its row appears in
-  the tables below **automatically** once the fit completes and stage 21's posterior
-  summary lands; no qmd edits are needed at that point beyond a re-render.
+- **K=4** — stage 21 full NUTS Student-$t$ fit, completed 2026-08-26; its Legs A/B/C
+  numbers (below) were computed 2026-09-07 after a watcher process that was meant to
+  auto-trigger them had died without running (see the Session 15 note in `CLAUDE.md`).
 
 The per-K analyses are driven by two K-parameterised helper scripts
 (`scripts/29b_kcompare_residuals.R` for Leg C, `scripts/31b_kcompare_pca.R` for Legs A/B).
@@ -299,21 +299,34 @@ kable(rs_show, booktabs = TRUE, escape = FALSE, row.names = FALSE,
 
 **Reading Leg C.** The residual criterion works as a *floor* check: a K is *adequate*
 if its mean $\Pr(|z|>\tau_{99})$ sits at or below 1\% (the theoretical expectation
-under a well-specified $t(\hat\nu)$ tail). Both K=2 (0.74\%) and K=3 (0.77\%) pass;
-K=4 is expected to also pass (adding a factor cannot make residual tails worse). Leg C
-therefore rules out under-fitting but does not by itself argue for K=3 over K=2 or K=4.
-The discriminating evidence lies in Legs A and B.
+under a well-specified $t(\hat\nu)$ tail). K=2 (0.74\%), K=3 (0.77\%), and K=4 (0.79\%)
+all pass, essentially flat. Leg C therefore rules out under-fitting at any K examined
+but does not by itself argue for K=3 over K=2 or K=4 — and, as it turns out below, even
+Legs A and B do not cleanly settle K=3 vs K=4.
 
-### The K=3 verdict (combining A + B + C)
+### The K=3 verdict (combining A + B + C) — K=4 does not produce a clean reversal
 
-- **Leg A** — the last PC's common-variance share drops from 30.8\% (K=2) to 10.5\% (K=3); K=4 pending. The K=2 → K=3 step still adds substantive common-variance structure, so K=3 is preferred over K=2. If PC4 at K=4 comes in near the noise floor (≈ 2\%), K=3 is preferred over K=4 too.
-- **Leg B** — 45/48 → 43/48 reliable loaders on the last PC (K=2 → K=3); PC3 is a well-identified third axis with a coherent contrast (possession-quality vs wide/direct/defensive; see §\ref{sec-interp}). If PC4 at K=4 falls below ~25/48 reliable, it is noise-dominated.
-- **Leg C** — both K=2 and K=3 pass the residual-adequacy floor with comparable mean exceedance rates (0.74\% vs 0.77\%). K=3 is not "hiding" tail misfit that K=2 caught, nor vice versa.
+- **Leg A** — the last PC's common-variance share declines from 30.8\% (K=2) to 10.5\%
+  (K=3) to **7.1\% (K=4)**: still declining, but not the drop toward a noise floor
+  (~2\%) that motivated running this comparison. The K=2 → K=3 step still adds clearly
+  substantive common-variance structure, so K=3 remains preferred over K=2 on this
+  criterion; K=3 vs K=4 is a milder, parsimony-flavoured preference rather than a sharp one.
+- **Leg B** — 45/48 → 43/48 → **45/48** reliable loaders on the last PC across
+  K=2 → K=3 → K=4: **non-monotonic**. PC4 at K=4 is, if anything, as reliably identified
+  as PC3 was at K=3, so this criterion gives no reason to prefer K=3 over K=4.
+- **Leg C** — K=2, K=3, and K=4 all pass the residual-adequacy floor with closely
+  comparable mean exceedance rates (0.74\%, 0.77\%, 0.79\%); this criterion does not
+  discriminate at any point in this range.
 
-Taken together: K=3 dominates K=2 on structural criteria (A, B) while matching on
-residual adequacy (C). The K=3-vs-K=4 verdict is *pending* the stage 21 fit; the null
-prediction — that PC4's variance share and reliable-loader count both fall to the noise
-floor — is the qualitative case for stopping at K=3 that the supervisor advised.
+Taken together: K=3 dominates K=2 on structural criteria (A, B) while matching it on
+residual adequacy (C) — that step is clean. The K=3-vs-K=4 step is **not** clean: Leg A
+mildly favours K=3, Leg B does not favour either, and Leg C is silent. Combined with the
+CV screens below (where K=4 is likewise never clearly dominated), the honest summary is
+that the data do not sharply separate K=3 from K=4. K=3 is retained as the production
+rank on parsimony grounds — the more economical of two ranks the evidence does not
+clearly distinguish — consistent with the supervisor's guidance to close the model at a
+qualitatively defensible rank rather than chase an open-ended search through
+successively higher, likely similarly ambiguous, comparisons.
 
 ### Cross-validation is inconclusive — honest disclosure
 
@@ -381,10 +394,15 @@ if (file.exists(holdout_path)) {
 **K=3** is the production rank. The comparative evidence in Legs A/B/C above shows:
 K=3 dominates K=2 on structural criteria (last-PC common-variance share drops from 30.8\%
 to 10.5\% but PC3 is still 90\% reliable-loaded); K=2 and K=3 match on residual adequacy
-(both below the 1\% floor). The pending K=4 stage-21 fit will confirm the K=3-vs-K=4
-side of the argument once it lands; the expected outcome (PC4 at the noise floor) makes
-K=3 the closing choice. The CV screens above are consistent with this call but are
-themselves inconclusive across $K \in \{2,\ldots,6\}$, so they do not carry the argument.
+(both below the 1\% floor). That step is clean. The K=3-vs-K=4 step, now that stage 21
+has completed and been analysed, is **not** clean: PC4's variance share (7.1\%) is small
+but not at a noise floor, and its reliable-loader count (45/48) is not lower than PC3's
+at K=3 (43/48) — the null prediction that motivated stopping at K=3 did not fully
+materialise. K=3 is retained regardless, on parsimony grounds given a genuinely
+ambiguous K=3-vs-K=4 comparison, matching the supervisor's guidance to close the model
+rather than continue chasing successively higher ranks. The CV screens above are
+consistent with this call but are themselves inconclusive across $K \in \{2,\ldots,6\}$
+(K=4 included), so they do not carry the argument either way.
 
 ## Factor loadings with posterior credible intervals {#sec-interp}
 
@@ -850,41 +868,48 @@ comp <- data.frame(
     "Low-rank $K=3$ vs diagonal $K=0$ (LOO, rebuilt)",
     "Minutes-scaled ($\\hat\\phi=0.5$) vs constant $\\sigma_e$"
   ),
-  `$\\Delta$ELPD` = c("$+3{,}724$", "$+11{,}668$", "$+12{,}125$*", "$+1{,}244$**", "deferred†", "n/a††"),
-  `SE` = c("187", "554", "—", "1,271", "—", "—"),
+  `$\\Delta$ELPD` = c("$+3{,}724$", "$+11{,}668$", "$+12{,}125$*", "$+1{,}244$**", "$+5{,}820.2$", "n/a††"),
+  `SE` = c("187", "554", "—", "1,271", "343.5", "—"),
   Source = c(
     "PSIS-LOO ($P=53$, $N=4944$)",
     "PSIS-LOO ($P=53$, $N=4944$)",
     "Pathfinder screening ($P=48$, $N=4586$)",
     "PSIS-LOO ($P=48$, $N=4586$)",
-    "Deferred; not blocking closure (§\\ref{sec-open})",
+    "PSIS-LOO ($P=48$, $N=4586$); directional (Pareto-$k>0.7$ for ~90\\% of points)",
     "$\\hat\\nu$ rises 4.90$\\to$5.67; low-min share 48.9\\%$\\to$8.3\\%"
   ),
   check.names = FALSE
 )
 kable(comp, booktabs = TRUE, escape = FALSE, row.names = FALSE,
       col.names = c("Comparison", "$\\Delta$ELPD", "SE", "Source/Note"),
-      caption = "All model comparisons. * Pathfinder: variational approximation; direction reliable but a single-K numeric optimum is not (see §\\ref{sec-rank}). ** PSIS-LOO: $\\Delta$ELPD $<$ SE and 99.4\\% Pareto-$k>0.5$; directional only. † Deferred (see §\\ref{sec-open}); not required for closing the model. †† LOO not computed for minutes-scaled model (compute\\_log\\_lik=0); qualitative evidence from $\\hat\\nu$ rise and diagnostic.")
+      caption = "All model comparisons. * Pathfinder: variational approximation; direction reliable but a single-K numeric optimum is not (see §\\ref{sec-rank}). ** PSIS-LOO: $\\Delta$ELPD $<$ SE and 99.4\\% Pareto-$k>0.5$; directional only. †† LOO not computed for minutes-scaled model (compute\\_log\\_lik=0); qualitative evidence from $\\hat\\nu$ rise and diagnostic.")
 ```
 
-The low-rank structure is strongly supported over diagonal (20 SE) and Student-$t$
-residuals are strongly warranted (both on the pre-rebuild data). For rank selection,
-K=3 is adopted on qualitative grounds (§\ref{sec-rank}, Legs A/B/C); the Pathfinder,
-player-holdout CV, and PSIS-LOO comparisons are *consistent* with K=3 but do not by
-themselves single out a K within the neighbourhood — see the honest disclosure in
-§\ref{sec-rank}. The minutes-scaled extension is validated by the diagnostic
+The low-rank structure is strongly supported over diagonal both on the pre-rebuild data
+(20 SE) and, now, on the rebuilt $P=48$/$N=4{,}586$ data directly (17 SE; row 5 above),
+and Student-$t$ residuals are strongly warranted. For rank selection, K=3 is adopted on
+qualitative grounds (§\ref{sec-rank}, Legs A/B/C) rather than by $\Delta$ELPD: the
+Pathfinder, player-holdout CV, and PSIS-LOO comparisons among $K \geq 1$ are *consistent*
+with K=3 but do not by themselves single out a K within the neighbourhood — see the
+honest disclosure in §\ref{sec-rank}, including the K=3-vs-K=4 comparison, which is not
+as clean as originally hoped. The minutes-scaled extension is validated by the diagnostic
 (§\ref{sec-minutes}) even without a formal LOO comparison.
 
 ---
 
 # Open Questions {#sec-open}
 
-1. **Low-rank vs diagonal comparison on rebuilt data (*deferred, not blocking*).** The
-   existing $\Delta$ELPD is on the pre-rebuild dataset ($P=53$, $N=4{,}944$). A
-   diagonal refit on the current data ($P=48$, $N=4{,}586$) would sharpen the
-   low-rank-vs-diagonal claim, but is not required to close the model per supervisor
-   guidance — the K=3 justification is grounded in the qualitative Legs A/B/C of
-   §\ref{sec-rank}, not in a $\Delta$ELPD comparison with the diagonal baseline.
+1. **Low-rank vs diagonal comparison on rebuilt data — resolved (2026-09-07).** The
+   diagonal baseline (stage 03) had already been refit on the current data
+   ($P=48$, $N=4{,}586$); the LOO comparison against the K=3 production model itself had
+   just never been run. Now computed: $\Delta$ELPD $=+5{,}820.2$ (SE $343.5$),
+   confirming the low-rank structure is strongly supported on the current data too (not
+   just the pre-rebuild dataset). One wrinkle worth recording: the first extraction
+   attempt used stage 28's own posterior-summary CSVs and returned a degenerate,
+   all-zero result — its `log_lik` columns are declared in the header but were never
+   populated (`compute_log_lik=0` at fit time). The fix was to reuse the real log_lik
+   already computed via `generate_quantities()` for the K=2-vs-K=3 comparison
+   (`fits/csv/block_c_gq/k3/`), which needed no new Stan run.
 
 2. **Factor archetype labels based on posterior CIs.** The group radar and cluster labels
    (§\ref{sec-interp}) are based on the posterior-mean PCA rotation. The CI-filtered

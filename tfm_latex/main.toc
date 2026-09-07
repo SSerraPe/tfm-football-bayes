@@ -30,9 +30,9 @@
 \contentsline {subsection}{\tocsubsection {}{9.2}{Hold-out and leave-one-out cross-validation: an inconclusive screen}}{34}{subsection.4.9.2}%
 \contentsline {subsection}{\tocsubsection {}{9.3}{A qualitative argument for the rank}}{35}{subsection.4.9.3}%
 \contentsline {subsection}{\tocsubsection {}{9.4}{Selected rank}}{36}{subsection.4.9.4}%
-\contentsline {section}{\tocsection {}{10}{Variance decomposition and intraclass correlation}}{37}{section.4.10}%
-\contentsline {section}{\tocsection {}{11}{Canonical factor directions via spectral decomposition}}{38}{section.4.11}%
-\contentsline {subsection}{\tocsubsection {}{11.1}{Why the identification constraint does not yield interpretable directions}}{38}{subsection.4.11.1}%
+\contentsline {section}{\tocsection {}{10}{Variance decomposition and intraclass correlation}}{38}{section.4.10}%
+\contentsline {section}{\tocsection {}{11}{Canonical factor directions via spectral decomposition}}{39}{section.4.11}%
+\contentsline {subsection}{\tocsubsection {}{11.1}{Why the identification constraint does not yield interpretable directions}}{39}{subsection.4.11.1}%
 \contentsline {subsection}{\tocsubsection {}{11.2}{Spectral decomposition of the common variance matrix}}{39}{subsection.4.11.2}%
 \contentsline {subsection}{\tocsubsection {}{11.3}{Interpretation of canonical factor directions}}{40}{subsection.4.11.3}%
 \contentsline {chapter}{\tocchapter {Chapter}{5}{Results}}{41}{chapter.5}%

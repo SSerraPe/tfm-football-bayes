@@ -241,19 +241,50 @@ Minutes-scaled fits (stage 34): variant A (fixed φ=0.5) ν̂=5.667, variant B (
 φ) ν̂=5.979, φ̂=0.366. Stage 35 minutes diagnostic: low-minute worst-cell share 8.3%
 (14/168 obs) vs 48.9% at stage 28. Verdict: CORRECTED.
 
-**Rank selection (Session 14 extended, 2026-08-25 — per-K comparison):**
-K=3 justified from a per-K comparison of K=2 (stage 18), K=3 (stage 28), and K=4
-(stage 21, pending) on the three criteria the supervisor prescribed:
-(A) variance shares of ΛΛ' PCs — at K=2 last-PC = 30.8% common; at K=3 last-PC = 10.5%;
-K=4 last-PC pending (expected near noise floor).
-(B) reliable-loader count per PC under fixed-reference PCA — K=2 last-PC 45/48 reliable;
-K=3 last-PC 43/48 reliable; K=4 last-PC pending.
-(C) residual adequacy under each fit's own t(ν̂) noise model — K=2 mean frac 0.74%,
-K=3 mean frac 0.77% (both below the 1% floor, so residuals adequate at both K and NOT a
-discriminator between them; K=4 mean frac pending).
-CV disclosed honestly as inconclusive across K ∈ {2..6}: stage-32 CSV argmax is K=6,
+**Rank selection (Session 15, 2026-09-07 — K=4 comparison completed):**
+K=3 retained as the production rank from a completed per-K comparison of K=2 (stage 18),
+K=3 (stage 28), and **K=4 (stage 21, now complete)** on the three criteria the supervisor
+prescribed. **Unlike the K=2-vs-K=3 step, K=4 does NOT produce a clean reversal:**
+(A) variance shares of ΛΛ' PCs — last-PC share: K=2 30.8% → K=3 10.5% → K=4 **7.1%**
+(still declining, not at a noise floor — the ≈2% expected in the Session 14 extension
+did not materialise).
+(B) reliable-loader count per PC under fixed-reference PCA — last-PC reliable count:
+K=2 45/48 → K=3 43/48 → K=4 **45/48** (non-monotonic — PC4 is not less identified than
+PC3 was).
+(C) residual adequacy under each fit's own t(ν̂) noise model — mean frac exceeding τ99:
+K=2 0.74% → K=3 0.77% → K=4 **0.79%** (flat, all below the 1% floor; still not a
+discriminator at any K examined).
+**Verdict:** the qualitative evidence does not sharply separate K=3 from K=4 (Criterion A
+mildly favours K=3, Criterion B does not, Criterion C is silent). K=3 is retained on
+parsimony grounds given the model is being closed, not because K=4 was shown to be worse.
+This honest, less-clean-than-hoped-for K=3-vs-K=4 comparison is now written up in
+`tfm_latex/methodology.tex` §9.4 (updated 2026-09-07) — see there for the full argument.
+CV remains disclosed as inconclusive across K ∈ {2..6}: stage-32 CSV argmax is K=6,
 stage-17 full-range argmax is K=5 (K=3 a local dip); the earlier qmd claim of "both
-metrics peak at K=3" was **incorrect** and has been corrected.
+metrics peak at K=3" was **incorrect** and has been corrected (Session 14).
+
+**Implemented Session 15 (2026-09-07):**
+- **Discovered stage 21 (K=4) had actually finished on 2026-08-26**, but the watcher process
+  meant to auto-trigger the K=4 kcompare analyses (`scripts/run_when_stage21_done.sh`,
+  tracked via `k4_watcher.pid`/`stage21.pid`) had died without running them — both PIDs
+  were stale, and `outputs/tables/21_real_k4_t_posterior_summary.csv` only ever had a
+  1-row (lp__-only) summary rather than the full per-parameter extraction.
+- **New `scripts/21b_build_k4_posterior_summary.R`** — rebuilds the missing full posterior
+  summary (337 params: nu, Lambda_a ×192, psi_a ×48, sigma_b ×48, sigma_e ×48) for stage 21
+  via the same Python column-pass approach as `B_block_b_diagnostics_28.R`, generalised to
+  K=4. Runs in ~80s per chain-set of 4 (2.6GB × 4 chains). Output matches the
+  `posterior::summarise_draws()` format (bracket-notation `variable` names) that
+  `29b_kcompare_residuals.R`/`31b_kcompare_pca.R` expect.
+- **Ran `BFA_K=4` for both kcompare scripts** — `29b_kcompare_summary.csv` and
+  `31b_kcompare_{variance_shares,reliable_counts}.csv` now have real K=4 rows (see the
+  Rank selection entry above for the numbers and verdict).
+- **`tfm_latex/methodology.tex` §9.4 updated** to report the actual, less-clean-than-hoped
+  K=4 comparison (previously said "K=4 not yet compared").
+- Session 13-14's earlier, larger doc-rebase work (tfm_latex Ch2-4 rebuild onto the
+  production dataset; README/CLAUDE.md/docs/thesis staleness fixes) is Sessions 13-14 above
+  and in git history (`b9f8cef`, `a6be05a`, `d93fe30`).
+- Stale `k4_watcher.pid`/`stage21.pid` removed; `.gitignore` already excludes `*.pid`
+  going forward (Session 14).
 
 **Implemented Session 14 (2026-08-22 initial + 2026-08-25 extension):**
 
@@ -288,8 +319,13 @@ preferred over neighbouring K". Scope extended to per-K comparison:*
   auto-appearing when the fit lands). Tables are driven by `read.csv()` on the kcompare
   CSVs, so no qmd edits are needed once stage 21 completes and the K=4 analyses run.
   Final "K=3 verdict" subsection replaces the previous adequacy-framed conclusion.
-- **PDF re-render pending**: after K=4 fit completes and 29b/31b run at K=4, one
-  `quarto render` call produces the final PDF.
+- **PDF re-render still pending** (Session 15 update): K=4 fit completed and 29b/31b now
+  have K=4 rows (Session 15, above), so `professor_summary.qmd`'s dynamically-driven
+  §sec-rank table will pick them up automatically — but the surrounding prose (the "Final
+  rank verdict" narrative) still needs a manual edit to match the actual K=4 verdict (not a
+  clean reversal — see the Rank selection entry above), and `quarto` is not installed in
+  this environment (no sudo access to `brew install --cask quarto`), so the PDF itself
+  has not been re-rendered.
 
 **Implemented Session 13 (2026-08-08):**
 - **Stage 34 complete** (`scripts/34_fit_minutes_scaled_t.R`): both variants fit successfully.
@@ -448,8 +484,17 @@ preferred over neighbouring K". Scope extended to per-K comparison:*
    (-34211.0), K=4 marginal (+1.2 units), K=5 reverses (-34219.4). K=6..8 still running for
    completeness. Production fit at K=3 (stage 28) is confirmed correct. Stage 34 uses K=3.
 7. **Low-rank vs diagonal: better metrics added.** Frobenius distance = 4.54, K-fold Δ = +72,881
-   (see stage 24). Stage 20 rebuild (K=3 vs diagonal P=48) blocked on Block D (stage 03 refit).
-   When complete, output `outputs/tables/20_icc_diagonal_vs_lowrank_rebuilt.csv`.
+   (see stage 24). ✅ Stage 20 rebuild (K=3 t-model vs diagonal, P=48, N=4586) completed
+   Session 15: **ΔELPD = +5,820.2 (SE 343.5)**, strongly favouring K=3 over diagonal on the
+   rebuilt data (elpd_loo −176,314.2 vs −182,134.5) — directionally consistent with the
+   pre-rebuild +3,724 figure but now on the correct dataset. Pareto-k is bad/very-bad for
+   ~90% of points at both models (consistent with Issue 10 below; directional evidence
+   only). Computed via `scripts/20b_diagonal_vs_k3_rebuilt.R` +
+   `scripts/20c_fix_diagonal_vs_k3_loo.R` (the first pass used stage 28's original CSVs,
+   whose `log_lik` columns turned out to be placeholder zeros from `compute_log_lik=0` at
+   fit time; the second pass correctly reused the real log_lik from the Block-C
+   `generate_quantities()` cache at `fits/csv/block_c_gq/k3/`). See
+   `outputs/tables/20_icc_diagonal_vs_lowrank_rebuilt.csv`.
 8. **Student-t ν.** ✅ Resolved — ν moved 2.95→4.902 after transforms; no longer near boundary.
 9. **GK players excluded.** ✅ Resolved in Session 8 — 501 rows removed, N=4586, I=1529.
 10. **LOO reliability.** Pareto-k "very bad" for >58% of points. Use K-fold ELPD (already
@@ -464,14 +509,25 @@ preferred over neighbouring K". Scope extended to per-K comparison:*
     Stage 35 minutes diagnostic: low-minute share 8.3% (14/168 obs) vs 48.9% at stage 28.
     Verdict: CORRECTED.
 
-**Next required go-ahead (Session 13 — stage 34 + 35 complete):**
+**Next required go-ahead (Session 15 update):**
 - **Stage 34 complete.** ν̂=5.667 (34a, fixed φ=0.5) / 5.979 (34b, estimated φ); φ̂=0.366.
 - **Stage 35 complete.** Low-minute worst-cell share: 8.3% (14/168 obs) vs 48.9% at stage 28. Verdict: CORRECTED.
-- **Remaining deferred:**
-  - Stage 03 diagonal refit → stage 20 LOO → `20_icc_diagonal_vs_lowrank_rebuilt.csv`.
-  - Stage 31 (`31_pca_with_ci.R`) — CI-filtered PCA + Σ_a variant for professor_summary.
+- **Stage 31 complete** (contrary to this note's earlier "remaining deferred" status) —
+  `outputs/tables/31_pca_loading_ci.csv`, `31_sigma_a_pca.csv`, `31_sigma_a_pca_loadings.csv`
+  all exist and are current (used directly in the 2026-09-07 `tfm_latex`/thesis rebase).
+- **Stage 20 rebuild (diagonal vs K=3, rebuilt P=48) — completed Session 15**: **ΔELPD =
+  +5,820.2 (SE 343.5)** favouring K=3. See Issue 7 below for the full story (stage 28's
+  original CSVs had placeholder-zero `log_lik`; fixed by reusing the Block-C
+  `generate_quantities()` cache). Output: `outputs/tables/20_icc_diagonal_vs_lowrank_rebuilt.csv`
+  + `20_pareto_k_diagonal_vs_lowrank_rebuilt.csv`.
+- **K=4 comparison complete (Session 15)** — see "Rank selection" above. Does not overturn
+  K=3, but is not a clean reversal either; documented honestly in `tfm_latex/methodology.tex` §9.4.
 - Two-component mixture model (Issue 12) deprioritised — ν≈5 after transforms.
 - Team-season effects, temporal GP — DEFERRED; close current model first.
+- `docs/professor/professor_summary.qmd`'s PDF has not been re-rendered since Session 13
+  (2026-08-08) despite several qmd text updates since (Sessions 14-15) — `quarto` is not
+  installed in this environment (no sudo access for `brew install --cask quarto`). The
+  qmd source is current; only the tracked `.pdf` deliverable is stale.
 
 **Chain initialisation — confirmed in place:** `build_pca_init()` (`src/stan_helpers.R:179`) is
 wired into stages 10, 18, 21, and 28.
