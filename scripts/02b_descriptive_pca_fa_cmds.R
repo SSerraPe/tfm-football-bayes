@@ -286,18 +286,50 @@ write_csv_safe(load_long, file.path(paths$tables, "02b_fa_loadings.csv"))
 fa_cor_tbl <- as.data.frame(fa_hi$Phi)
 write_csv_safe(rownames_to_column(fa_cor_tbl, "factor"), file.path(paths$tables, "02b_fa_factor_correlations.csv"))
 
-p_loadings_fa <- ggplot(load_long, aes(x = reorder(feature, abs_loading), y = loading,
+# Panels are ordered by variance explained (fa_hi$Vaccounted["Proportion Var", ]) and
+# labeled with the short interpretation given in the surrounding prose (background.tex,
+# "Ordered by the variance each factor accounts for..."). If the FA is refit and the
+# ML-column-to-archetype correspondence shifts, this vector must be re-checked against
+# fa_hi$Vaccounted and updated to match.
+factor_var_order <- names(sort(fa_hi$Vaccounted["Proportion Var", ], decreasing = TRUE))
+factor_interpretation <- c(
+  "chance creation & assists", "goal threat & finishing", "carrying & offensive duelling",
+  "passing volume & circulation", "defensive duel-winning", "defensive duel exposure",
+  "progressive & vertical passing", "physical engagement & possession risk",
+  "high/pressing recoveries", "passing accuracy vs. crossing risk", "deep build-up circulation"
+)
+wrap_label <- function(x, width = 20) paste(strwrap(x, width = width), collapse = "\n")
+factor_display <- setNames(
+  paste0("F", seq_along(factor_var_order), ": ", vapply(factor_interpretation, wrap_label, character(1))),
+  factor_var_order
+)
+
+load_long <- load_long |>
+  mutate(
+    factor_label = factor(factor_display[factor], levels = unname(factor_display[factor_var_order])),
+    feature_label = gsub("per90_|rate_", "", feature),
+    feature_label = gsub("_", " ", feature_label)
+  )
+
+p_loadings_fa <- ggplot(load_long, aes(x = reorder(feature_label, abs_loading), y = loading,
                                         fill = ifelse(loading > 0, "Positive", "Negative"))) +
   geom_col() +
   geom_hline(yintercept = 0, linewidth = 0.3, color = "gray30") +
   coord_flip() +
-  facet_wrap(~factor, scales = "free_y") +
+  facet_wrap(~factor_label, scales = "free_y", ncol = 4) +
+  scale_y_continuous(breaks = scales::breaks_pretty(n = 3), labels = scales::label_number(accuracy = 0.1)) +
   scale_fill_manual(values = c("Positive" = "steelblue", "Negative" = "firebrick")) +
-  theme_minimal() +
-  theme(legend.position = "bottom") +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "bottom",
+    strip.text = element_text(size = 9, face = "bold"),
+    axis.text.y = element_text(size = 9),
+    axis.text.x = element_text(size = 8),
+    panel.spacing = unit(1, "lines")
+  ) +
   labs(x = NULL, y = "Loading", fill = NULL)
 ggsave(file.path(paths$scripts, "..", "tfm_latex", "images", "loadings_fa.png"),
-       p_loadings_fa, width = 9, height = 7, dpi = 300)
+       p_loadings_fa, width = 15, height = 10, dpi = 300)
 
 # ---------------------------------------------------------------------------
 # 6) Classical MDS (Euclidean + cosine), full sample; extremes from the SAME

@@ -5,7 +5,7 @@
 \contentsline {section}{\tocsection {}{1}{Similarity representation}}{9}{section.3.1}%
 \contentsline {section}{\tocsection {}{2}{Exploratory low-dimensional structure}}{10}{section.3.2}%
 \contentsline {subsection}{\tocsubsection {}{2.1}{Principal component analysis}}{12}{subsection.3.2.1}%
-\contentsline {subsection}{\tocsubsection {}{2.2}{Factor analysis}}{14}{subsection.3.2.2}%
+\contentsline {subsection}{\tocsubsection {}{2.2}{Factor analysis}}{15}{subsection.3.2.2}%
 \contentsline {subsection}{\tocsubsection {}{2.3}{Classical multidimensional scaling}}{18}{subsection.3.2.3}%
 \contentsline {subsection}{\tocsubsection {}{2.4}{Summary of the exploratory role of PCA, FA, and CMDS}}{21}{subsection.3.2.4}%
 \contentsline {chapter}{\tocchapter {Chapter}{4}{Model}}{23}{chapter.4}%

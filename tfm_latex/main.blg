@@ -3,49 +3,44 @@ Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: main.aux
 The style file: amsplain.bst
 Database file #1: tfm.bib
-Warning--missing journal name in swinton2023bayesian
-Warning--missing pages in swinton2023bayesian
-Warning--missing journal name in yanchenko2020hierarchical
-Warning--missing pages in yanchenko2020hierarchical
-You've used 31 entries,
+You've used 32 entries,
             2213 wiz_defined-function locations,
-            694 strings with 9117 characters,
-and the built_in function-call counts, 10548 in all, are:
-= -- 947
-> -- 520
+            702 strings with 9373 characters,
+and the built_in function-call counts, 11043 in all, are:
+= -- 999
+> -- 549
 < -- 1
-+ -- 206
-- -- 171
-* -- 924
-:= -- 1709
-add.period$ -- 31
-call.type$ -- 31
-change.case$ -- 178
++ -- 218
+- -- 181
+* -- 966
+:= -- 1787
+add.period$ -- 32
+call.type$ -- 32
+change.case$ -- 186
 chr.to.int$ -- 0
-cite$ -- 35
-duplicate$ -- 396
-empty$ -- 870
-format.name$ -- 171
-if$ -- 2172
+cite$ -- 32
+duplicate$ -- 407
+empty$ -- 909
+format.name$ -- 181
+if$ -- 2278
 int.to.chr$ -- 0
-int.to.str$ -- 31
-missing$ -- 67
-newline$ -- 103
-num.names$ -- 68
-pop$ -- 216
+int.to.str$ -- 32
+missing$ -- 68
+newline$ -- 106
+num.names$ -- 70
+pop$ -- 226
 preamble$ -- 1
-purify$ -- 143
+purify$ -- 150
 quote$ -- 0
-skip$ -- 242
+skip$ -- 248
 stack$ -- 0
-substring$ -- 703
-swap$ -- 66
+substring$ -- 756
+swap$ -- 63
 text.length$ -- 1
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 112
-warning$ -- 4
-while$ -- 111
-width$ -- 33
-write$ -- 285
-(There were 4 warnings)
+type$ -- 116
+warning$ -- 0
+while$ -- 117
+width$ -- 34
+write$ -- 297

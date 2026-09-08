@@ -8,149 +8,99 @@
 \begin{thebibliography}{10}
 
 \bibitem{anderson1956statistical}
-Theodore~W. Anderson and Herman Rubin, \emph{Statistical inference in factor
-  analysis}, Proceedings of the Third {Berkeley} Symposium on Mathematical
-  Statistics and Probability (Jerzy Neyman, ed.), vol.~5, University of
-  California Press, 1956, pp.~111--150.
+Theodore~W. Anderson and Herman Rubin, \emph{Statistical inference in factor analysis}, Proceedings of the Third {Berkeley} Symposium on Mathematical Statistics and Probability (Jerzy Neyman, ed.), vol.~5, University of California Press, 1956, pp.~111--150.
 
 \bibitem{baio2010bayesian}
-Gianluca Baio and Marta Blangiardo, \emph{Bayesian hierarchical model for the
-  prediction of football results}, Journal of Applied Statistics \textbf{37}
-  (2010), no.~2, 253--264.
+Gianluca Baio and Marta Blangiardo, \emph{Bayesian hierarchical model for the prediction of football results}, Journal of Applied Statistics \textbf{37} (2010), no.~2, 253--264.
 
 \bibitem{bartholomew2011latent}
-David~J. Bartholomew, Martin Knott, and Irini Moustaki, \emph{Latent variable
-  models and factor analysis: A unified approach}, 3 ed., Wiley, 2011.
+David~J. Bartholomew, Martin Knott, and Irini Moustaki, \emph{Latent variable models and factor analysis: A unified approach}, 3 ed., Wiley, 2011.
 
 \bibitem{borg2005mds}
-Ingwer Borg and Patrick J.~F. Groenen, \emph{Modern multidimensional scaling:
-  Theory and applications}, 2 ed., Springer, 2005.
+Ingwer Borg and Patrick J.~F. Groenen, \emph{Modern multidimensional scaling: Theory and applications}, 2 ed., Springer, 2005.
 
 \bibitem{browne1992fit}
-Michael~W. Browne and Robert Cudeck, \emph{Alternative ways of assessing model
-  fit}, Testing Structural Equation Models (Kenneth~A. Bollen and J.~Scott
-  Long, eds.), Sage, 1993, pp.~136--162.
+Michael~W. Browne and Robert Cudeck, \emph{Alternative ways of assessing model fit}, Testing Structural Equation Models (Kenneth~A. Bollen and J.~Scott Long, eds.), Sage, 1993, pp.~136--162.
 
 \bibitem{carpenter2017stan}
-Bob Carpenter, Andrew Gelman, Matthew~D. Hoffman, Daniel Lee, Ben Goodrich,
-  Michael Betancourt, Marcus~A. Brubaker, Jiqiang Guo, Peter Li, and Allen
-  Riddell, \emph{Stan: A probabilistic programming language}, Journal of
-  Statistical Software \textbf{76} (2017), no.~1, 1--32.
+Bob Carpenter, Andrew Gelman, Matthew~D. Hoffman, Daniel Lee, Ben Goodrich, Michael Betancourt, Marcus~A. Brubaker, Jiqiang Guo, Peter Li, and Allen Riddell, \emph{Stan: A probabilistic programming language}, Journal of Statistical Software \textbf{76} (2017), no.~1, 1--32.
 
 \bibitem{cox2001mds}
-Trevor~F. Cox and Michael A.~A. Cox, \emph{Multidimensional scaling}, 2 ed.,
-  Chapman \& Hall/CRC, 2001.
+Trevor~F. Cox and Michael A.~A. Cox, \emph{Multidimensional scaling}, 2 ed., Chapman \& Hall/CRC, 2001.
 
 \bibitem{gelman2006prior}
-Andrew Gelman, \emph{Prior distributions for variance parameters in
-  hierarchical models}, Bayesian Analysis \textbf{1} (2006), no.~3, 515--534.
+Andrew Gelman, \emph{Prior distributions for variance parameters in hierarchical models}, Bayesian Analysis \textbf{1} (2006), no.~3, 515--534.
 
 \bibitem{gelman2007data}
-Andrew Gelman and Jennifer Hill, \emph{Data analysis using regression and
-  multilevel/hierarchical models}, Cambridge University Press, 2007.
+Andrew Gelman and Jennifer Hill, \emph{Data analysis using regression and multilevel/hierarchical models}, Cambridge University Press, 2007.
 
 \bibitem{geweke1993bayesian}
-John Geweke, \emph{Bayesian treatment of the independent student-$t$ linear
-  model}, Journal of Applied Econometrics \textbf{8} (1993), no.~S1, S19--S40.
+John Geweke, \emph{Bayesian treatment of the independent student-$t$ linear model}, Journal of Applied Econometrics \textbf{8} (1993), no.~S1, S19--S40.
 
 \bibitem{geweke1996measuring}
-John Geweke and Guofu Zhou, \emph{Measuring the pricing error of the arbitrage
-  pricing theory}, Review of Financial Studies \textbf{9} (1996), no.~2,
-  557--587.
+John Geweke and Guofu Zhou, \emph{Measuring the pricing error of the arbitrage pricing theory}, Review of Financial Studies \textbf{9} (1996), no.~2, 557--587.
 
 \bibitem{horn1965parallel}
-John~L. Horn, \emph{A rationale and test for the number of factors in factor
-  analysis}, Psychometrika \textbf{30} (1965), no.~2, 179--185.
+John~L. Horn, \emph{A rationale and test for the number of factors in factor analysis}, Psychometrika \textbf{30} (1965), no.~2, 179--185.
 
 \bibitem{jennrich1966rotation}
-Robert~I. Jennrich and Paul~F. Sampson, \emph{Rotation for simple loadings},
-  Psychometrika \textbf{31} (1966), no.~3, 313--323.
+Robert~I. Jennrich and Paul~F. Sampson, \emph{Rotation for simple loadings}, Psychometrika \textbf{31} (1966), no.~3, 313--323.
 
 \bibitem{jolliffe2002pca}
 Ian~T. Jolliffe, \emph{Principal component analysis}, 2 ed., Springer, 2002.
 
 \bibitem{juarez2010model}
-Miguel~A. Ju\'{a}rez and Mark F.~J. Steel, \emph{Model-based clustering of
-  non-{Gaussian} panel data based on skew-$t$ distributions}, Journal of the
-  American Statistical Association \textbf{105} (2010), no.~490, 298--309.
+Miguel~A. Ju\'{a}rez and Mark F.~J. Steel, \emph{Model-based clustering of non-{Gaussian} panel data based on skew-$t$ distributions}, Journal of the American Statistical Association \textbf{105} (2010), no.~490, 298--309.
 
 \bibitem{lange1989robust}
-Kenneth~L. Lange, Roderick J.~A. Little, and Jeremy M.~G. Taylor, \emph{Robust
-  statistical modeling using the $t$ distribution}, Journal of the American
-  Statistical Association \textbf{84} (1989), no.~408, 881--896.
+Kenneth~L. Lange, Roderick J.~A. Little, and Jeremy M.~G. Taylor, \emph{Robust statistical modeling using the $t$ distribution}, Journal of the American Statistical Association \textbf{84} (1989), no.~408, 881--896.
 
 \bibitem{lopes2004bayesian}
-Hedibert~Freitas Lopes and Mike West, \emph{Bayesian model assessment in factor
-  analysis}, Statistica Sinica \textbf{14} (2004), no.~1, 41--67.
+Hedibert~Freitas Lopes and Mike West, \emph{Bayesian model assessment in factor analysis}, Statistica Sinica \textbf{14} (2004), no.~1, 41--67.
 
 \bibitem{neal2011mcmc}
-Radford~M. Neal, \emph{{MCMC} using {Hamiltonian} dynamics}, Handbook of
-  {Markov} Chain {Monte Carlo} (Steve Brooks, Andrew Gelman, Galin~L. Jones,
-  and Xiao-Li Meng, eds.), CRC Press, 2011, pp.~113--162.
+Radford~M. Neal, \emph{{MCMC} using {Hamiltonian} dynamics}, Handbook of {Markov} Chain {Monte Carlo} (Steve Brooks, Andrew Gelman, Galin~L. Jones, and Xiao-Li Meng, eds.), CRC Press, 2011, pp.~113--162.
 
 \bibitem{oh2001bayesian}
-Man-Suk Oh and Adrian~E. Raftery, \emph{Bayesian multidimensional scaling and
-  choice of dimension}, Journal of the American Statistical Association
-  \textbf{96} (2001), no.~455, 1031--1044.
+Man-Suk Oh and Adrian~E. Raftery, \emph{Bayesian multidimensional scaling and choice of dimension}, Journal of the American Statistical Association \textbf{96} (2001), no.~455, 1031--1044.
 
 \bibitem{orucc2024analysis}
-Deniz~Can Oru{\c{c}}, Lorenzo Cascioli, Luca Stradiotti, Maaike Van~Roy, Pieter
-  Robberechts, and Jesse Davis, \emph{An analysis of the influence of game
-  context on team playing style}, International Workshop on Machine Learning
-  and Data Mining for Sports Analytics, Springer, 2024, pp.~57--68.
+Deniz~Can Oru{\c{c}}, Lorenzo Cascioli, Luca Stradiotti, Maaike Van~Roy, Pieter Robberechts, and Jesse Davis, \emph{An analysis of the influence of game context on team playing style}, International Workshop on Machine Learning and Data Mining for Sports Analytics, Springer, 2024, pp.~57--68.
 
 \bibitem{papaspiliopoulos2007general}
-Omiros Papaspiliopoulos, Gareth~O. Roberts, and Martin Sk\"{o}ld, \emph{A
-  general framework for the parametrization of hierarchical models},
-  Statistical Science \textbf{22} (2007), no.~1, 59--73.
+Omiros Papaspiliopoulos, Gareth~O. Roberts, and Martin Sk\"{o}ld, \emph{A general framework for the parametrization of hierarchical models}, Statistical Science \textbf{22} (2007), no.~1, 59--73.
 
 \bibitem{ribeiro2025bayesian}
-Gabriel~G. Ribeiro, Lilia C.~C. Da~Costa, Paulo~H. Ferreira, and Diego~C.
-  do~Nascimento, \emph{A bayesian approach to predict performance in football:
-  a case study}, Frontiers in Sports and Active Living \textbf{7} (2025),
-  1486928.
+Gabriel~G. Ribeiro, Lilia C.~C. Da~Costa, Paulo~H. Ferreira, and Diego~C. do~Nascimento, \emph{A bayesian approach to predict performance in football: a case study}, Frontiers in Sports and Active Living \textbf{7} (2025), 1486928.
 
 \bibitem{schwarz1978bic}
-Gideon Schwarz, \emph{Estimating the dimension of a model}, The Annals of
-  Statistics \textbf{6} (1978), no.~2, 461--464.
+Gideon Schwarz, \emph{Estimating the dimension of a model}, The Annals of Statistics \textbf{6} (1978), no.~2, 461--464.
 
 \bibitem{shrout1979intraclass}
-Patrick~E. Shrout and Joseph~L. Fleiss, \emph{Intraclass correlations: Uses in
-  assessing rater reliability}, Psychological Bulletin \textbf{86} (1979),
-  no.~2, 420--428.
+Patrick~E. Shrout and Joseph~L. Fleiss, \emph{Intraclass correlations: Uses in assessing rater reliability}, Psychological Bulletin \textbf{86} (1979), no.~2, 420--428.
 
 \bibitem{swinton2023bayesian}
-Paul Swinton, \emph{Bayesian approaches to quantifying uncertainty in sport and
-  exercise measurements: A guide for practitioners and applied researchers},
-  (2023).
+Paul~A. Swinton, Ben Stephens~Hemingway, Iain~J. Gallagher, and Eimear Dolan, \emph{Bayesian approaches to quantifying uncertainty in sport and exercise measurements: A guide for practitioners and applied researchers}, SportRxiv preprint, 2023.
 
 \bibitem{teixeira2025mapping}
-Jose~E. Teixeira, Eduardo Maio, Pedro Afonso, Samuel Encarnacao, Guilherme~F.
-  Machado, Ryland Morgans, Tiago~M. Barbosa, Ant{\'o}nio~M. Monteiro, Pedro
-  Forte, Ricardo Ferraz, et~al., \emph{Mapping football tactical behavior and
-  collective dynamics with artificial intelligence: a systematic review},
-  Frontiers in Sports and Active Living \textbf{7} (2025), 1569155.
+Jose~E. Teixeira, Eduardo Maio, Pedro Afonso, Samuel Encarnacao, Guilherme~F. Machado, Ryland Morgans, Tiago~M. Barbosa, Ant{\'o}nio~M. Monteiro, Pedro Forte, Ricardo Ferraz, et~al., \emph{Mapping football tactical behavior and collective dynamics with artificial intelligence: a systematic review}, Frontiers in Sports and Active Living \textbf{7} (2025), 1569155.
 
 \bibitem{torgerson1958theory}
 Warren~S. Torgerson, \emph{Theory and methods of scaling}, Wiley, 1958.
 
+\bibitem{tucker1973reliability}
+Ledyard~R. Tucker and Charles Lewis, \emph{A reliability coefficient for maximum likelihood factor analysis}, Psychometrika \textbf{38} (1973), no.~1, 1--10.
+
 \bibitem{vehtari2017practical}
-Aki Vehtari, Andrew Gelman, and Jonah Gabry, \emph{Practical {Bayesian} model
-  evaluation using leave-one-out cross-validation and {WAIC}}, Statistics and
-  Computing \textbf{27} (2017), no.~5, 1413--1432.
+Aki Vehtari, Andrew Gelman, and Jonah Gabry, \emph{Practical {Bayesian} model evaluation using leave-one-out cross-validation and {WAIC}}, Statistics and Computing \textbf{27} (2017), no.~5, 1413--1432.
 
 \bibitem{wyscout_glossary}
-{Wyscout}, \emph{Wyscout glossary}, \url{https://dataglossary.wyscout.com/},
-  n.d., Official glossary describing the Wyscout data model used across the
-  platform, reports, and API. Accessed: 2026-04-21.
+{Wyscout}, \emph{Wyscout glossary}, \url{https://dataglossary.wyscout.com/}, n.d., Official glossary describing the Wyscout data model used across the platform, reports, and API. Accessed: 2026-04-21.
 
 \bibitem{yanchenko2020hierarchical}
-Anna~K. Yanchenko and Peter~D. Hoff, \emph{Hierarchical multidimensional
-  scaling for the comparison of musical performance styles},  (2020).
+Anna~K. Yanchenko and Peter~D. Hoff, \emph{Hierarchical multidimensional scaling for the comparison of musical performance styles}, The Annals of Applied Statistics \textbf{14} (2020), no.~4, 1581--1603.
 
 \bibitem{zhang2022pathfinder}
-Lu~Zhang, Bob Carpenter, Andrew Gelman, and Aki Vehtari, \emph{Pathfinder:
-  Parallel quasi-newton variational inference}, Journal of Machine Learning
-  Research \textbf{23} (2022), no.~306, 1--49.
+Lu~Zhang, Bob Carpenter, Andrew Gelman, and Aki Vehtari, \emph{Pathfinder: Parallel quasi-newton variational inference}, Journal of Machine Learning Research \textbf{23} (2022), no.~306, 1--49.
 
 \end{thebibliography}
