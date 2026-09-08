@@ -43,6 +43,7 @@ Rplots.pdf
 *.out
 *.fls
 *.fdb_latexmk
+*.synctex.gz
 **/*_files/
 
 # Large, regenerable processed data
