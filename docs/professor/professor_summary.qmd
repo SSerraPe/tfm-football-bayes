@@ -698,6 +698,107 @@ if (file.exists(fig("37_similarity_example.png")))
   knitr::include_graphics(fig("37_similarity_example.png"))
 ```
 
+### Style vs. level: a fully Bayesian similarity score
+
+The similarity metric above is a useful first pass, but it is a **point estimate** on
+**classical** PCA scores, and it blends two conceptually different things into one number:
+whether two players *look alike* (the shape of their profile) and whether they *produce
+alike* (their level of output). This matters for a natural question the point-estimate
+metric cannot answer on its own: can a player be genuinely similar in style to an
+exceptional outlier — a generational talent — without matching their output? Intuitively,
+yes: two players can share a nearly identical profile shape while sitting at very
+different output levels, for reasons the model does not (and should not) collapse into a
+single "similarity" number — squad role, finishing variance, luck, and the sheer rarity of
+truly elite output all separate "style" from "level."
+
+The model's own covariance structure already gives a principled way to make this split.
+Recall (\S\ref{sec-model}) that the player effect decomposes as
+$\mathbf{a}_i = \Lambda\boldsymbol\eta_i + \boldsymbol\psi_a\odot\mathbf{z}_{u,i}$: a
+**shared** part driven by the $K=3$ factors, and an **idiosyncratic** part that the shared
+factors do not explain. "Style" is naturally the player's position in the shared factor
+space — the PCA-rotated score $\mathbf{f}_i$ used throughout this report — while "level" is
+naturally read off the specific output features the shared style position does not by
+itself pin down (goals and xG per shot). Two players can be **style-close** (nearly
+identical $\mathbf{f}_i$) while being **level-far** (very different modelled goals/xG) —
+that is the formal, model-native version of "similar style, different output."
+
+This section recomputes the archetype-space distance **per posterior draw** (not once on
+posterior means), for the case-study players already introduced above plus their
+recovered nearest neighbours. Each pair below therefore carries a genuine credible
+interval on the style distance and on the level gap, plus a stability statement: the
+fraction of posterior draws in which a given neighbour is *the* single closest player in
+style space. A tight interval and a high stability fraction mean the ranking is not an
+artefact of posterior noise; a wide interval or low stability means the ordering among
+the closest few neighbours should be read loosely.
+
+```{r similarity-bayes-table}
+bayes_path <- tbl("38_bayesian_similarity_case_studies.csv")
+if (file.exists(bayes_path)) {
+  bayes_sim <- read.csv(bayes_path)
+  bayes_show <- bayes_sim |>
+    dplyr::group_by(query_player_name) |>
+    dplyr::slice_min(style_dist_mean, n = 3) |>
+    dplyr::ungroup() |>
+    dplyr::transmute(
+      Player = query_player_name,
+      `Style neighbour` = neighbor_player_name,
+      `Style dist. (90% CI)` = sprintf("%.2f [%.2f, %.2f]", style_dist_mean, style_dist_q05, style_dist_q95),
+      `P(closest)` = sprintf("%.0f%%", 100 * p_closest_neighbor),
+      `Level gap (90% CI)` = sprintf("%.2f [%.2f, %.2f]", level_gap_mean, level_gap_q05, level_gap_q95)
+    )
+  kable(bayes_show, booktabs = TRUE, row.names = FALSE,
+        caption = "Top-3 style-neighbours per case-study player, fully Bayesian version: posterior mean style distance and level gap (goals + xG per90, Z-scored units), each with a 90\\% credible interval, plus the fraction of posterior draws in which the neighbour is the single closest player in style space.")
+}
+```
+
+```{r}
+#| label: fig-style-vs-level
+#| fig-cap: "Style distance vs. level gap for the top-10 style-neighbours of each case-study player. Points toward the bottom-right are the clearest examples of 'same shape, different output level' — a stylistic twin at a different tier. Error bars are 90\\% credible intervals from the posterior draws."
+#| out-width: "90%"
+if (file.exists(fig("38_style_vs_level_scatter.png")))
+  knitr::include_graphics(fig("38_style_vs_level_scatter.png"))
+```
+
+Two concrete patterns emerge from this table that were not visible under the earlier
+point-estimate metric. **Benzema's closest style-neighbour is not Cristiano Ronaldo.**
+The point-estimate radar metric ranked Ronaldo first (they were team-mates, and the
+percentile radar's Attacking-output spoke blends shape and level together); the
+posterior-draw style-only metric instead makes S. Jovetić the modal closest match
+(39\% of draws) with Ronaldo a clear second (25\%) — and, more to the point, Ronaldo also
+carries the *largest* level gap of Benzema's four closest style-neighbours. Read together,
+this is a direct, data-driven instance of the argument above: even Benzema, an elite
+striker whose *shape* is genuinely close to Ronaldo's, cannot close the *level* gap to
+him — Ronaldo's idiosyncratic scoring output separates him from his closest stylistic
+peers, not just from the pool at large. **Ramos's closest neighbour is a near four-way
+tie, not a clean winner.** The old point estimate placed Javi García first by a margin of
+0.003 over Gerard Piqué (0.1611 vs.\ 0.1641) — a difference with no meaningful posterior
+support. The draw-level treatment shows four centre-backs (Piqué, Umtiti, Javi García,
+Mathieu) within a similar style-distance range, each closest-neighbour in only
+16--24\% of draws: Piqué is the modal pick, consistent with the well-known Ramos--Piqué
+pairing used earlier in this report, but the honest statement is a four-way toss-up, not
+a single confident answer. This is the practical payoff of moving to a fully Bayesian
+metric: a point estimate cannot distinguish "clearly the closest neighbour" from "one of
+several statistically indistinguishable candidates," and here the two cases look
+identical until the posterior draws are examined individually.
+
+Two things follow from this decomposition. First, it explains *why* a true generational
+outlier is unlikely to have a perfect twin: the outlier-ness lives disproportionately in
+the idiosyncratic term $\boldsymbol\psi_a\odot\mathbf{z}_{u,i}$, which is by construction
+the part of a player's identity that is *not* shared with anyone else — so matching
+someone's shared style is achievable, but matching both their style and their most
+idiosyncratic output is structurally much less likely. (The dataset is La Liga only,
+2011/12--2022/23; a player like Haaland has never played in this league and is not in
+this analysis — he is a useful illustration of the "generational outlier" idea, not a
+literal query target. The case-study players above, all of whom did play in this window,
+serve as the concrete stand-ins.) Second, and more usefully, it turns "style-close,
+level-far" pairs into a concrete scouting/recommendation product: a shortlist of players
+who match a target's profile shape at a different output tier — a candidate list of
+plausible, cheaper alternatives, rather than attempted replacements for an irreplaceable
+outlier. As with the point-estimate similarity metric above, this is a style/production
+tool only: market value, age, injury history, and league context are not modelled, and
+any shortlist it produces should be read as a starting point for scouting judgement, not
+a substitute for it.
+
 ---
 
 ## Season profiles {#sec-seasons}

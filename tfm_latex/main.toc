@@ -36,8 +36,8 @@
 \contentsline {subsection}{\tocsubsection {}{11.2}{Spectral decomposition of the common variance matrix}}{39}{subsection.4.11.2}%
 \contentsline {subsection}{\tocsubsection {}{11.3}{Interpretation of canonical factor directions}}{40}{subsection.4.11.3}%
 \contentsline {chapter}{\tocchapter {Chapter}{5}{Results}}{41}{chapter.5}%
-\contentsline {section}{\tocsection {}{1}{Stuff}}{41}{section.5.1}%
-\contentsline {chapter}{\tocappendix {Appendix}{A}{Appendix Title}}{42}{appendix.A}%
-\contentsline {chapter}{\tocappendix {Appendix}{B}{SQL extraction and construction queries}}{43}{appendix.B}%
-\contentsline {section}{\tocsection {}{1}{Complete extraction query}}{43}{section.B.1}%
-\contentsline {chapter}{\tocappendix {Appendix}{}{Bibliography}}{55}{appendix*.1}%
+\contentsline {section}{\tocsection {}{1}{Applications: planning outline}}{41}{section.5.1}%
+\contentsline {chapter}{\tocappendix {Appendix}{A}{Appendix Title}}{43}{appendix.A}%
+\contentsline {chapter}{\tocappendix {Appendix}{B}{SQL extraction and construction queries}}{44}{appendix.B}%
+\contentsline {section}{\tocsection {}{1}{Complete extraction query}}{44}{section.B.1}%
+\contentsline {chapter}{\tocappendix {Appendix}{}{Bibliography}}{56}{appendix*.1}%

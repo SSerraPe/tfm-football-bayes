@@ -1,3 +1,55 @@
 \chapter{Results} \label{chap:results}
-\section{Stuff}
-Write here.
+
+\section{Applications: planning outline}
+
+\textit{Working outline only — bullet points capturing planned content, not yet expanded into
+Results prose. The in-depth write-up of the player-similarity analysis currently lives in
+\texttt{docs/professor/professor\_summary.qmd} (\S Player similarity); this outline tracks what
+should eventually be folded into this chapter, plus items intentionally deferred beyond it.}
+
+\begin{itemize}
+  \item \textbf{Similarity score.}
+  \begin{itemize}
+    \item Core idea: the model's own covariance structure,
+      $\Sigma_a = \Lambda\Lambda^\top + \Psi_a$, separates a \emph{style} component
+      (the shared low-rank factor position, $\mathbf{f}_i$) from a \emph{level/idiosyncrasy}
+      component (the part of a player's identity not explained by the shared factors).
+    \item Two players can be style-close (near-identical $\mathbf{f}_i$) while being far apart
+      on level/output — the model-native answer to "can a player be stylistically similar to
+      an outlier without matching their output."
+    \item Fully Bayesian version: distance recomputed per posterior draw (not just a point
+      estimate), giving a credible interval on the distance itself and a stability statement
+      (e.g. "P(closest style-neighbour is unchanged across draws)").
+    \item Concrete case studies use in-sample outliers (Messi, Cristiano Ronaldo, Neymar, etc.)
+      as the stand-in for a "generational outlier" — the dataset is La Liga only
+      (2011/12--2022/23), so a player like Haaland is illustrative/hypothetical only, never a
+      literal query target.
+  \end{itemize}
+
+  \item \textbf{Scouting / recommendations.}
+  \begin{itemize}
+    \item Nearest-neighbour lookup in style space as a recruitment-shortlist tool: "find a
+      cheaper player with the same shape, at a different output level."
+    \item Explicit caveat: market value, age, injury history, and league context are not
+      modelled — this is a style/production tool, not a full recruitment decision system.
+  \end{itemize}
+
+  \item \textbf{Tactical fit — deferred to future work.}
+  \begin{itemize}
+    \item No team identifier exists anywhere in the current pipeline (confirmed: absent from
+      \texttt{model\_row\_mapping.csv} and from the raw SQL extraction) — a genuine
+      player-vs-team-system comparison is not buildable without new data engineering back to
+      the Wyscout source.
+    \item Ties to the already-planned team-season effect $c_t$ extension (see
+      \texttt{docs/ideas/ideas.Rmd}). If ever built, reframe as "which archetype cluster does
+      this player best fit," not a team-vs-player comparison.
+  \end{itemize}
+
+  \item \textbf{Feature creation — proposed only, not computed.}
+  \begin{itemize}
+    \item A stored archetype-cluster label per player.
+    \item A "style score" / "level score" per player as derived reporting features.
+    \item A soft archetype-membership probability, replacing the current hard $k=5$ k-means
+      assignment.
+  \end{itemize}
+\end{itemize}

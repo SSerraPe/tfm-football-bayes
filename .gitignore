@@ -9,6 +9,10 @@ stan/additive_*
 # Large CmdStan posterior CSV draws (~12 GB)
 fits/csv/
 
+# Large per-draw caches (regenerable via their producing script; e.g. stage 38's
+# full per-draw style-score array is ~140MB, over GitHub's 100MB hard limit)
+fits/38_*_draws.rds
+
 # Raw and interim data (large / proprietary)
 data/raw/
 data/interim/
