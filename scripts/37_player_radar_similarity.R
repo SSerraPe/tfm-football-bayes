@@ -26,10 +26,18 @@ source(file.path(model_root, "src", "loading_visualization.R"))
 # ══════════════════════════════════════════════════════════════════════════════
 # 1. Load all data
 # ══════════════════════════════════════════════════════════════════════════════
-eff    <- read_csv(file.path(paths$tables, "14_player_effect_means.csv"),
-                   show_col_types = FALSE)
 scores <- read_csv(file.path(paths$tables, "29_player_factor_scores.csv"),
                    show_col_types = FALSE)
+# K=3-native player effects (per Session's "all results from the K=3 production
+# model" constraint) -- replaces the old 14_player_effect_means.csv, which was
+# built from the stale K=2/pre-rebuild stage-10 fit. Keyed by player_index there;
+# joined to player_id/player_name here to keep the shape ("player_id" + 48
+# feature columns) the rest of this script already expects.
+eff <- read_csv(file.path(paths$tables, "29_player_effect_means_k3.csv"),
+                show_col_types = FALSE) |>
+  left_join(scores |> select(player_index, player_id), by = "player_index") |>
+  select(-player_index) |>
+  relocate(player_id)
 ci_tbl <- read_csv(file.path(paths$tables, "31_pca_loading_ci.csv"),
                    show_col_types = FALSE)
 

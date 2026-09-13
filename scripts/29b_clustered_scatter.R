@@ -39,6 +39,11 @@ print(data.frame(cents[order(cents$PC1), ], archetype = archetypes))
 
 scores$archetype <- label_map[scores$cluster]
 
+write.csv(scores[, c("player_index", "player_id", "player_name", "archetype",
+                      "cluster", "pc1_score", "pc2_score", "pc3_score", "n_seasons")],
+          "outputs/tables/29b_player_archetypes.csv", row.names = FALSE)
+message("Saved: outputs/tables/29b_player_archetypes.csv")
+
 archetype_colors <- c(
   "Forwards"              = "#E41A1C",
   "Attacking midfielders" = "#FF7F00",

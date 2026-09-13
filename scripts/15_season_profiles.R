@@ -86,25 +86,69 @@ candidate_ids <- if (!is.na(chosen_k)) {
   c("28_real_lowrank_a_diag_b_t_k3", "10_real_lowrank_a_diag_b")
 }
 
-fit <- NULL
+csv_files <- NULL
+fit_id_used <- NULL
 for (.id in candidate_ids) {
-  fit <- load_cmdstan_fit(
-    fit_path = file.path(paths$fits, paste0(.id, "_fit.rds")),
-    model_id = .id
-  )
-  if (!is.null(fit)) { message("Loaded fit: ", .id); break }
+  found <- discover_cmdstan_csv_files(.id)
+  if (length(found) > 0L) { csv_files <- found; fit_id_used <- .id; message("Using CSVs: ", .id); break }
 }
 rm(.id)
-if (is.null(fit)) {
+if (is.null(csv_files)) {
   message("No fit available — skipping 15_season_profiles. Run stage 28 or set BFA_SIM_RANK_A.")
   quit(save = "no", status = 0)
 }
 
-# ── Extract draws ─────────────────────────────────────────────────────────────
+# ── Extract draws (column-pass, not as_cmdstan_fit()) ────────────────────────
+# sigma_b/z_b are small (P + S*P = 48 + 576 = 624 cols), but the production K=3
+# CSVs are ~2.6GB x 4 chains -- as_cmdstan_fit()/fit$draws() tries to parse every
+# column and hits R's 16GB vector memory limit. Same column-pass pattern as
+# stages 29/31/38/40.
 
-message("Extracting sigma_b and z_b draws ...")
-sigma_b_mat <- posterior::as_draws_matrix(fit$draws(variables = "sigma_b"))
-z_b_mat     <- posterior::as_draws_matrix(fit$draws(variables = "z_b"))
+py_script <- file.path(model_root, "src", "extract_stan_csv_params.py")
+find_col_indices <- function(csv_path, param_names) {
+  con <- file(csv_path, "r"); on.exit(close(con))
+  repeat {
+    line <- readLines(con, n = 1L)
+    if (length(line) == 0L) return(setNames(rep(NA_integer_, length(param_names)), param_names))
+    if (!startsWith(line, "#")) {
+      hdr <- strsplit(line, ",")[[1]]
+      return(setNames(match(param_names, hdr), param_names))
+    }
+  }
+}
+extract_batch <- function(csv_path, chain_id, params_0idx, out_path) {
+  args_pairs <- paste0(names(params_0idx), ":", params_0idx - 1L)
+  cmd_args <- c(shQuote(py_script), shQuote(csv_path), as.character(chain_id),
+                shQuote(out_path), args_pairs)
+  ret <- system2("python3", args = cmd_args, stdout = FALSE, stderr = FALSE)
+  if (ret != 0) stop("Python extraction failed for chain ", chain_id)
+  read.csv(out_path, check.names = FALSE)
+}
+
+sigma_b_names <- paste0("sigma_b.", seq_len(P))
+z_b_names     <- paste0("z_b.", rep(seq_len(S), P), ".", rep(seq_len(P), each = S))
+params        <- c(sigma_b_names, z_b_names)
+
+message("Discovering column indices for sigma_b + z_b (", length(params), " cols)...")
+col_idx <- find_col_indices(csv_files[1], params)
+missing <- names(col_idx)[is.na(col_idx)]
+if (length(missing) > 0) stop("Not found in header: ", paste(head(missing, 5), collapse = ", "))
+
+scratchpad <- file.path(tempdir(), "stage15_extract")
+dir.create(scratchpad, recursive = TRUE, showWarnings = FALSE)
+message("Extracting sigma_b + z_b draws from ", length(csv_files), " chains ...")
+chain_dfs <- lapply(seq_along(csv_files), function(i) {
+  out <- file.path(scratchpad, sprintf("chain%d.csv", i))
+  message("  chain ", i, " ...")
+  extract_batch(csv_files[i], i, col_idx, out)
+})
+draws_df <- do.call(rbind, chain_dfs)
+
+sigma_b_mat <- as.matrix(draws_df[, sigma_b_names, drop = FALSE]); storage.mode(sigma_b_mat) <- "double"
+colnames(sigma_b_mat) <- sprintf("sigma_b[%d]", seq_len(P))
+z_b_mat <- as.matrix(draws_df[, z_b_names, drop = FALSE]); storage.mode(z_b_mat) <- "double"
+colnames(z_b_mat) <- as.vector(outer(seq_len(S), seq_len(P), function(j, p) sprintf("z_b[%d,%d]", j, p)))
+rm(draws_df, chain_dfs); gc()
 
 sigma_b_vars <- sprintf("sigma_b[%d]", seq_len(P))
 z_b_vars     <- as.vector(

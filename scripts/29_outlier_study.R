@@ -118,6 +118,16 @@ if (max(abs(B_mean)) > 5)
 message(sprintf("A_mean range: [%.3f, %.3f]; B_mean range: [%.3f, %.3f]",
                 min(A_mean), max(A_mean), min(B_mean), max(B_mean)))
 
+# Persist the raw K=3 player/season effect matrices themselves (not just derived PC
+# scores) -- downstream consumers (e.g. stage 37's percentile radar, currently wired to
+# the stale K=2 stage-10 fit via 14_player_effect_means.csv) need the actual per-feature
+# K=3 posterior means, not just their PCA projection.
+write_csv(data.frame(player_index = seq_len(I), A_mean, check.names = FALSE),
+          file.path(paths$tables, "29_player_effect_means_k3.csv"))
+write_csv(data.frame(season_index = seq_len(S), B_mean, check.names = FALSE),
+          file.path(paths$tables, "29_season_effect_means_k3.csv"))
+message("Saved: 29_player_effect_means_k3.csv, 29_season_effect_means_k3.csv")
+
 # ── Step 3 — Standardised residuals ──────────────────────────────────────────
 
 scale_e <- sigma_e * sqrt(nu_hat / (nu_hat - 2))
@@ -518,22 +528,22 @@ comparison_tbl <- tibble(
     "Low-rank K=3 vs K=2 (PSIS-LOO)",
     "Low-rank K=3 vs diagonal K=0"
   ),
-  delta_elpd = c(72881, 3724, 12125, round(d_elpd, 1), NA_real_),
-  se_delta   = c(NA, NA, NA, round(se_d, 1), NA_real_),
-  n_se       = c(NA, ">20", NA, round(d_elpd / se_d, 2), NA_real_),
+  delta_elpd = c(72881, 3724, 12125, round(d_elpd, 1), 5820.2),
+  se_delta   = c(NA, NA, NA, round(se_d, 1), 343.5),
+  n_se       = c(NA, ">20", NA, round(d_elpd / se_d, 2), round(5820.2 / 343.5, 2)),
   source     = c(
     "K-fold Pathfinder (old P=53)",
     "PSIS-LOO old data",
     "Pathfinder K=0-4 (rebuilt P=48)",
     "PSIS-LOO rebuilt P=48, t-model",
-    "Stage 20"
+    "PSIS-LOO rebuilt P=48, t-model"
   ),
   notes = c(
     "Stage 24; Pareto-k unreliable — K-fold is primary",
     "Stage 18 vs stage 10; pre-rebuild N=4944/P=53",
     "Stage 17 rebuilt; Reversal at K=4 → K*=3",
     "C_loo_k2_vs_k3.csv; 99.4% Pareto-k>0.5 — directional only",
-    "PENDING — Block E (Stage 03 diagonal refit still running)"
+    "20_icc_diagonal_vs_lowrank_rebuilt.csv (Session 15); 88-99% Pareto-k>0.5 — directional only"
   )
 )
 write_csv(comparison_tbl, file.path(paths$tables, "final_model_comparison.csv"))

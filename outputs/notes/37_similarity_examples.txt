@@ -1,5 +1,5 @@
 === Stage 37: Player similarity — top 10 nearest neighbours (PC1/PC2/PC3 space) ===
-Date: 2026-08-07
+Date: 2026-09-13
 
 Distance = Euclidean in standardised (PC1, PC2, PC3) space.
 
