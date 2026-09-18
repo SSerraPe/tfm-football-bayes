@@ -50,11 +50,11 @@
 \contentsline {subsection}{\tocsubsection {}{8.2}{Classical point-estimate baseline}}{52}{subsection.5.8.2}%
 \contentsline {subsection}{\tocsubsection {}{8.3}{A fully Bayesian similarity score}}{52}{subsection.5.8.3}%
 \contentsline {paragraph}{\tocparagraph {}{}{Benzema's closest style-neighbour is not Ronaldo.}}{53}{section*.4}%
-\contentsline {paragraph}{\tocparagraph {}{}{Ramos's closest neighbour is a near four-way statistical tie.}}{53}{section*.5}%
+\contentsline {paragraph}{\tocparagraph {}{}{Ramos's closest neighbour is a near four-way statistical tie.}}{54}{section*.5}%
 \contentsline {subsection}{\tocsubsection {}{8.4}{Population-level reliability}}{55}{subsection.5.8.4}%
-\contentsline {section}{\tocsection {}{9}{Applications: scouting and recommendations}}{56}{section.5.9}%
-\contentsline {section}{\tocsection {}{10}{Tactical fit and feature creation}}{57}{section.5.10}%
-\contentsline {chapter}{\tocappendix {Appendix}{A}{Appendix Title}}{58}{appendix.A}%
-\contentsline {chapter}{\tocappendix {Appendix}{B}{SQL extraction and construction queries}}{59}{appendix.B}%
-\contentsline {section}{\tocsection {}{1}{Complete extraction query}}{59}{section.B.1}%
-\contentsline {chapter}{\tocappendix {Appendix}{}{Bibliography}}{71}{appendix*.6}%
+\contentsline {section}{\tocsection {}{9}{Applications: scouting and recommendations}}{57}{section.5.9}%
+\contentsline {section}{\tocsection {}{10}{Tactical fit and feature creation}}{58}{section.5.10}%
+\contentsline {chapter}{\tocappendix {Appendix}{A}{Appendix Title}}{59}{appendix.A}%
+\contentsline {chapter}{\tocappendix {Appendix}{B}{SQL extraction and construction queries}}{60}{appendix.B}%
+\contentsline {section}{\tocsection {}{1}{Complete extraction query}}{60}{section.B.1}%
+\contentsline {chapter}{\tocappendix {Appendix}{}{Bibliography}}{72}{appendix*.6}%

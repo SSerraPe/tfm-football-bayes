@@ -373,8 +373,24 @@ below uses an actual in-sample player as the stand-in.
 Before the fully Bayesian treatment, a simpler point-estimate version: standardise each player's three PCA
 scores and compute Euclidean distance. This is a single number per pair, with no posterior uncertainty on the
 distance itself. Under this metric, Messi's nearest neighbour is Neymar (distance $1.74$) and Ramos's is Piqué
-(distance $0.16$) --- both plausible, well-known pairings. The next two subsections show what changes when the
-same question is asked with full posterior uncertainty attached.
+(distance $0.16$) --- both plausible, well-known pairings. Figure~\ref{fig:radar-examples} shows what such a
+pairing looks like at the level of individual features, using the percentile radar of
+\S\ref{sec:results-archetypes}'s eight feature groups. The next two subsections show what changes when the
+same similarity question is asked with full posterior uncertainty attached.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.32\textwidth]{images/37_radar_messi_neymar.png}\hfill
+\includegraphics[width=0.32\textwidth]{images/37_radar_ramos_pique.png}\hfill
+\includegraphics[width=0.32\textwidth]{images/37_radar_suarez_benzema.png}
+\caption{Percentile radar comparisons (percentile among all 1,529 outfield players) for three of the
+point-estimate pairings above. Messi--Neymar: the closest pair overall, near-identical across all eight
+groups. Ramos--Piqué: two elite centre-backs, Ramos leading Dueling and Piqué leading Passing quality --- the
+pairing \S\ref{sec:results-similarity} shows is actually a four-way statistical tie once posterior uncertainty
+is accounted for. Suárez--Benzema: contrasting centre-forward profiles, relevant to the Benzema case study
+below.}
+\label{fig:radar-examples}
+\end{figure}
 
 \subsection{A fully Bayesian similarity score}
 
@@ -417,6 +433,21 @@ well-known Ramos--Piqué pairing, but the honest statement is a four-way toss-up
 A point estimate cannot distinguish ``clearly the closest neighbour'' from ``one of several statistically
 indistinguishable candidates''; here, the two cases look identical until the posterior draws are examined
 individually.
+
+Figure~\ref{fig:posterior-clouds} makes both findings visible directly, rather than through a single
+distance-plus-percentage summary. A player's position in style space is not a point --- it is a posterior
+\emph{cloud}, and whether two players are confidently close or only ambiguously close is a visual fact about
+how much their clouds overlap.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{images/44_posterior_clouds.png}
+\caption{Posterior clouds (600 subsampled draws, 90\% posterior ellipse) for the two cases above. Panel A:
+Messi and Neymar's clouds are almost entirely overlapping, visualising the $92\%$ draw-level stability of that
+pairing. Panel B: Ramos, Piqué, Umtiti, and Javi García's clouds overlap each other substantially and
+unevenly --- the visual counterpart of a genuine four-way tie, not a confident single answer.}
+\label{fig:posterior-clouds}
+\end{figure}
 
 \subsection{Population-level reliability}
 

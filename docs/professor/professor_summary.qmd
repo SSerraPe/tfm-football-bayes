@@ -160,7 +160,7 @@ $$
 |---|---|---|
 | Low-minute share in top-200 worst | 48.9\% (88/180 obs) | **8.3\% (14/168 obs)** |
 | Binomial $p$ (H1: share $> 20\%$) | $<10^{-17}$ | $>0.999$ |
-| Regression slope: max\,$|z|$ $\sim$ log\,min | negative, $p\ll 0.001$ | 0.007, $p=0.97$ |
+| Regression slope: max\,$\lvert z\rvert$ $\sim$ log\,min | negative, $p\ll 0.001$ | 0.007, $p=0.97$ |
 | Verdict | Over-represented | **CORRECTED** |
 
 ```{r}
@@ -259,10 +259,10 @@ rc_show <- data.frame(
   `Features` = rc$n_features,
   `Reliable (CI $\\neq 0$)` = rc$n_reliable,
   `Share` = sprintf("%.1f%%", 100 * rc$share_reliable),
-  `Max $|$loading$|$` = round(rc$max_abs_load, 3),
+  `Max $\\lvert$loading$\\rvert$` = round(rc$max_abs_load, 3),
   check.names = FALSE
 )
-colnames(rc_show) <- c("$K$", "PC", "Features", "Reliable ($\\neq 0$)", "Share", "Max $|$loading$|$")
+colnames(rc_show) <- c("$K$", "PC", "Features", "Reliable ($\\neq 0$)", "Share", "Max $\\lvert$loading$\\rvert$")
 kable(rc_show, booktabs = TRUE, escape = FALSE, row.names = FALSE,
       caption = "Reliable-loader count per PC and K. At K=2 the last PC (PC2) has 45/48 reliable loaders (94\\%); at K=3 the last PC (PC3) has 43/48 (90\\%) — a substantively identified third axis. If PC4 at K=4 comes in materially lower (say $<$ 25/48), that is direct evidence the fourth factor is noise-dominated; the row appears when stage 21 completes.")
 ```
@@ -284,17 +284,17 @@ rs_show <- data.frame(
   K                    = resid_kcmp$K,
   `$\\hat\\nu$`        = round(resid_kcmp$nu_hat, 3),
   `$\\tau_{99}$`       = round(resid_kcmp$tau_99, 3),
-  `mean $\\Pr(|z|>\\tau_{99})$` = sprintf("%.2f\\%%", 100 * resid_kcmp$mean_frac_gt_tau99),
+  `mean $\\Pr(\\lvert z\\rvert>\\tau_{99})$` = sprintf("%.2f\\%%", 100 * resid_kcmp$mean_frac_gt_tau99),
   `median`             = sprintf("%.2f\\%%", 100 * resid_kcmp$median_frac_gt_tau99),
   `expected under $t$` = sprintf("%.2f\\%%", 100 * resid_kcmp$expected_frac_under_t),
   `\\texttt{unremarkable}`         = resid_kcmp$n_unremarkable,
   `\\texttt{contamination-driven}` = resid_kcmp$n_contamination_driven,
   `\\texttt{skew}`     = resid_kcmp$n_skew_residual,
-  `worst $|z|$`        = round(resid_kcmp$worst_cell_zstd, 2),
+  `worst $\\lvert z\\rvert$` = round(resid_kcmp$worst_cell_zstd, 2),
   check.names = FALSE
 )
 kable(rs_show, booktabs = TRUE, escape = FALSE, row.names = FALSE,
-      caption = "Per-K residual adequacy. Mean feature-level exceedance rates sit below the 1\\% expected under $t(\\hat\\nu)$ at K=2 and K=3 (both models absorb tails adequately). The improvement from K=2 to K=3 in mean $\\Pr(|z|>\\tau_{99})$ is $\\approx 0.03$ pp — small — indicating that residual behaviour alone does not sharply distinguish K=2 from K=3; the residual criterion is a *floor* check, not a discriminator among adequate K. K=4 row appears when stage 21 completes.")
+      caption = "Per-K residual adequacy. Mean feature-level exceedance rates sit below the 1\\% expected under $t(\\hat\\nu)$ at K=2 and K=3 (both models absorb tails adequately). The improvement from K=2 to K=3 in mean $\\Pr(\\lvert z\\rvert>\\tau_{99})$ is $\\approx 0.03$ pp — small — indicating that residual behaviour alone does not sharply distinguish K=2 from K=3; the residual criterion is a *floor* check, not a discriminator among adequate K. K=4 row appears when stage 21 completes.")
 ```
 
 **Reading Leg C.** The residual criterion works as a *floor* check: a K is *adequate*
@@ -515,6 +515,68 @@ if (file.exists(fig("29_top_players_table_pc2.png")))
 if (file.exists(fig("29_top_players_table_pc3.png")))
   knitr::include_graphics(fig("29_top_players_table_pc3.png"))
 ```
+
+## Player similarity --- the short version {#sec-similarity-simple}
+
+::: {.callout-note}
+**For the meeting.** This box is a two-minute summary of the similarity result. The full technical
+build-up (percentile radars, the classical distance metric, the fully Bayesian version, and the population
+reliability check) follows below in \S\ref{sec-profiles} and its "Style vs. level" subsection.
+:::
+
+**The question.** What does it mean for two football players to be "similar"? Two players can look alike
+because they produce similar *numbers* (same goals, same passes), or because they play the same *way* even if
+one produces much more than the other. Our model lets us tell these two apart.
+
+**Step 1 --- what "similar" looks like.** The figure below compares two players on eight
+football-skill groups (attack, shooting, passing, progression, defending, dueling, discipline), shown as a
+percentile against all 1,529 outfield players in the dataset. Messi and Neymar's shapes are nearly identical
+--- that is what a genuinely similar pair looks like under this model.
+
+```{r}
+#| label: fig-simple-radar
+#| fig-cap: "Messi vs Neymar: the closest pair of players in the whole dataset. Nearly identical shape across all eight skill groups."
+#| out-width: "60%"
+if (file.exists(fig("37_radar_messi_neymar.png")))
+  knitr::include_graphics(fig("37_radar_messi_neymar.png"))
+```
+
+**Step 2 --- separating "how they play" from "how much they produce."** The model splits each player's
+profile into a *shared style* part (their position relative to the three main stylistic axes the model finds
+in the data) and a *personal, unshared* part (whatever makes that specific player over- or under-perform on
+specific numbers like goals, beyond what their style predicts). Two players can be close on style while being
+far apart on that personal part --- the figure below shows this for a broad set of players:
+points toward the bottom-right are players who play alike but produce very differently.
+
+```{r}
+#| label: fig-simple-style-level
+#| fig-cap: "Style distance (how alike two players play) vs. level gap (how differently they produce), for the ten most similar players to each of 17 case-study players. Bottom-right = same style, different output tier."
+#| out-width: "75%"
+if (file.exists(fig("42_style_vs_level_scatter_extended.png")))
+  knitr::include_graphics(fig("42_style_vs_level_scatter_extended.png"))
+```
+
+**Step 3 --- why "the closest player" needs a confidence level, not just a number.** Because the model is
+Bayesian, a player's position is not a single dot --- it is a cloud of plausible positions. The figure below
+shows this directly for two cases already discussed above: Messi and Neymar's clouds
+overlap almost completely (we can say with real confidence that they are each other's closest match), while
+four elite centre-backs' clouds overlap messily with each other (the "closest match" among them is much closer
+to a coin flip than a confident answer). A plain distance number cannot tell these two situations apart; the
+posterior can.
+
+```{r}
+#| label: fig-simple-clouds
+#| fig-cap: "Two players are not two dots: each has a cloud of plausible positions. Left: Messi and Neymar's clouds overlap almost completely (closest match 92% of the time). Right: four centre-backs whose clouds overlap messily (each one is the 'closest' only 16-24% of the time) -- a genuine four-way tie, not a confident single answer."
+#| out-width: "95%"
+if (file.exists(fig("44_posterior_clouds.png")))
+  knitr::include_graphics(fig("44_posterior_clouds.png"))
+```
+
+**Bottom line.** A single "most similar player" number can hide two very different situations: a genuinely
+confident match, or a coin-flip among several candidates that happens to produce one arbitrary "winner." This
+model tells the two apart, and additionally separates *style* from *output level* --- which is what makes it
+useful for scouting: finding a player who plays like a target but at a different (typically cheaper) output
+tier, rather than pretending a replacement for an outlier talent exists.
 
 ## Player profiles and comparisons {#sec-profiles}
 
@@ -1056,7 +1118,7 @@ if (file.exists(tbl("29_residual_feature_summary.csv")) &&
   fs_show$verdict       <- ifelse(is.na(fs_show$verdict), "—", fs_show$verdict)
   kable(fs_show[, c("feature", "group", "p50_abs", "p99_abs", "frac_gt_tau99", "verdict")],
         booktabs = TRUE, row.names = FALSE,
-        col.names = c("Feature", "Group", "p50 |z|", "p99 |z|", "Frac > τ₉₉", "Verdict"),
+        col.names = c("Feature", "Group", "p50 abs(z)", "p99 abs(z)", "Frac > τ₉₉", "Verdict"),
         caption = "Top 12 features by p99 of standardised residuals (K=3 t-model). Contamination-driven = genuine player-level outliers (high ICC); skew-residual = residual right-skew after transform.")
 }
 ```
