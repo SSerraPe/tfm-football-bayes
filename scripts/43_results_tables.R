@@ -44,20 +44,25 @@ diag_summary <- diag |>
   arrange(family)
 write_csv(diag_summary, file.path(paths$tables, "43_diagnostics_summary.csv"))
 
+param_symbol <- c(
+  Lambda_a = "$\\boldsymbol\\Lambda_a$", nu = "$\\nu$", psi_a = "$\\boldsymbol\\psi_a$",
+  sigma_b = "$\\boldsymbol\\sigma_b$", sigma_e = "$\\boldsymbol\\sigma_e$"
+)
+
 diag_display <- diag_summary |>
   transmute(
-    Parameter = family, N = n,
-    `Median ESS(bulk)` = round(median_ess_bulk, 0),
-    `Min ESS(bulk)` = round(min_ess_bulk, 0),
-    `Max Rhat` = round(max_rhat, 3),
-    `N(Rhat>1.01)` = n_rhat_gt_1.01
+    Parameter = param_symbol[family], `$N$` = n,
+    `ESS$_\\text{bulk}$: median (min)` = sprintf("%.0f (%.0f)", median_ess_bulk, min_ess_bulk),
+    `Max $\\hat R$` = round(max_rhat, 3),
+    `$N(\\hat R{>}1.01)$` = n_rhat_gt_1.01
   ) |>
   bind_rows(tibble(
-    Parameter = "LLt[1,10] (bellwether)", N = 1,
-    `Median ESS(bulk)` = round(llt_diag$ess_bulk, 0), `Min ESS(bulk)` = round(llt_diag$ess_bulk, 0),
-    `Max Rhat` = round(llt_diag$rhat, 3), `N(Rhat>1.01)` = as.integer(llt_diag$rhat > 1.01)
+    Parameter = "$[\\boldsymbol\\Lambda_a\\boldsymbol\\Lambda_a^\\top]_{1,10}$", `$N$` = 1,
+    `ESS$_\\text{bulk}$: median (min)` = sprintf("%.0f (%.0f)", llt_diag$ess_bulk, llt_diag$ess_bulk),
+    `Max $\\hat R$` = round(llt_diag$rhat, 3),
+    `$N(\\hat R{>}1.01)$` = as.integer(llt_diag$rhat > 1.01)
   ))
-write_latex_table(diag_display, "43_diagnostics_summary")
+write_latex_table(diag_display, "43_diagnostics_summary", escape = FALSE)
 message(sprintf("LLt[1,10] mixing bellwether (rotation-invariant, the goals x passes pair flagged in earlier sessions): ESS_bulk=%.0f, Rhat=%.4f -> %s",
                 llt_diag$ess_bulk, llt_diag$rhat, if (llt_diag$ess_bulk > 200 && llt_diag$rhat < 1.01) "PASS" else "borderline"))
 
@@ -96,17 +101,17 @@ nu_34b <- get_row(file.path(paths$tables, "34b_real_lowrank_a_diag_b_t_mv_phi_k3
 phi_34b <- get_row(file.path(paths$tables, "34b_real_lowrank_a_diag_b_t_mv_phi_k3_posterior_summary.csv"), "phi")
 
 phi_tbl <- tibble(
-  Model = c("Constant sigma_e (stage 28)", "Minutes-scaled, phi=0.5 fixed (34a)", "Minutes-scaled, phi estimated (34b)"),
-  `nu (90% CI)` = c(
+  Model = c("Constant $\\sigma_e$ (28)", "$\\phi=0.5$ fixed (34a)", "$\\phi$ estimated (34b)"),
+  `$\\nu$ (90\\% CI)` = c(
     sprintf("%.2f [%.2f, %.2f]", nu_28$mean, nu_28$q5, nu_28$q95),
     sprintf("%.2f [%.2f, %.2f]", nu_34a$mean, nu_34a$q5, nu_34a$q95),
     sprintf("%.2f [%.2f, %.2f]", nu_34b$mean, nu_34b$q5, nu_34b$q95)
   ),
-  `phi (90% CI)` = c("fixed at 0", "fixed at 0.5", sprintf("%.3f [%.3f, %.3f]", phi_34b$mean, phi_34b$q5, phi_34b$q95)),
-  `Low-minute worst-cell share` = c("48.9% (88/180)", "8.3% (14/168)", "8.3% (14/168)")
+  `$\\phi$ (90\\% CI)` = c("fixed at 0", "fixed at 0.5", sprintf("%.3f [%.3f, %.3f]", phi_34b$mean, phi_34b$q5, phi_34b$q95)),
+  `Low-minute share` = c("48.9\\% (88/180)", "8.3\\% (14/168)", "8.3\\% (14/168)")
 )
 write_csv(phi_tbl, file.path(paths$tables, "43_phi_comparison.csv"))
-write_latex_table(phi_tbl, "43_phi_comparison")
+write_latex_table(phi_tbl, "43_phi_comparison", escape = FALSE)
 
 # ── §5.5 Canonical loadings: top reliable loaders per PC ──────────────────────
 

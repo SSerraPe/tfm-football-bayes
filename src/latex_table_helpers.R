@@ -9,7 +9,8 @@
 #
 # Fragments are written to tfm_latex/tables/<name>.tex.
 
-write_latex_table <- function(df, name, col_names = NULL, digits = 3, align = NULL, longtable = FALSE) {
+write_latex_table <- function(df, name, col_names = NULL, digits = 3, align = NULL,
+                               longtable = FALSE, escape = TRUE) {
   check_packages(c("knitr"))
   if (!is.null(col_names)) colnames(df) <- col_names
   out_dir <- file.path(paths$scripts, "..", "tfm_latex", "tables")
@@ -17,7 +18,7 @@ write_latex_table <- function(df, name, col_names = NULL, digits = 3, align = NU
   out_path <- file.path(out_dir, paste0(name, ".tex"))
   tex <- knitr::kable(
     df, format = "latex", booktabs = TRUE, digits = digits,
-    align = align, row.names = FALSE, linesep = "", longtable = longtable
+    align = align, row.names = FALSE, linesep = "", longtable = longtable, escape = escape
   )
   writeLines(as.character(tex), out_path)
   message("Wrote LaTeX table fragment: ", out_path)

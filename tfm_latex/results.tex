@@ -13,7 +13,7 @@ one deliberate exception is \S\ref{sec:results-phi}, which resolves the fixed-vs
 
 Table~\ref{tab:diagnostics-summary} summarises posterior convergence for the production fit, grouped by
 parameter family. $\hat R$ and effective sample size are computed in the usual way from four parallel chains.
-Three of the $144$ entries of $\boldsymbol\Lambda_a$ are excluded from the \emph{Lambda\_a} row: under the
+Three of the $144$ entries of $\boldsymbol\Lambda_a$ are excluded from the $\boldsymbol\Lambda_a$ row: under the
 lower-triangular, positive-diagonal constraint of \S\ref{sec:ltpd} these entries are fixed at exactly zero and
 never sampled, so $\hat R$ is undefined for them (zero posterior variance) rather than poorly mixed.
 
@@ -22,9 +22,10 @@ never sampled, so $\hat R$ is undefined for them (zero posterior variance) rathe
 \caption{Posterior convergence summary for the production fit ($K^*=3$), by parameter family. $\nu$ is the
 Student-$t$ degrees of freedom (Definition~\ref{def:student_t}); $\boldsymbol\Lambda_a$, $\boldsymbol\Psi_a$
 are the factor loadings and uniqueness (Definition~\ref{def:sigma_a}); $\boldsymbol\sigma_b,\boldsymbol\sigma_e$
-are the season and residual scales. The LLt[1,10] row is the rotation-invariant bellwether check discussed
-below.}
+are the season and residual scales. The $[\boldsymbol\Lambda_a\boldsymbol\Lambda_a^\top]_{1,10}$ row is the
+rotation-invariant bellwether check discussed below.}
 \label{tab:diagnostics-summary}
+\small
 \input{tables/43_diagnostics_summary.tex}
 \end{table}
 
@@ -187,7 +188,9 @@ player, not noise or pure context.
 \textbf{Table~\ref*{tab:icc-full}.} Full 48-feature ICC table (posterior median [90\% CI]).
 \end{center}
 \label{tab:icc-full}
+\scriptsize
 \input{tables/41_icc_full48.tex}
+\normalsize
 
 \section{Canonical factor directions and their football interpretation}
 \label{sec:results-canonical}
