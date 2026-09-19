@@ -41,6 +41,7 @@ Rplots.pdf
 **/*.pdf
 !docs/professor/professor_summary.pdf
 !docs/thesis/thesis_technical_document.pdf
+!tfm_mesio_latex_2026/main.pdf
 
 # LaTeX build intermediates and Quarto render caches
 *.aux

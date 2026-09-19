@@ -168,22 +168,47 @@ group_avg <- bj |>
   ) |>
   mutate(group = factor(group, levels = group_order()))
 
+# Small-multiples redesign (thesis revision Phase 5): one panel per feature
+# group (7 groups -> 2 rows x 4 columns, one empty cell), each with its own
+# free y-axis, rather than 7 overlapping lines sharing one axis. Also fixes a
+# real bug in the previous single-panel version: its title was a plain
+# character string containing literal LaTeX math syntax ("$\\hat{b}_{j}$"),
+# which ggplot renders as literal text, not math -- the dollar signs and
+# braces showed up baked into the PNG. Plain English titles throughout, no
+# raw LaTeX in any ggplot title/subtitle/label string anywhere in this file.
+#
+# UNIT LABELLING (found during Phase 5, separate from the two fixes above):
+# `has_transform` is FALSE against the data currently on disk -- the on-disk
+# data/processed/scaling_parameters.csv predates the transform_type column
+# that scripts/02_prepare_model_objects.R now writes (confirmed: the current
+# stage-02 script does compute and save it; the CSV/model_objects.rds on disk
+# are simply stale relative to that script). Under the fallback branch above,
+# b_pct_mean is literally b_mean -- the raw Z-scaled posterior-mean season
+# effect, NOT a back-transformed original-unit value and NOT a percentage.
+# The previous labels ("% deviation ... original feature units
+# back-transformed") were therefore inaccurate for every fit made against the
+# current on-disk artifacts, not just this one. Labelled honestly in
+# Z-score/sigma units below (matching stage 36's Figure~7, which never
+# attempted back-transformation and was never mislabelled). Rerunning stage 02
+# would restore true back-transformation for this plot, but that touches the
+# shared data pipeline and is out of scope for a LaTeX-revision session --
+# flagged to the user rather than done here.
 p_group <- ggplot(group_avg,
     aes(x = season_lbl, y = b_group_mean, colour = group, group = group)) +
   geom_hline(yintercept = 0, linetype = "dashed", colour = "grey60", linewidth = 0.4) +
   geom_line(linewidth = 0.9) +
-  geom_point(size = 2.2) +
-  scale_colour_manual(values = group_colours(), name = "Feature group") +
-  scale_fill_manual(  values = group_colours(), name = "Feature group") +
+  geom_point(size = 1.8) +
+  scale_colour_manual(values = group_colours(), guide = "none") +
+  facet_wrap(~group, ncol = 4, scales = "free_y") +
   labs(
-    title    = "Group-averaged season effects $\\hat{b}_{j}$ (stage 28, K=3)",
-    subtitle = "Each line = mean % deviation from average within feature group (original feature units back-transformed).",
-    x = "Season", y = "Mean season effect (% deviation from feature average)"
+    title    = "Group-averaged season effects, posterior mean, stage 28 K=3",
+    subtitle = "Each panel: mean posterior season effect within feature group, in Z-scaled feature units.",
+    x = "Season", y = "Mean season effect (σ, Z-scaled feature units)"
   ) +
-  theme_minimal(base_size = 11) +
+  theme_minimal(base_size = 10) +
   theme(
-    axis.text.x  = element_text(angle = 45, hjust = 1),
-    legend.position = "right"
+    axis.text.x  = element_text(angle = 45, hjust = 1, size = 7),
+    strip.text   = element_text(size = 8.5, face = "bold")
   )
 
 ggsave(file.path(paths$figures, "33_season_group_trends.png"),

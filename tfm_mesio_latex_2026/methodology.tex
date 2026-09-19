@@ -255,53 +255,7 @@ The result in Proposition~\ref{prop:ltpd_ident} is established in \cite{anderson
 
 \begin{remark}[The LT-PD constraint is not an interpretive rotation]
 \label{rem:ltpd_notinterp}
-The LT-PD constraint resolves the mathematical non-identifiability, but it does not produce loadings that are interpretable in a football sense. A simple-structure rotation such as varimax or oblimin minimises cross-loadings and maximises the separation of features across factors, yielding loading patterns that correspond to recognisable dimensions. The LT-PD constraint does neither: it fixes a coordinate system by zeroing out the upper triangle of $\boldsymbol{\Lambda}$, a choice determined by feature ordering rather than by football logic. The resulting columns of $\boldsymbol{\Lambda}$ do not correspond to canonical latent directions and should not be reported or interpreted as such. Interpretable factor directions are recovered through the post-processing procedure described in Section~\ref{sec:pca_postprocessing}.
-\end{remark}
-
-\section{Non-centred parametrisation}
-\label{sec:noncentred}
-
-\begin{definition}[Non-centred player effects]
-\label{def:noncentred}
-Rather than sampling $\mathbf{a}_i$ directly from $\mathcal{N}(\mathbf{0}, \boldsymbol{\Sigma}_a)$, the model introduces auxiliary standardised variables $\boldsymbol{\eta}_i \in \mathbb{R}^K$ and $\mathbf{z}_{u,i} \in \mathbb{R}^P$ and constructs the player effect as
-\begin{equation}
-\mathbf{a}_i = \boldsymbol{\Lambda}\,\boldsymbol{\eta}_i + \boldsymbol{\psi}_a \odot \mathbf{z}_{u,i},
-\label{eq:noncentred}
-\end{equation}
-where $\boldsymbol{\eta}_i \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_K)$, $\mathbf{z}_{u,i} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_P)$, $\boldsymbol{\eta}_i$ and $\mathbf{z}_{u,i}$ are mutually independent, and $\boldsymbol{\psi}_a = (\psi_{a,1}, \ldots, \psi_{a,P})^\top$ is the vector of uniqueness standard deviations. The symbol $\odot$ denotes elementwise multiplication.
-\end{definition}
-
-\begin{proposition}[Equivalence of the non-centred form]
-\label{prop:noncentred_equiv}
-Under Definition~\ref{def:noncentred}, $\mathbf{a}_i \sim \mathcal{N}(\mathbf{0}, \boldsymbol{\Sigma}_a)$.
-\end{proposition}
-\begin{proof}
-Since $\boldsymbol{\eta}_i \perp \mathbf{z}_{u,i}$, the cross-covariance $\mathrm{Cov}(\boldsymbol{\Lambda}\boldsymbol{\eta}_i,\, \boldsymbol{\psi}_a \odot \mathbf{z}_{u,i}) = \boldsymbol{\Lambda}\,\mathrm{Cov}(\boldsymbol{\eta}_i,\, \mathbf{z}_{u,i})\,\mathrm{diag}(\boldsymbol{\psi}_a) = \mathbf{0}$. Therefore,
-\begin{align*}
-\mathrm{Cov}(\mathbf{a}_i)
-&= \boldsymbol{\Lambda}\,\mathrm{Cov}(\boldsymbol{\eta}_i)\,\boldsymbol{\Lambda}^\top + \mathrm{Cov}(\boldsymbol{\psi}_a \odot \mathbf{z}_{u,i}) \\
-&= \boldsymbol{\Lambda}\,\mathbf{I}_K\,\boldsymbol{\Lambda}^\top + \mathrm{diag}(\psi_{a,1}^2, \ldots, \psi_{a,P}^2) \\
-&= \boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top + \boldsymbol{\Psi}_a = \boldsymbol{\Sigma}_a.
-\end{align*}
-The mean is zero since both $\boldsymbol{\eta}_i$ and $\mathbf{z}_{u,i}$ have zero means.
-\end{proof}
-
-The non-centred form \eqref{eq:noncentred} is therefore statistically equivalent to the centred form, but it has substantially better computational properties when used with gradient-based samplers.
-
-\begin{remark}[Posterior geometry and the Neal funnel]
-\label{rem:funnel}
-The centred parametrisation creates a posterior geometry in which the player effects $\mathbf{a}_i$ and the global parameters $(\boldsymbol{\Lambda}, \boldsymbol{\Psi}_a)$ are strongly coupled. When the loading magnitudes are small, the player effects are constrained to be small regardless of the observed data. In the vicinity of $\boldsymbol{\Lambda} \approx \mathbf{0}$, the posterior contracts into a narrow funnel in the joint parameter space that gradient-based samplers traverse poorly, yielding large step-size adaptation failures, many divergent transitions, and very low effective sample sizes. The non-centred form decouples the global variance parameters from the individual standardised scores: $\boldsymbol{\eta}_i$ and $\mathbf{z}_{u,i}$ are always $\mathcal{O}(1)$ random variables regardless of the current values of $\boldsymbol{\Lambda}$ and $\boldsymbol{\psi}_a$, so the sampler explores their space with stable step sizes while the likelihood gradients guide the global parameters. This reparametrisation strategy is described in the general hierarchical model context by \cite{papaspiliopoulos2007general} and its interaction with Hamiltonian Monte Carlo is analysed in \cite{neal2011mcmc}.
-\end{remark}
-
-\begin{remark}[Sum-to-zero centring of raw scores]
-\label{rem:sumtozero}
-The non-centred form \eqref{eq:noncentred} introduces a translational degeneracy. For any constants $c_k \in \mathbb{R}$, replacing $\eta_{i,k}$ by $\eta_{i,k} + c_k$ for all $i$ simultaneously shifts all player effects by $\boldsymbol{\Lambda}(c_1, \ldots, c_K)^\top$, which cannot be distinguished from a corresponding shift in the season effects. To eliminate this degeneracy, the model enforces sum-to-zero constraints on the raw scores:
-\begin{equation}
-\sum_{i=1}^{I} \eta_{i,k} = 0 \;\text{ for each } k = 1, \ldots, K, \qquad
-\sum_{i=1}^{I} z_{u,i,p} = 0 \;\text{ for each } p = 1, \ldots, P.
-\label{eq:sumtozero}
-\end{equation}
-This is implemented by subtracting the cross-player mean from the raw score draws in the model's transformed-parameters block, which is equivalent to a linear reparametrisation and does not restrict the marginal distribution of $\mathbf{a}_i$.
+The LT-PD constraint resolves the mathematical non-identifiability \cite{anderson1956statistical,geweke1996measuring}, but it does not produce loadings that are interpretable in a football sense. A simple-structure rotation such as varimax or oblimin minimises cross-loadings and maximises the separation of features across factors, yielding loading patterns that correspond to recognisable dimensions. The LT-PD constraint does neither: it fixes a coordinate system by zeroing out the upper triangle of $\boldsymbol{\Lambda}$, a choice determined by feature ordering rather than by football logic. The resulting columns of $\boldsymbol{\Lambda}$ do not correspond to canonical latent directions and should not be reported or interpreted as such. Interpretable factor directions are recovered through the post-processing procedure described in Section~\ref{sec:pca_postprocessing}.
 \end{remark}
 
 \section{Prior specification}
@@ -375,13 +329,9 @@ where $p_{\mathrm{HN}}$ denotes the Half-Normal$(0,1)$ density and $p_{\mathrm{G
 
 The factor rank $K$ governs the dimension of the latent space used to model the player covariance $\boldsymbol{\Sigma}_a$. Unlike the parameters $\boldsymbol{\Lambda}$, $\boldsymbol{\Psi}_a$, and $\nu$, the rank $K$ is not a continuous model parameter that can be assigned a prior and sampled within a single model: it determines the parametric family itself. The selection of $K$ is therefore a model comparison problem.
 
-\subsection{The rank as a model selection problem}
-
 For any fixed value of $K \in \{0, 1, 2, \ldots\}$, the model specification in Sections~\ref{sec:covariance}--\ref{sec:priors} is complete. The case $K = 0$ is a special case: it sets $\boldsymbol{\Sigma}_a = \boldsymbol{\Psi}_a$ (diagonal player covariance), corresponding to the assumption that all player-level cross-feature correlation is zero. This \emph{diagonal model} serves as a natural baseline; the gain in predictive performance relative to it quantifies the value of modelling shared player-level covariance structure.
 
-The rank $K^*$ is selected by comparing models at $K = 0, 1, 2, \ldots$ on out-of-sample predictive performance. Because the parameter space grows with $K$ and overfitting is possible, in-sample criteria such as the log-likelihood are insufficient; out-of-sample evaluation on data not used in fitting is necessary.
-
-Several out-of-sample criteria were tried to settle $K$ directly, before the qualitative argument below was adopted instead. A hold-out expected log predictive density (ELPD) was computed on a season-stratified $15\%$ test split; Pareto-smoothed importance-sampling leave-one-out cross-validation (PSIS-LOO) \cite{vehtari2017practical} was computed post hoc on full-sample fits, though its Pareto-$\hat{k}$ diagnostic exceeded $0.5$ for most observations here, limiting it to a directional check rather than a precise one; and a faster Pathfinder-based variational screen \cite{zhang2022pathfinder} was run across a wider range of candidate ranks than repeated full NUTS fits would allow. None of these gave a clean answer among $K \geq 1$: the hold-out ELPD was maximised at $K=6$, with $K=3$ and $K=4$ competitive and separated from it by no more than run-to-run variability, while the Pathfinder screen peaked at $K=5$ with $K=3$ a local dip rather than a clear optimum --- both are best read as flat across $K \in \{2,\ldots,6\}$ rather than as pointing to one preferred rank. The one comparison these criteria did settle clearly is $K=0$ (diagonal) against any $K \geq 1$ (low-rank), which is decisive and is reported in Chapter~\ref{chap:results}. For choosing among $K \geq 1$, however, the resolution was purely qualitative, as described next.
+Whether shared player-level covariance is worth modelling at all is answered decisively, and is reported in Chapter~\ref{chap:results}; the choice of rank among $K \geq 1$ is argued qualitatively, as follows.
 
 \subsection{A qualitative argument for the rank}
 \label{sec:rank_qualitative}
@@ -392,21 +342,20 @@ The rank actually adopted for the production model is selected on qualitative, s
 
 \begin{remark}[Anchoring to the posterior mean, not to per-draw estimates]
 \label{rem:posterior_mean_anchor}
-Both criteria below require the eigendecomposition of the common-variance matrix $\boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top$ introduced in Section~\ref{sec:pca_postprocessing}. Proposition~\ref{prop:spectral_inv} shows that, \emph{for a fixed posterior draw}, this eigendecomposition is invariant to the identification constraint used to fit $\boldsymbol{\Lambda}$. It is not, however, invariant \emph{across} posterior draws in the sense needed to build a credible interval directly: sampling variability in $\boldsymbol{\Lambda}^{(s)}$ can rotate the leading eigenvectors within the subspace they span from one draw to the next, so naively comparing $\mathbf{V}^{(s)}$ across draws risks comparing different rotations of the same subspace rather than a stable estimate of one direction. To avoid this, the analyses below fix a single reference orientation---the eigendecomposition of the \emph{posterior-mean} common-variance matrix $\bar{\boldsymbol{\Lambda}}\bar{\boldsymbol{\Lambda}}^\top$, where $\bar{\boldsymbol{\Lambda}} = \tfrac{1}{S_{\mathrm{mc}}}\sum_s \boldsymbol{\Lambda}^{(s)}$---and project each draw's loadings onto this fixed reference before summarising uncertainty. This is a first-order (mean-rotation) approximation to a fully Procrustes-aligned per-draw analysis; it is adequate for the two qualitative judgements made here (whether a component's common-variance share is small, and whether its loadings are reliably non-zero), since both depend on the sign and approximate magnitude of the projected loadings rather than on precise per-draw geometry.
+Both criteria below require the eigendecomposition of the common-variance matrix $\boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top$ introduced in Section~\ref{sec:pca_postprocessing}. Proposition~\ref{prop:spectral_inv} shows that, \emph{for a fixed posterior draw}, this eigendecomposition is invariant to the identification constraint used to fit $\boldsymbol{\Lambda}$. It is not, however, invariant \emph{across} posterior draws in the sense needed to build a credible interval directly: sampling variability in $\boldsymbol{\Lambda}^{(s)}$ can rotate the leading eigenvectors within the subspace they span from one draw to the next, so naively comparing $\mathbf{V}^{(s)}$ across draws risks comparing different rotations of the same subspace rather than a stable estimate of one direction. To avoid this, the analyses below fix a single reference orientation---the eigendecomposition of the \emph{posterior-mean} common-variance matrix $\bar{\boldsymbol{\Lambda}}\bar{\boldsymbol{\Lambda}}^\top$, where $\bar{\boldsymbol{\Lambda}} = \tfrac{1}{S_{\mathrm{mc}}}\sum_s \boldsymbol{\Lambda}^{(s)}$---and project each draw's loadings onto this fixed reference before summarising uncertainty. The same construction gives comparable per-player credible intervals: replacing $\mathbf{V}^{(s)}$ by the fixed $\bar{\mathbf{V}}$ in \eqref{eq:rotated_scores} yields $\mathbf{f}_i^{(s)} = \bar{\mathbf{V}}^\top\boldsymbol{\Lambda}^{(s)}\boldsymbol{\eta}_i^{(s)}$, used in Chapter~\ref{chap:results} to report posterior credible intervals on individual players' canonical scores.
 \end{remark}
 
 \begin{description}
 \item[Criterion A: variance share of the PCs of $\bar{\boldsymbol{\Lambda}}\bar{\boldsymbol{\Lambda}}^\top$] For a candidate rank $K$, the eigenvalue $d_K$ of the \emph{last} (smallest) canonical factor, expressed as a share of $\sum_{k=1}^K d_k$, measures how much additional common-variance structure the $K$-th dimension contributes. A last-component share close to the trailing eigenvalues of the full uniqueness spectrum indicates that dimension is not resolving substantive shared structure.
-\item[Criterion B: loader count under the fixed-reference PCA] For the last canonical factor at rank $K$, the number of features whose $90\%$ credible interval (computed under Remark~\ref{rem:posterior_mean_anchor}'s fixed reference) excludes zero indicates whether that dimension is a well-identified axis with broad support across features, or a weakly identified direction loaded on by only a handful of features.
-\item[Criterion C: residual adequacy under the fit's own $t(\hat\nu)$ noise model] For each candidate fit, the standardised residuals $z_{np} = (y_{np} - \hat a_{i[n],p} - \hat b_{j[n],p})/(\hat\sigma_{e,p}\sqrt{\hat\nu/(\hat\nu-2)})$ are compared against the $99$th-percentile threshold $\tau_{99}$ implied by $t(\hat\nu)$. If the empirical exceedance rate across all $N \times P$ cells is at or below the nominal $1\%$, the residual distribution is adequate under the fitted noise model; this is a floor check on model misspecification, not a criterion that discriminates between two ranks that both pass it.
+\item[Criterion B: residual adequacy under the fit's own $t(\hat\nu)$ noise model] For each candidate fit, the standardised residuals $z_{np} = (y_{np} - \hat a_{i[n],p} - \hat b_{j[n],p})/(\hat\sigma_{e,p}\sqrt{\hat\nu/(\hat\nu-2)})$ are compared against the $99$th-percentile threshold $\tau_{99}$ implied by $t(\hat\nu)$. If the empirical exceedance rate across all $N \times P$ cells is at or below the nominal $1\%$, the residual distribution is adequate under the fitted noise model; this is a floor check on model misspecification, not a criterion that discriminates between two ranks that both pass it.
 \end{description}
 
 \subsection{Selected rank}
 \label{sec:rank_selection}
 
-Applying Criteria A--C across $K=2, 3, 4$ gives the following picture. The last canonical factor's common-variance share declines from $30.8\%$ at $K=2$ to $10.5\%$ at $K=3$ to $7.1\%$ at $K=4$---a continued but decelerating decline, not a sharp drop to a noise floor at any point (Criterion A). The loader count of the last factor is $45/48$ at $K=2$, $43/48$ at $K=3$, and $45/48$ at $K=4$: it does not fall monotonically, so the fourth canonical factor is, if anything, as reliably identified by this criterion as the third (Criterion B). Mean residual exceedance under $\tau_{99}$ is $0.74\%$, $0.77\%$, and $0.79\%$ at $K=2,3,4$ respectively---all comfortably below the $1\%$ floor and essentially flat, so residual adequacy holds at every rank examined and does not discriminate among them (Criterion C).
+Applying Criteria A and B across $K=2, 3, 4$ gives the following picture. The last canonical factor's common-variance share declines from $30.8\%$ at $K=2$ to $10.5\%$ at $K=3$ to $7.1\%$ at $K=4$---a continued but decelerating decline, not a sharp drop to a noise floor at any point (Criterion A). Mean residual exceedance under $\tau_{99}$ is $0.74\%$, $0.77\%$, and $0.79\%$ at $K=2,3,4$ respectively---all comfortably below the $1\%$ floor and essentially flat, so residual adequacy holds at every rank examined and does not discriminate among them (Criterion B).
 
-Taken together, this comparison does not produce a clean reversal at $K=4$ the way it does at $K=3$ relative to $K=2$: Criterion A mildly favours stopping at $K=3$ (the fourth factor's contribution, while still non-trivial, is smaller than the third's), while Criterion B gives no reason to prefer $K=3$ over $K=4$, and Criterion C is uninformative at this rank range. Read honestly, choosing $K=3$ over $K=4$ is simply a preference for the simpler model: the fourth factor's contribution is smaller, but not small enough to ignore. This is a much weaker result than the case for $K\geq 1$ over $K=0$, or even the milder case for $K=3$ over $K=2$, both of those were clear-cut; this one is not. Combined with the cross-validation trials described above, where $K=4$ is likewise never clearly dominated, the honest summary is that the data do not sharply distinguish $K=3$ from $K=4$. $K=3$ is nonetheless retained as the production rank $K^*=3$, used throughout the remainder of this chapter and in Chapter~\ref{chap:results}: it is the more parsimonious of two ranks that the evidence does not clearly separate, and closing the model at a defensible, adequately-supported rank was judged preferable to an open-ended search for further, likely similarly ambiguous, comparisons at $K \geq 5$.
+Taken together, this comparison does not produce a clean reversal at $K=4$ the way it does at $K=3$ relative to $K=2$: Criterion A mildly favours stopping at $K=3$ (the fourth factor's contribution, while still non-trivial, is smaller than the third's), while Criterion B is uninformative at this rank range and offers no separate support either way. Read honestly, choosing $K=3$ over $K=4$ rests on Criterion A alone, and amounts to a preference for the simpler model: the fourth factor's contribution is smaller, but not small enough to ignore. This is a much weaker result than the case for $K\geq 1$ over $K=0$, or even the milder case for $K=3$ over $K=2$, both of those were clear-cut; this one is not. Combined with the cross-validation trials described above, where $K=4$ is likewise never clearly dominated, the honest summary is that the data do not sharply distinguish $K=3$ from $K=4$. $K=3$ is nonetheless retained as the production rank $K^*=3$, used throughout the remainder of this chapter and in Chapter~\ref{chap:results}: it is the more parsimonious of two ranks that the evidence does not clearly separate, and closing the model at a defensible, adequately-supported rank was judged preferable to an open-ended search for further, likely similarly ambiguous, comparisons at $K \geq 5$.
 
 \begin{remark}[Comparability with the exploratory factor count of Chapter~\ref{chap:background}]
 \label{rem:k_not_comparable}
@@ -490,10 +439,3 @@ Proposition~\ref{prop:spectral_inv} is the key justification for reporting the e
 Eigenvectors are defined up to sign: if $\mathbf{v}$ is an eigenvector of $\mathbf{C}^{(s)}$, so is $-\mathbf{v}$. A sign convention is applied draw-by-draw before computing posterior summaries: for each canonical factor $k$, the sign of $\mathbf{v}_k^{(s)}$ is chosen so that the feature with the largest absolute loading on that eigenvector has a positive loading. This convention ensures that the posterior mean of $\mathbf{v}_k^{(s)}$ reflects a coherent direction rather than cancelling between draws of opposite sign.
 \end{remark}
 
-\subsection{Interpretation of canonical factor directions}
-
-The posterior mean of the eigenvectors $\mathbf{V}^{(s)}$, together with $95\%$ credible intervals computed from the drawn quantiles, provides the canonical factor loading profile. For canonical factor $k$, the loading of feature $p$ is $V_{pk}^{(s)}$; features whose credible intervals exclude zero can be interpreted as having a robust association with that latent dimension after integrating over posterior uncertainty.
-
-The eigenvalue share $d_k^{(s)} / \sum_{k'=1}^K d_{k'}^{(s)}$ measures the fraction of player-effect common variance attributed to canonical factor $k$ in draw $s$. This share is itself a posterior quantity; its posterior median summarises how the $K$ latent dimensions partition the shared player-level variation.
-
-The rotated factor scores $\mathbf{f}_i^{(s)} \in \mathbb{R}^K$ from \eqref{eq:rotated_scores} locate each player in the canonical factor space. Their posterior distribution quantifies the uncertainty in each player's latent position as a function of the number of seasons in which that player is observed and of how precisely the data identify the relevant latent dimensions.

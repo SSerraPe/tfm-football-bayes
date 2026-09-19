@@ -66,29 +66,33 @@ write_latex_table(diag_display, "43_diagnostics_summary", escape = FALSE)
 message(sprintf("LLt[1,10] mixing bellwether (rotation-invariant, the goals x passes pair flagged in earlier sessions): ESS_bulk=%.0f, Rhat=%.4f -> %s",
                 llt_diag$ess_bulk, llt_diag$rhat, if (llt_diag$ess_bulk > 200 && llt_diag$rhat < 1.01) "PASS" else "borderline"))
 
-# ── §5.2 Rank-selection Criteria A/B/C recap (K=2,3,4) ────────────────────────
+# ── §5.2 Rank-selection Criteria A/B recap (K=2,3,4) ──────────────────────────
+# NOTE (2026-09, thesis revision Phase 3): the "reliable loaders" column (the
+# criterion formerly labelled B, now dropped from the thesis argument per
+# methodology.tex Sec. 8 -- it gave no reason to prefer K=3 over K=4) is no
+# longer included in the table. The residual-adequacy criterion is relabelled
+# Criterion B throughout, matching methodology.tex. Real math-mode column
+# headers replace the earlier raw-ASCII ones (K, "Last-PC share of LLt",
+# "Mean resid. > tau99", "nu_hat").
 
 kc_resid <- read_csv(file.path(paths$tables, "29b_kcompare_summary.csv"), show_col_types = FALSE)
 kc_var   <- read_csv(file.path(paths$tables, "31b_kcompare_variance_shares.csv"), show_col_types = FALSE)
-kc_rel   <- read_csv(file.path(paths$tables, "31b_kcompare_reliable_counts.csv"), show_col_types = FALSE)
 
 last_pc_per_k <- function(df, k) df |> filter(K == k) |> slice_max(pc, n = 1, with_ties = FALSE)
 
 rank_recap <- lapply(c(2, 3, 4), function(k) {
   v <- last_pc_per_k(kc_var, k)
-  rl <- last_pc_per_k(kc_rel, k)
   r  <- kc_resid |> filter(K == k)
   tibble(
-    K = k,
-    `Last-PC share of LLt` = sprintf("%.1f%%", 100 * v$share_LLt),
-    `Last-PC reliable loaders` = sprintf("%d/%d", rl$n_reliable, rl$n_features),
-    `Mean resid. > tau99` = sprintf("%.2f%%", 100 * r$mean_frac_gt_tau99),
-    `nu_hat` = round(r$nu_hat, 2)
+    `$K$` = k,
+    `Last-PC share of $\\bar{\\boldsymbol\\Lambda}_a\\bar{\\boldsymbol\\Lambda}_a^\\top$` = sprintf("%.1f\\%%", 100 * v$share_LLt),
+    `Mean $\\Pr(|z|>\\tau_{99})$` = sprintf("%.2f\\%%", 100 * r$mean_frac_gt_tau99),
+    `$\\hat\\nu$` = round(r$nu_hat, 2)
   )
 })
 rank_recap_tbl <- bind_rows(rank_recap)
 write_csv(rank_recap_tbl, file.path(paths$tables, "43_rank_criteria_abc.csv"))
-write_latex_table(rank_recap_tbl, "43_rank_criteria_abc", digits = 2)
+write_latex_table(rank_recap_tbl, "43_rank_criteria_abc", digits = 2, escape = FALSE)
 
 # ── §5.3 Minutes-scaling (phi) diagnostic ─────────────────────────────────────
 
@@ -143,5 +147,74 @@ for (pc_name in sort(unique(top_pc$pc))) {
               Score = round(.data[[paste0(tolower(pc_name), "_score")]], 2))
   write_latex_table(disp, paste0("43_archetype_", tolower(pc_name)))
 }
+
+# ── §5.6b Archetypes: combined PC1/PC2/PC3 table (thesis revision Phase 5) ────
+# Replaces the three separate top/bottom-8 tables above with one compact
+# top/bottom-4-per-axis table read side by side. Selection rule: within each
+# axis/direction, the highest-magnitude players that are recognisable
+# footballers, never reaching past roughly the top 15-20 by magnitude to find
+# one -- except PC3-top, where the actual top-ranked players are all genuinely
+# obscure (first recognisable name is rank 14) and the user chose the honest,
+# unadjusted top 4 rather than reaching for recognisability (2026-09 decision).
+#
+# NOTE: pick by (pc, direction, player_name) against 29_top_players_by_pc.csv,
+# not by player_name alone against 29b_player_archetypes.csv -- several common
+# Spanish surnames (e.g. "J. Rodríguez") collide across unrelated players in
+# the full 1,529-player table, and a name-only join silently pulled in the
+# wrong player's score for one entry during Phase 5 (caught by inspection
+# before it reached the thesis).
+# SIGN CORRECTION (found during the "three replacement sections" revision, documented in
+# full in scripts/48_style_space_scatter.R): 29_outlier_study.R's eigendecomposition of
+# Lambda_bar %*% t(Lambda_bar) is never sign-anchored, unlike stage 31's
+# (31_pca_with_ci.R), which anchors each PC so the feature with the largest |loading| is
+# positive -- the convention Remark 4.24/rem:sign specifies and the one the new loading
+# heatmap and style-space scatter (stages 47, 48) are built on. Checked directly: PC1
+# happens to already agree with that convention; PC2 and PC3 are its exact reflection (an
+# elite passer like Xavi scores pc2_score = -7.40 under stage 29's raw sign, when a
+# passing-heavy player should score strongly positive on "passing volume/quality (+) vs.
+# aerial/physical (-)"). 29_top_players_by_pc.csv inherits that same unanchored sign, so
+# its "top"/"bottom" labels for PC2 and PC3 are reversed relative to the corrected
+# convention used everywhere else in this chapter. Fixed here by flipping the retrieved
+# score's sign for PC2/PC3 and swapping which (old) direction feeds the corrected top vs.
+# bottom half of the table; PC1 needs neither, having already agreed.
+pick_pc <- function(pc_name, dir_name, names, flip_sign = FALSE) {
+  sub <- top_pc |> filter(pc == pc_name, direction == dir_name)
+  score_col <- paste0(tolower(pc_name), "_score")
+  out <- sub |>
+    filter(player_name %in% names) |>
+    distinct(player_name, .keep_all = TRUE) |>
+    mutate(player_name = factor(player_name, levels = names)) |>
+    arrange(player_name)
+  s <- out[[score_col]] * if (flip_sign) -1 else 1
+  tibble(Player = as.character(out$player_name), Score = round(s, 2))
+}
+
+pc1_top    <- c("J. Mascherano", "Gerard Piqué", "S. Umtiti", "Raúl Albiol")
+pc1_bottom <- c("Vinícius Júnior", "Neymar", "K. Mbappé", "L. Messi")
+# Named by their CORRECTED pole (old stage-29 "top"/"bottom" is the reverse for PC2/PC3):
+pc2_positive <- c("Xavi", "Andrés Iniesta", "J. Rodríguez", "T. Kroos")               # old "bottom"
+pc2_negative <- c("C. Stuani", "A. Budimir", "S. Okazaki", "Y. En-Nesyri")            # old "top"
+pc3_positive <- c("L. Messi", "Xavi", "M. Pjanić", "Cristiano Ronaldo")               # old "bottom"
+pc3_negative <- c("Iván Alejo", "Juan Iglesias", "O. Vranješ", "Houboulang Mendes")   # old "top"
+
+combined <- bind_cols(
+  pick_pc("PC1", "top", pc1_top),
+  pick_pc("PC2", "bottom", pc2_positive, flip_sign = TRUE),
+  pick_pc("PC3", "bottom", pc3_positive, flip_sign = TRUE),
+  .name_repair = "unique"
+) |> bind_rows(
+  bind_cols(
+    pick_pc("PC1", "bottom", pc1_bottom),
+    pick_pc("PC2", "top", pc2_negative, flip_sign = TRUE),
+    pick_pc("PC3", "top", pc3_negative, flip_sign = TRUE),
+    .name_repair = "unique"
+  )
+)
+write_csv(combined, file.path(paths$tables, "43_archetype_combined.csv"))
+write_latex_table(combined,
+  col_names = c("Player", "Score", "Player", "Score", "Player", "Score"),
+  name = "43_archetype_combined")
+message("Combined archetype table written (top 4 rows = Top; bottom 4 rows = Bottom -- ",
+        "results.tex inserts the \\midrule and Top/Bottom row labels by hand).")
 
 message("Stage 43 complete.")

@@ -1,6 +1,7 @@
-# Stage 36 — Top 5 most-changed season profiles
-# Finds the 5 features with the largest peak-to-trough swing in season effects
-# and produces one panel per feature (line + 90% CI ribbon).
+# Stage 36 — Top 6 most-changed season profiles
+# Finds the 6 features with the largest peak-to-trough swing in season effects
+# and produces one panel per feature (line + 90% CI ribbon), arranged in a
+# compact 3x2 grid (thesis revision Phase 5: was top-5 in a tall 5x1 column).
 
 script_arg  <- grep("^--file=", commandArgs(FALSE), value = TRUE)
 script_path <- if (length(script_arg) > 0) sub("^--file=", "", script_arg[1]) else
@@ -46,10 +47,10 @@ feature_ranges <- season_eff |>
   ) |>
   arrange(desc(b_range))
 
-top5_features <- feature_ranges$feature[1:5]
+top6_features <- feature_ranges$feature[1:6]
 
-cat("Top 5 features by season-effect range (max b_mean - min b_mean):\n")
-print(as.data.frame(feature_ranges[1:5, c("feature", "b_range", "b_max", "b_min")]))
+cat("Top 6 features by season-effect range (max b_mean - min b_mean):\n")
+print(as.data.frame(feature_ranges[1:6, c("feature", "b_range", "b_max", "b_min")]))
 
 # ── 3. Group colour lookup ────────────────────────────────────────────────────
 groups <- feature_group_lookup()
@@ -97,13 +98,13 @@ make_panel <- function(feat, rank_i) {
     )
 }
 
-panels <- mapply(make_panel, top5_features, seq_along(top5_features),
+panels <- mapply(make_panel, top6_features, seq_along(top6_features),
                  SIMPLIFY = FALSE)
 
-# ── 5. Combine with patchwork ─────────────────────────────────────────────────
-fig_combined <- wrap_plots(panels, ncol = 1) +
+# ── 5. Combine with patchwork: compact 3x2 grid ───────────────────────────────
+fig_combined <- wrap_plots(panels, ncol = 2, nrow = 3) +
   plot_annotation(
-    title    = "Top 5 features by season-effect range",
+    title    = "Top 6 features by season-effect range",
     subtitle = paste(
       "Posterior mean season effect b̂ⱼ with 90% credible intervals.",
       "Range = max − min of posterior mean across 12 La Liga seasons (2011/12–2022/23)."
@@ -114,8 +115,8 @@ fig_combined <- wrap_plots(panels, ncol = 1) +
     )
   )
 
-out_fig <- file.path(paths$figures, "36_season_top5_profiles.png")
-ggsave(out_fig, fig_combined, width = 9, height = 14, dpi = 150)
+out_fig <- file.path(paths$figures, "36_season_top6_profiles.png")
+ggsave(out_fig, fig_combined, width = 11, height = 9, dpi = 150)
 cat("Saved:", out_fig, "\n")
 
 # ── 6. Text summary ───────────────────────────────────────────────────────────
@@ -128,14 +129,14 @@ direction_label <- function(feat) {
 }
 
 summary_lines <- c(
-  "=== Stage 36: Top 5 features by season-effect range ===",
+  "=== Stage 36: Top 6 features by season-effect range ===",
   sprintf("Date: %s", Sys.Date()),
   "",
   "Measure: max(b_mean) - min(b_mean) across 12 La Liga seasons.",
   "",
   sprintf("%-55s %9s %13s", "Feature", "Range (σ)", "Direction")
 )
-for (feat in top5_features) {
+for (feat in top6_features) {
   df_f <- season_eff |> filter(feature == feat)
   rng  <- round(max(df_f$b_mean) - min(df_f$b_mean), 3)
   dir  <- direction_label(feat)
@@ -143,7 +144,7 @@ for (feat in top5_features) {
                      sprintf("%-55s %9.3f %13s", feat, rng, dir))
 }
 
-out_note <- file.path(paths$notes, "36_season_top5_summary.txt")
+out_note <- file.path(paths$notes, "36_season_top6_summary.txt")
 writeLines(summary_lines, out_note)
 cat("Saved:", out_note, "\n")
 cat(paste(summary_lines, collapse = "\n"), "\n")

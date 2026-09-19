@@ -64,5 +64,14 @@ display_tbl <- icc_tbl |>
 
 write_latex_table(head(display_tbl, 15), "41_icc_top15")
 write_latex_table(display_tbl, "41_icc_full48", longtable = TRUE)
+# NOTE (2026-09, thesis revision Phase 3): in the revised thesis, "41_icc_top15.tex"
+# is no longer used in the main body (replaced by a top-5-by-player/top-5-by-season
+# stacked-bar figure, stage 45); "41_icc_full48.tex" moved to Appendix A and had a
+# \caption{}/\label{}/\endfirsthead/\endhead block added by hand in the new thesis
+# copy of this fragment (write_latex_table() does not support inline longtable
+# captions) so it gets a real, auto-numbered table float instead of the previous
+# hand-written "Table~\ref*{...}" workaround, which caused a table-numbering
+# collision with the top-15 table. Regenerating this fragment from this script would
+# overwrite that manual header -- reapply it if this script is rerun.
 
 message("Stage 41 complete.")

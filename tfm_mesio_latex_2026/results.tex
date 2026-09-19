@@ -1,0 +1,507 @@
+\chapter{Results} \label{chap:results}
+
+This chapter reports the results of fitting the model of Chapter~\ref{chap:methodology} to the production
+La Liga player--season dataset described in Chapter~\ref{chap:data_source}. Unless stated otherwise, every
+number, table, and figure in this chapter comes from the constant-$\sigma_e$, $K^*=3$, Student-$t$ production
+fit (Definition~\ref{def:additive}, $\boldsymbol\Sigma_a$ as in Definition~\ref{def:sigma_a}) --- the model
+whose specification, identification, and rank selection were argued for in Chapter~\ref{chap:methodology}. The
+one deliberate exception is \S\ref{sec:results-phi}, which resolves the fixed-vs-estimated $\phi$ question
+(Remark~\ref{rem:phi}) using a pair of separate fits built specifically for that comparison.
+
+\section{Model diagnostics and convergence}
+\label{sec:results-diagnostics}
+
+Table~\ref{tab:diagnostics-summary} summarises posterior convergence for the production fit, grouped by
+parameter family. $\hat R$ and effective sample size are computed in the usual way from four parallel chains.
+Three of the $144$ entries of $\boldsymbol\Lambda_a$ are excluded from the $\boldsymbol\Lambda_a$ row: under the
+lower-triangular, positive-diagonal constraint of \S\ref{sec:ltpd} these entries are fixed at exactly zero and
+never sampled, so $\hat R$ is undefined for them (zero posterior variance) rather than poorly mixed.
+
+\begin{table}[h]
+\centering
+\caption{Posterior convergence summary for the production fit ($K^*=3$), by parameter family. $\nu$ is the
+Student-$t$ degrees of freedom (Definition~\ref{def:student_t}); $\boldsymbol\Lambda_a$, $\boldsymbol\Psi_a$
+are the factor loadings and uniqueness (Definition~\ref{def:sigma_a}); $\boldsymbol\sigma_b,\boldsymbol\sigma_e$
+are the season and residual scales. The $[\boldsymbol\Lambda_a\boldsymbol\Lambda_a^\top]_{1,10}$ row is the
+rotation-invariant bellwether check discussed below.}
+\label{tab:diagnostics-summary}
+\small
+\input{tables/43_diagnostics_summary.tex}
+\end{table}
+
+Convergence is excellent for the scalar and per-feature parameters: $\nu$, $\boldsymbol\psi_a$,
+$\boldsymbol\sigma_b$, and $\boldsymbol\sigma_e$ all have $\hat R \leq 1.005$ and minimum bulk-ESS in the
+hundreds to thousands. $\boldsymbol\Lambda_a$ itself mixes less cleanly (worst $\hat R = 1.014$, $4$ of the
+$141$ sampled entries above the conventional $1.01$ threshold) --- but, as Remark~\ref{rem:ltpd_notinterp}
+already anticipated, the raw loadings under the LT-PD identification constraint are an identification device,
+not the object of substantive interest, so this is not by itself informative about whether the model has
+recovered a genuine, stable shared-covariance structure. Proposition~\ref{prop:spectral_inv} gives the
+rotation-invariant object that \emph{is} of substantive interest: the spectral decomposition of
+$\hat{\boldsymbol\Lambda}_a\hat{\boldsymbol\Lambda}_a^\top$. Following that proposition, mixing was checked
+directly on one representative entry of this rotation-invariant common-variance matrix, $[\boldsymbol\Lambda_a
+\boldsymbol\Lambda_a^\top]_{1,10}$ (the goals--forward-passes pair, previously the single worst-mixing entry
+identified during model development): $\hat{R} = 1.005$, bulk-ESS $\approx 237$, comfortably above the
+$200$-draw threshold used throughout this chapter --- a clean pass, in contrast to the raw loadings'
+noisier picture.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\textwidth]{images/40_correlation_ppc_scatter_k3.png}
+\caption{Posterior predictive check: observed pairwise feature correlations vs. the model-implied correlation
+$[\boldsymbol\Sigma_a]_{pq}/\sqrt{\mathrm{Var}(y_p)\mathrm{Var}(y_q)}$ (Proposition~\ref{prop:sigma_entries}),
+posterior mean $\pm 90\%$ credible interval across $4{,}000$ draws. $r(\text{observed}, \text{model-implied}) =
+0.975$.}
+\label{fig:ppc-correlation}
+\end{figure}
+
+Figure~\ref{fig:ppc-correlation} checks whether the model reproduces the observed cross-feature correlation
+structure: since $\boldsymbol\Sigma_b$ and $\boldsymbol\Sigma_e$ are diagonal by construction, every
+model-implied off-diagonal correlation comes entirely from $\boldsymbol\Sigma_a = \boldsymbol\Lambda_a
+\boldsymbol\Lambda_a^\top + \boldsymbol\Psi_a$. The near-perfect agreement ($r=0.975$) across all $\binom{48}{2}
+= 1{,}128$ feature pairs indicates the three shared factors, plus feature-specific uniqueness, are jointly
+sufficient to explain almost all of the pairwise dependence structure in the data --- direct support for the
+low-rank modelling choice beyond the ELPD comparison of \S\ref{sec:results-rank}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.75\textwidth]{images/40_residual_distribution_check_k3.png}
+\caption{Residual check: $y_{np} - \hat a_{i[n],p} - \hat b_{j[n],p}$ against $\mathcal{N}(0,\hat\sigma_{e,p})$
+for six features (top-2 by ICC\_player, top-2 by ICC\_season, bottom-2 by combined ICC; \S\ref{sec:results-icc}).
+The fitted noise model is Student-$t$, not Normal, so heavier-than-Normal tails here are expected, not a
+misspecification.}
+\label{fig:ppc-residual}
+\end{figure}
+
+\section{Rank selection: results}
+\label{sec:results-rank}
+
+Two separate questions were posed in \S\ref{sec:rank}: whether low-rank $\boldsymbol\Sigma_a$ is worth having
+at all ($K=0$ vs.\ $K\geq1$), and, if so, which rank to use ($K^*$ among $K\geq1$). The evidence for the two
+questions is qualitatively different, and this section reports them separately rather than blending them.
+
+\paragraph{$K=0$ vs.\ $K\geq1$: decisive.} PSIS-LOO on the rebuilt production dataset ($N=4{,}586$, $P=48$)
+gives $\Delta\mathrm{ELPD} = 5{,}820.2$ (SE $343.5$, $\approx 17$ standard errors) favouring the low-rank
+$K^*=3$ model over the fully diagonal $K=0$ baseline. Pareto-$\hat k$ exceeds $0.5$ for the large majority of
+observations under both models ($98.9\%$ diagonal, $99.3\%$ low-rank), so this magnitude should be read
+directionally rather than as a precise variance estimate --- but a nearly-$17$-SE gap is not the kind of result
+a directional caveat can reverse. Shared player-level covariance structure is real and worth modelling.
+
+\paragraph{Choosing $K^*$ among $K \geq 1$: qualitative, per \S\ref{sec:rank_qualitative}.} Table~\ref{tab:rank-criteria}
+recaps the two structural criteria across $K=2,3,4$ that \S\ref{sec:rank_qualitative} defined; a player-holdout
+cross-validation screen was also run across the same range and did not discriminate among these ranks either.
+
+\begin{table}[h]
+\centering
+\caption{Criteria A and B across candidate ranks (\S\ref{sec:rank_qualitative}). Criterion A: last canonical
+factor's share of $\bar{\boldsymbol\Lambda}_a\bar{\boldsymbol\Lambda}_a^\top$'s total variance. Criterion B:
+mean fraction of standardised residual cells exceeding the fit's own $t(\hat\nu)$-implied $\tau_{99}$ threshold.
+The final column reports each fit's own estimated Student-$t$ degrees of freedom $\hat\nu$, included for
+reference rather than as a third criterion.}
+\label{tab:rank-criteria}
+\input{tables/43_rank_criteria_abc.tex}
+\end{table}
+
+Criterion A mildly favours stopping at $K=3$ (the fourth factor's $7.1\%$ share is smaller than the third's
+$10.5\%$, but the decline from $K{=}2\to3\to4$ is continuous, not a sharp drop to a noise floor). Criterion B
+is flat and uninformative at this range (all three ranks comfortably under the $1\%$ adequacy floor). Read
+honestly, the case for $K=3$ over $K=4$ rests on Criterion A alone, and amounts to a preference for the simpler
+model under a still-shrinking-but-not-negligible fourth factor, not a clean reversal of the kind that separates
+$K=0$ from $K\geq1$. $K^*=3$ is retained on parsimony grounds and used throughout the rest of this chapter.
+
+\section{Resolving the observation-level variance scaling ($\phi$)}
+\label{sec:results-phi}
+
+Remark~\ref{rem:phi} left open whether the minutes-exposure scaling exponent $\phi$ in
+Definition~\ref{def:phi} should be fixed or estimated, deferring the decision to this chapter. The motivation
+for scaling at all came from a direct diagnostic on the constant-$\sigma_e$ fit: of the top-200 worst
+standardised-residual cells, $48.9\%$ ($88/180$) came from the bottom quintile of playing time, against an
+expected $20\%$ under no minutes effect (binomial $p < 4.4\times10^{-18}$) --- observations from low-minute
+player-seasons are markedly under-fit by a model that treats residual variance as constant regardless of
+exposure.
+
+\begin{table}[h]
+\centering
+\caption{Resolving $\phi$: constant-$\sigma_e$ baseline vs.\ two minutes-scaled variants. "Low-minute
+worst-cell share" repeats the diagnostic above, recomputed on each fit's own residuals.}
+\label{tab:phi-comparison}
+\input{tables/43_phi_comparison.tex}
+\end{table}
+
+Table~\ref{tab:phi-comparison} compares the constant-$\sigma_e$ production fit against two minutes-scaled
+refits: $\phi$ fixed at the Poisson-rate value of $0.5$, and $\phi$ estimated freely. Both minutes-scaled
+variants eliminate the low-minute over-representation almost entirely ($48.9\% \to 8.3\%$), confirming the
+scaling addresses the diagnosed problem rather than merely reshuffling it. The estimated $\hat\phi = 0.366$
+(90\% CI $[0.360, 0.373]$) is meaningfully below the fixed value of $0.5$: the data reject pure Poisson-rate
+scaling in favour of a milder, super-Poisson exponent, consistent with some of a player's per-minute variance
+being genuine heterogeneity (skill, role) rather than pure sampling noise that would vanish with more minutes.
+Both scaled variants also push $\hat\nu$ higher (from $4.90$ to $5.67$--$5.98$): once exposure-driven
+heteroscedasticity is accounted for, less of the remaining spread needs to be attributed to heavy tails.
+
+\textbf{Verdict:} minutes-scaling with an estimated $\phi$ is the better-supported treatment for this data.
+The rest of this chapter, however, continues to report results from the constant-$\sigma_e$ production fit
+(stage 28): that is the fit all of the downstream infrastructure below (canonical loadings, archetypes,
+similarity) was built against, and it is what Chapter~\ref{chap:methodology} describes as ``the model''
+throughout. Re-deriving every subsequent result under the minutes-scaled variant is a natural extension, flagged
+here rather than undertaken, since the qualitative substance of the loadings and similarity results is not
+expected to change materially and the constant-$\sigma_e$ fit is the one already validated end-to-end.
+
+\section{Variance decomposition: intraclass correlations}
+\label{sec:results-icc}
+
+Definition~\ref{def:icc} defines $\mathrm{ICC}_{a,p}$, $\mathrm{ICC}_{b,p}$, $\mathrm{ICC}_{e,p}$ as the share
+of feature $p$'s total variance attributable to player, season, and residual, respectively.
+Remark~\ref{rem:bayesian_icc} notes these are themselves posterior quantities, since every variance component
+is sampled; Figure~\ref{fig:icc-top5} plots the posterior-median split for the five features with the highest
+player ICC and, separately, the five features with the highest season ICC (the full 48-feature table is given
+in Table~\ref{tab:icc-full}, Appendix~\ref{app:icc}).
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{images/45_icc_top5_stacked.png}
+\caption{Player/season/residual variance share (posterior median) for the five features with the highest
+player ICC (left) and the five features with the highest season ICC (right).}
+\label{fig:icc-top5}
+\end{figure}
+
+Player identity dominates the left-panel features: all five exceed $\mathrm{ICC}_a = 0.85$ (recoveries,
+offensive duels, touch in box, forward passes, crosses), with essentially no season component. The right
+panel tells a complementary story: season ICC reaches $0.44$ for smart passes and $0.31$ for pressing duels,
+features that do not otherwise stand out on the player-dominance ranking. This is the quantitative counterpart
+to the qualitative claim motivating the whole model (\S\ref{sec:covariance}): football performance profiles are
+substantially stable properties of the player for most features, but a handful of specifically tactical or
+rule-sensitive features carry a real, non-trivial season signal --- \S\ref{sec:results-seasons} returns to
+smart passes' season trend directly.
+
+\section{Canonical factor loadings by feature group}
+\label{sec:results-loadings}
+
+Raw $\boldsymbol\Lambda_a$, fitted under the LT-PD constraint of \S\ref{sec:ltpd}, is an identification device
+and should not be interpreted directly (Remark~\ref{rem:ltpd_notinterp}). Following
+Definition~\ref{def:pca_postproc}, canonical factor directions are instead obtained by eigendecomposing the
+common-variance matrix $\bar{\boldsymbol\Lambda}_a\bar{\boldsymbol\Lambda}_a^\top$
+(Proposition~\ref{prop:spectral_inv} shows this is invariant to the identification constraint used at fit
+time).
+
+\begin{table}[h]
+\centering
+\caption{Variance shares of the three canonical factors, for the common-variance matrix
+$\bar{\boldsymbol\Lambda}_a\bar{\boldsymbol\Lambda}_a^\top$ and for total player variance
+$\bar{\boldsymbol\Sigma}_a = \bar{\boldsymbol\Lambda}_a\bar{\boldsymbol\Lambda}_a^\top + \bar{\boldsymbol\Psi}_a$.
+The gap between the two columns for each PC is the share absorbed by feature-specific uniqueness
+$\boldsymbol\Psi_a$ instead of the shared factors.}
+\label{tab:pca-variance-shares}
+\begin{tabular}{lcc}
+\toprule
+Canonical factor & Share of $\bar{\boldsymbol\Lambda}_a\bar{\boldsymbol\Lambda}_a^\top$ & Share of $\bar{\boldsymbol\Sigma}_a$ \\
+\midrule
+PC1 & 61.8\% & 45.6\% \\
+PC2 & 27.7\% & 20.7\% \\
+PC3 & 10.5\% & 8.1\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Roughly a quarter of total player-level variance sits in $\boldsymbol\Psi_a$ rather than the three shared
+factors (Table~\ref{tab:pca-variance-shares}) --- a meaningful idiosyncratic component that
+\S\ref{sec:results-similarity} returns to directly.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{images/47_loading_heatmap.png}
+\caption{Posterior-mean loading of all 48 features on PC1--PC3, grouped by feature category and coloured on a
+diverging scale centred at zero. A dark outline marks the 137 of 144 cell-loadings (95\%) whose 90\% credible
+interval excludes zero; the seven unmarked cells are the exceptions. Groups are ordered so PC1's sign runs
+monotonically from Defending (most positive) to Attacking output (most negative).}
+\label{fig:loading-heatmap}
+\end{figure}
+
+Three things stand out from Figure~\ref{fig:loading-heatmap}, one per axis.
+
+\textbf{PC1} separates defensive volume from attacking output. Defending and passing-volume features load
+positive --- recoveries, interceptions, clearances, forward and long passes --- while Attacking output loads
+entirely negative: all seven of its features, from goals to touches in the box, carry a negative, reliable
+loading. Passing itself splits by purpose rather than sitting on one side of the axis: bulk, directional
+passing (forward passes, long passes, lateral passes) loads with the defensive pole, while creative passing
+(key passes, smart passes, crosses, shot assists) loads with attacking output. This is the axis that separates
+centre-backs from strikers most cleanly: Table~\ref{tab:archetype-combined}'s PC1 extremes are drawn entirely
+from those two positions, with no overlap between them.
+
+\textbf{PC2} separates technical, pass-based play from aerial and physical play. Passing volume, passing
+quality, and progressive actions load entirely positive; the negative pole is anchored by aerial duels and
+head shots, with clearances and blocked shots close behind and a mild negative loading on goals and expected
+goals --- a target-man, aerial-duel profile rather than a purely defensive one. PC2 is largely independent of
+PC1: it is why a target forward and a deep-lying passer can sit at a similar point on the defend/attack axis
+while landing at opposite ends of this one, as Table~\ref{tab:archetype-combined}'s PC2 rows show directly
+(Stuani, Budimir, Okazaki, and En-Nesyri at one extreme; Xavi, Iniesta, Rodríguez, and Kroos at the other).
+
+\textbf{PC3} does not match a simple wide-versus-direct-play description, and is renamed accordingly. Its
+positive pole combines possession quality --- the successful-pass rate is the single largest loading on the
+axis --- with direct goal threat: head shots, goals, and expected goals per shot all load positively alongside
+passing accuracy. Its negative pole is anchored by crossing, being dribbled past, and losing defensive duels, a
+mix of wide attacking play and defensive engagement rather than either one cleanly. PC3 adds information the
+other two axes do not carry: two attacking players who agree on PC1 and PC2 can still differ sharply in
+whether their output comes through retained possession and clean finishing or through crossing into contested
+situations, a distinction \S\ref{sec:results-similarity} returns to for two of its three case-study players.
+
+\paragraph{Reconciling three factors with the earlier eleven.} Chapter~\ref{chap:background} reported an
+eleven-factor exploratory solution from classical factor analysis of the raw, unpartitioned player--season
+matrix. Remark~\ref{rem:k_not_comparable} explains why $K^*=3$ is not in tension with that finding: the
+classical analysis describes the total covariance of $\mathbf y_n$, in which any two features that co-vary for
+\emph{any} reason --- shared player skill, a league-wide tactical shift, or coincidental season drift ---
+contribute jointly to the recovered factor count. $\boldsymbol\Sigma_a$, by contrast, is the covariance of what
+is left of a player \emph{after} season-level drift and observation noise are subtracted out
+(Definition~\ref{def:additive}); a smaller $K$ for that narrower object is the expected consequence of
+conditioning on more structure, not a contradiction between the two analyses. As that remark itself notes, this
+explanation has not been independently validated (e.g.\ by refitting the classical FA on a player-only,
+season-averaged version of the data) and should be read as an argument for the direction of the discrepancy,
+not a demonstrated equivalence.
+
+\FloatBarrier
+
+\section{The canonical style space}
+\label{sec:results-stylespace}
+
+Projecting each player's posterior-mean effect onto the three canonical directions gives every player a
+position in a $3$-dimensional style space. $k$-means clustering ($k=5$) on the (PC1, PC2) plane recovers five
+groups that align closely with recognisable positional roles once ordered by PC1: Forwards, Attacking
+midfielders, Midfielders, Defensive midfielders, and Centre backs, running from the most attacking to the most
+defensive end of PC1. This structure is not replotted below, since Figure~\ref{fig:style-space-scatter} uses
+colour to track individual players across three specific projections rather than five population clusters, but
+it stands as independent confirmation that the space this chapter works with corresponds to real footballing
+structure, not an artefact of the model.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{images/48_style_space_scatter.png}
+\caption{All 1{,}529 players' posterior-mean canonical scores (grey), with the three case-study players of
+\S\ref{sec:results-similarity} (diamonds) and their three closest style-neighbours (circles) in each of the
+three pairwise projections. Only the targets are labelled.}
+\label{fig:style-space-scatter}
+\end{figure}
+
+A three-dimensional style space is not honestly summarised by its first two coordinates, and
+Figure~\ref{fig:style-space-scatter} shows why with the three players it highlights. On PC1 alone, Ramos is a
+clear defensive extreme, Messi a clear attacking one, and Xavi sits close to the population centre --- a
+midfielder who is neither markedly defensive nor markedly attacking by this axis's measure. The PC1--PC2 panel
+adds the fact that Messi and Xavi both score highly on PC2, so a two-axis view already separates all three
+players cleanly. The PC2--PC3 panel tells a different story: Messi and Xavi's points sit almost on top of each
+other, both far to the technical, high-retention end of both axes, while Ramos remains clearly apart. Read on
+its own, that panel would suggest Messi and Xavi are close in style. Only PC1, absent from that projection,
+reveals that they are not --- one of the more concrete illustrations in this chapter of why the third axis
+earns its place rather than being a minor correction to the first two.
+
+Table~\ref{tab:archetype-combined} lists the most extreme players on each canonical factor, four per
+direction rather than eight, chosen as the highest-magnitude players on each axis who are also recognisable
+footballers (never reaching past roughly the top 15--20 by magnitude to find one). The one exception is PC3's
+bottom row: its highest-magnitude players on that (negative) pole are all genuinely unfamiliar names, so the
+row is left as the honest, unadjusted top 4 by magnitude rather than reaching deep into the ranking for
+recognisability.
+
+\begin{table}[h]
+\centering
+\caption{Top and bottom 4 players on each canonical factor (PC1: defensive volume vs.\ attacking output; PC2:
+technical/pass-based vs.\ aerial/physical; PC3: ball retention and direct scoring vs.\ crossing and defensive
+engagement).}
+\label{tab:archetype-combined}
+\input{tables/43_archetype_combined.tex}
+\end{table}
+
+\FloatBarrier
+
+\section{Season profiles}
+\label{sec:results-seasons}
+
+Consistent with Figure~\ref{fig:icc-top5}, season ICC is small for almost every feature --- but small does not
+mean zero, and group-averaged season effects reveal coherent league-wide drift over the twelve seasons in the
+data (Figure~\ref{fig:season-trends}).
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\textwidth]{images/33_season_group_trends.png}
+\caption{Group-averaged posterior-mean season effects $\hat{\mathbf b}_j$, in Z-scaled feature units, one panel
+per feature group, 2011/12--2022/23. Most groups drift downward from around 2017/18 onward.}
+\label{fig:season-trends}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\textwidth]{images/36_season_top6_profiles.png}
+\caption{The six features with the largest peak-to-trough range in $\hat{\mathbf b}_j$ across seasons. Smart
+passes shows the largest range (2.4$\sigma$) and, uniquely among the six, a monotonic falling trend rather than
+a peak-and-recovery shape.}
+\label{fig:season-top6}
+\end{figure}
+
+Smart passes stands out not just for its range but for its shape: every other feature in
+Figure~\ref{fig:season-top6} rises, falls, and partially recovers within the sample window, while smart passes
+falls steadily from 2011/12 to 2022/23 with no recovery at any point. A through-ball attempted at a
+league-average rate in 2011/12 would be attempted well below that rate a decade later, holding player identity
+fixed. Read as a tactical signal rather than a statistical curiosity, this is evidence of a leaguewide shift
+away from risk-laden, line-breaking passing and toward lower-risk possession retention over the sample window
+--- consistent with the broader decline visible in the Passing volume and Passing quality panels of
+Figure~\ref{fig:season-trends}.
+
+\FloatBarrier
+
+\section{Player similarity: separating style from level}
+\label{sec:results-similarity}
+
+This section takes up, in depth, the question the Introduction posed at the outset: what does it mean for two
+players to be ``similar,'' and can a player be stylistically similar to an outlier without matching their
+output?
+
+\subsection{Motivation: separating style from level}
+
+The model's own covariance structure already gives a principled way to make this split. Recall
+(Definition~\ref{def:sigma_a}) that the player effect decomposes as
+\[
+\mathbf a_i = \boldsymbol\Lambda_a\boldsymbol\eta_i + \boldsymbol\psi_a \odot \mathbf z_{u,i},
+\]
+a \emph{shared} component driven by the $K^*=3$ canonical factors, and an \emph{idiosyncratic} component that
+those factors do not explain. \textbf{Style} is naturally read off the shared component: a player's position in
+the $3$-dimensional canonical factor space, $\mathbf f_i$ (Definition~\ref{def:pca_postproc}), the same
+coordinates used for the archetype clustering of \S\ref{sec:results-stylespace}. \textbf{Level} is naturally
+read off the specific output features that shared style position does not by itself pin down --- here, goals
+and expected goals per shot. Both are evaluated at their posterior mean throughout this section.
+
+Two players can therefore be \emph{style-close} (near-identical $\mathbf f_i$) while being \emph{level-far}
+(very different modelled goal output). That is the model-native version of ``can a player be stylistically
+similar to an outlier without matching their production'': yes, and the mechanism is explicit rather than
+asserted. It also explains why a true generational outlier is unlikely to have a perfect twin --- their
+outlier-ness lives disproportionately in $\boldsymbol\psi_a \odot \mathbf z_{u,i}$, the part of their identity
+that is, by construction, not shared with anyone else. Matching someone's shared style is achievable; matching
+both their style and their most idiosyncratic output is structurally much less likely.
+
+\emph{A note on scope}: the dataset is La Liga only, 2011/12--2022/23 (Chapter~\ref{chap:data_source}). A player like
+Erling Haaland, who has never played in this league, is not in this analysis. He is a useful illustration of
+the ``generational outlier'' idea in the abstract, never a literal query target here --- every concrete example
+below uses an actual in-sample player as the stand-in.
+
+\subsection{Case studies: three targets}
+
+Style distance between two players is the Euclidean distance between their posterior-mean canonical factor
+scores $\bar{\mathbf f}_i$, standardised across all 1{,}529 outfield players; level gap is the Euclidean
+distance between their posterior-mean per90 goals and expected-goals effects. Both are single numbers per
+pair, reported directly as distances rather than converted to a bounded similarity score: smaller means more
+similar, and the underlying quantity is already a Euclidean distance in standardised canonical-score space,
+the same one used throughout this chapter. Introducing a monotone transform to a $[0,1]$ scale here would add a
+mathematical object the thesis does not otherwise need.
+
+The remainder of this section works through three named players: Messi, Sergio Ramos, and Xavi. The primary
+reason for this choice is that a reader already has an informed opinion about how each of these three plays,
+which is what makes the model's output checkable rather than merely plausible --- an unfamiliar player's
+neighbour list cannot be judged against prior knowledge, a familiar one's can. A secondary reason is that their
+canonical scores span real extremes of the space, though less completely than a one-player-per-axis account
+would suggest. Messi is an extreme on both PC1 (4th most extreme of 1{,}529 players) and PC3 (the single most
+extreme value in the dataset). Xavi is an extreme on PC2 (also the single most extreme value) and PC3 (2nd most
+extreme), but sits close to the population centre on PC1 (1{,}123rd by magnitude, near the median). Ramos is a
+clear PC1 extreme (26th most extreme, the positive pole) but not a PC2 extreme (1{,}451st, essentially the
+population median) and shares PC3's negative pole with Messi and Xavi rather than anchoring an opposing one.
+Between the three, both poles of PC1 are covered and the shared negative pole of PC2 and PC3 is covered twice
+over; PC2's and PC3's positive poles are not represented by any of the three. This is a genuine partial
+coverage of the space, not a tidy one-axis-each account, and is reported as such.
+
+\begin{table}[h]
+\centering
+\caption{Each target's three closest style-neighbours, by style distance, with the level gap between them.}
+\label{tab:similarity}
+\input{tables/48_similarity_table.tex}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{images/50_score_forest_plot.png}
+\caption{Posterior 90\% credible intervals for each target's canonical score on PC1--PC3, alongside the same
+three style-neighbours as Table~\ref{tab:similarity} and the three most distant players by style (grey
+squares; selection rule in the text). Scores use the fixed reference orientation of
+Remark~\ref{rem:posterior_mean_anchor}, so intervals are directly comparable across players and draws.}
+\label{fig:score-forest}
+\end{figure}
+
+The three most distant players per target are chosen from the top decile of style distance from that target,
+as the three most recognisable names in that decile, capped at not reaching past roughly its top 30 players by
+raw distance; the rule is applied identically to all three targets. For Ramos and Xavi this returns genuinely
+recognisable players (Hélder Costa, Messi, and Pedro Porro for Ramos; Ante Budimir, Cristian Stuani, and
+Youssef En-Nesyri for Xavi). For Messi it does not: no player in his top decile of style distance is a
+recognisable name at any reasonable depth, so the honest top three by raw distance are used instead --- O.
+Vranješ, Juan Iglesias, and Iván Alejo, all low-minute fringe players. That the players stylistically furthest
+from Messi are unheralded role-players rather than other attacking talents is itself informative: his profile
+is extreme enough that its opposite is occupied by nobody in particular.
+
+\paragraph{Messi.} Neymar, Pedro, and Philippe Coutinho are Messi's three closest style-neighbours, and none
+closes the level gap: Neymar's, the smallest of the three, is still $1.99$. Figure~\ref{fig:score-forest}'s
+PC1 and PC3 intervals for these three overlap Messi's own comfortably, while the three most distant players
+sit clearly apart on every axis.
+
+\paragraph{Ramos.} Javi García ($0.161$) and Gerard Piqué ($0.164$) sit within $0.003$ of each other in style
+distance from Ramos, both clearly ahead of the third-closest, Samuel Umtiti ($0.316$). Figure~\ref{fig:score-forest}
+shows what the point estimates alone do not: on PC1, Ramos's own credible interval overlaps all three
+neighbours, and García's and Piqué's overlap each other almost entirely. The near-tie in Table~\ref{tab:similarity}
+is a real near-tie in the posterior, not an artefact of reporting three decimal places. Piqué's level gap to
+Ramos ($0.77$) is smaller than García's ($1.13$), which may explain why the well-known Ramos--Piqué pairing
+persists in football conversation even though García edges ahead on style alone. One of Ramos's three most
+distant players is Messi himself --- the same PC1 contrast this chapter returns to repeatedly, restated here
+as a distance rather than a pair of separate extremes.
+
+\paragraph{Xavi.} Miralem Pjanić ($0.65$), Toni Kroos ($1.19$), and Andrés Iniesta ($1.29$) are three players
+built around retaining and circulating possession, matching PC2's description of Xavi's game directly, and all
+three level gaps are small (Pjanić's, $0.32$, is the smallest anywhere in Table~\ref{tab:similarity}). Xavi's
+three most distant players --- Budimir, Stuani, and En-Nesyri --- are all aerial-target forwards, PC2's
+opposite pole. Figure~\ref{fig:score-forest}'s PC2 panel makes the contrast visually explicit: Xavi's cluster
+and the three forwards' do not overlap at all.
+
+\FloatBarrier
+
+\section{Applications: scouting and recommendations}
+\label{sec:results-scouting}
+
+The style/level decomposition of \S\ref{sec:results-similarity} turns directly into a scouting-relevant product:
+a shortlist of players who match a target's style at a different output tier, rather than an attempted
+like-for-like replacement of an irreplaceable talent. Concretely, the recipe is: fix a target player, take their
+top style-neighbours (as in Table~\ref{tab:similarity}), and read off which of those neighbours
+has the largest \emph{level gap} --- that neighbour is a plausible ``cheaper alternative'' candidate, in the
+sense of matching shape while differing in the specific output dimension a club may be more willing to accept a
+discount on.
+
+This is a style/production tool, not a recruitment decision system, and should be read as one input among many:
+market value, age, injury history, contract situation, and league context are not modelled anywhere in this
+pipeline. Within those limits, it offers something a purely descriptive scouting report cannot: an explicit
+separation of ``how a player plays'' from ``how much they currently produce.''
+
+\section{Future work}
+\label{sec:results-future}
+
+Three directions were considered during this work and are reported here as scoped future work rather than as
+contributions of the present thesis.
+
+\textbf{Uncertainty beyond posterior means.} The model itself is fully Bayesian throughout: every variance
+component, loading, and rank-selection criterion in Chapters~\ref{chap:methodology} and~\ref{chap:results}
+carries a posterior distribution, not a point estimate, and individual canonical scores are no longer an
+exception --- Figure~\ref{fig:score-forest} reports a 90\% credible interval for each case-study player on
+every axis, under the fixed reference orientation of Remark~\ref{rem:posterior_mean_anchor}. Two other
+summaries still reduce the posterior to a single number. The style-space clustering of
+\S\ref{sec:results-stylespace} assigns each player to a single $k$-means cluster on $\bar{\mathbf f}_i$, and the
+similarity table of \S\ref{sec:results-similarity} reports one style distance and one level gap per pair rather
+than a credible interval on either. A soft, probability-weighted archetype membership per player (e.g.\ from a
+Gaussian mixture over the canonical factor scores, letting a player be reported as, say, 70\% centre-back and
+30\% defensive midfielder) is a direct extension of the scores now being reported with uncertainty, and remains
+open. A credible interval on a \emph{pairwise distance} is a different, harder problem: it depends on the joint
+draw-by-draw behaviour of two players' scores together, not on either player's marginal interval alone, and
+was not attempted here.
+
+\textbf{Distance-based latent-space models.} The factor-analytic route taken in Chapter~\ref{chap:methodology}
+represents player style through a shared covariance structure. A complementary approach, not pursued here,
+represents player style directly through pairwise dissimilarities via Bayesian multidimensional scaling
+\cite{oh2001bayesian}, with hierarchical extensions available for repeated player--season observations
+\cite{yanchenko2020hierarchical}. The classical multidimensional scaling analysis of
+Chapter~\ref{chap:background} is a first, non-probabilistic step in that direction; a fully Bayesian version
+would attach posterior uncertainty directly to each player's position in the similarity space, which the
+present factor-analytic model instead obtains indirectly, through the canonical factor scores.
+
+\textbf{Team-season effects and tactical fit.} No team identifier exists anywhere in the current data pipeline
+(confirmed absent from both the raw SQL extraction and the model's row-mapping table), so a genuine
+player-vs-team-system comparison is not buildable without new data engineering back to the Wyscout source.
+Adding a team-season effect $c_{t(i,j),j}$ would separate manager and tactical-system effects from stable
+player identity, and would be the natural foundation for a real tactical-fit score; absent that extension, the
+closest available proxy is simply which of the five archetype clusters (\S\ref{sec:results-stylespace}) a
+player belongs to.

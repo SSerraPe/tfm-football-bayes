@@ -1,0 +1,213 @@
+% -------------------------- main.tex -------------------------%
+% English template for the fmetfm class (UPC/FME/MESIO inspired)
+% Migrated to adopt the MESIO templateTFE2026 (MESIOTFM.cls) page
+% geometry, sans-serif fonts, colour scheme, coloured hyperref
+% links, and cover-page field set -- see fmetfm.cls header and
+% CLAUDE.md / the revision plan for the full migration notes.
+% ------------------------------------------------------------%
+
+\documentclass{fmetfm}
+
+% ------------------------------------------------------------%
+% LANGUAGE + ENCODING
+% ------------------------------------------------------------%
+% If you compile with pdfLaTeX:
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+
+% If you compile with XeLaTeX/LuaLaTeX, comment out fontenc/inputenc
+% and use fontspec instead.
+
+% ------------------------------------------------------------%
+% MATH + FIGURES (you already had these)
+% ------------------------------------------------------------%
+\usepackage{amsmath,amsfonts,amssymb,latexsym}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{multirow}  % target-name spanning rows in the similarity table (Chapter 5)
+\usepackage{siunitx}   % decimal-aligned numeric columns in the similarity table
+\usepackage{placeins} % \FloatBarrier, to stop floats drifting across sections in Chapter 5
+
+% longtable's own \LT@makecaption hardcodes "Table N: caption" (colon), independent
+% of amsbook's \@makecaption, which formats every other float in this document as
+% "Table N. caption" (period). Patch it to match, so the one longtable in this
+% thesis (the Appendix A ICC table) does not read as a formatting inconsistency.
+\makeatletter
+\def\LT@makecaption#1#2#3{%
+  \LT@mcol\LT@cols c{\hbox to\z@{\hss\parbox[t]\LTcapwidth{%
+    \reset@font
+    \sbox\@tempboxa{#1{#2.\enspace}#3}%
+    \ifdim\wd\@tempboxa>\hsize
+      #1{#2.\enspace}#3%
+    \else
+      \hbox to\hsize{\hfil\box\@tempboxa\hfil}%
+    \fi
+    \endgraf\vskip\baselineskip}%
+  \hss}}}
+\makeatother
+
+% Optional: nicer theorem refs, clever refs, etc.
+% \usepackage{cleveref}
+
+\usepackage{listings}
+\usepackage{xcolor}
+
+\lstdefinelanguage{SQL}{
+  keywords={select, from, where, join, inner, left, right, full, on, as, and, or, not,
+  case, when, then, else, end, group, by, order, having, union, all, distinct,
+  with, over, partition, row_number, sum, count, avg, min, max, coalesce, cast},
+  sensitive=false,
+  morecomment=[l]{--},
+  morestring=[b]'
+}
+
+\lstset{
+  language=SQL,
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\bfseries,
+  commentstyle=\itshape,
+  showstringspaces=false,
+  breaklines=true,
+  breakatwhitespace=false,
+  columns=fullflexible,
+  frame=single,
+  tabsize=2,
+  captionpos=b
+}
+
+% hyperref is already loaded (with the MESIO colour scheme applied)
+% by fmetfm.cls -- do not reload it here.
+
+% ------------------------------------------------------------%
+% Title page metadata (same roles as your old \def\autor etc.,
+% plus the new fields introduced by the MESIO templateTFE2026:
+% month/year, keywords, MSC, acknowledgements)
+% ------------------------------------------------------------%
+\title{Title of the Thesis}
+\autor{Sebastián Serra Peña}
+\treball{Master Thesis}
+\advisor{Victor Peña Pizarro}
+\departament{Departament d'Estadística i Investigació Operativa (EIO)}
+\monthYear{Month, year}
+% \agraiments{Thanks to...}   % uncomment and fill in if you want an acknowledgements page
+
+\begin{document}
+
+% ------------------------------------------------------------%
+% Title page
+% ------------------------------------------------------------%
+\maketitle
+
+% ------------------------------------------------------------%
+% Optional: Dedication page
+% ------------------------------------------------------------%
+\dedicatoria{A short dedication placed on its own page, where I have no idea who to dedicate this too...}
+
+% ------------------------------------------------------------%
+% Frontmatter numbering (roman)
+% ------------------------------------------------------------%
+\frontmatter
+
+% ------------------------------------------------------------%
+% Abstract (English) + keywords + MSC (MESIO templateTFE2026 fields)
+% ------------------------------------------------------------%
+\begin{abstract}
+
+\vspace{1cm}
+Will write the abstract here (about 300–500 words). Explain the problem,
+methodology, main contributions, and results.
+
+\keywords{keyword1, keyword2, keyword3}
+\msc{MSC1, MSC2}
+\end{abstract}
+
+% ------------------------------------------------------------%
+% Table of contents
+% ------------------------------------------------------------%
+\tableofcontents
+
+% ------------------------------------------------------------%
+% Main content numbering (arabic)
+% ------------------------------------------------------------%
+\mainmatter
+
+\chapter{Introduction}
+
+Modern football data analysis increasingly depends on the ability to compare players and teams in a principled, scalable manner. Clubs, analysts, and recruitment departments are often faced with questions that are conceptually simple yet technically demanding: \emph{Which players are truly similar in style? How does a player’s role change across seasons or clubs? Can we characterise tactical profiles in a way that is both interpretable and statistically grounded?} Recent work in sports analytics and the broader literature on tactical behaviour highlights the growing importance of data-driven representations of playing style, collective dynamics, and contextual effects \cite{teixeira2025mapping,orucc2024analysis}. However, many operational approaches remain either heuristic or too tightly tied to one-off visualisations, making it difficult to quantify similarity consistently across large populations, seasons, and evolving contexts.
+
+This masters' thesis is motivated by a practical and scientific aim: to build a framework for \emph{modelling} latent football style from player performance data using a hierarchical Bayesian model. Rather than attempting to predict a single outcome (e.g., goals or match results), the focus is on constructing a space in which players (and, ultimately, groups such as teams or positional archetypes) can be compared meaningfully. The Bayesian approach adopted here provides, as a direct consequence rather than an added feature, posterior uncertainty on the quantities of interest --- the player/season/residual variance decomposition, the canonical factor loadings, and each player's latent position --- rather than point estimates alone \cite{swinton2023bayesian}. While Bayesian hierarchical modelling has a long track record for football outcome prediction \cite{baio2010bayesian} and performance modelling \cite{ribeiro2025bayesian}, comparatively less attention has been paid to Bayesian latent-space constructions tailored to similarity and style, particularly with hierarchical structure reflecting repeated measures across seasons.
+
+The starting point of this work is a longitudinal dataset of player match statistics from LaLiga, covering twelve seasons (2011/12 to 2022/23) and aggregated to the player--season level. Each observation corresponds to a player in a given season, with a minimum exposure threshold to reduce noise from small samples. From these aggregates, we construct feature vectors designed to be comparable across players and seasons: volume and intensity measures expressed per 90 minutes, efficiency ratios (such as passing accuracy or duel win rates), and interpretable blocks reflecting common scouting and coaching perspectives (offensive production; progression and creation; carrying and 1v1 actions; defence and pressing; duels and physical contests). This block structure is not merely cosmetic, but rather facilitates encoding a domain-informed decomposition of performance into components that are often discussed qualitatively, and it provides a natural handle for weighting or extending the dataset when needed.
+
+The resulting player--season observations are inherently multivariate, with substantial dependence structure across variables. Many football actions co-occur mechanically or tactically, and performance indicators often reflect overlapping dimensions of role, team context, and style. In such settings, analysing each variable in isolation can obscure the broader structure of the data, while naive comparisons in the original feature space may overstate noise, redundancy, or scale effects. A central methodological idea of this thesis is therefore to seek lower-dimensional latent representations that preserve the most relevant structure for comparison and interpretation. In practical terms, the goal is to represent player profiles in a way that is compact enough to visualise and reason about, yet rich enough to retain meaningful distinctions in style, usage, and tactical function.
+
+From this perspective, the thesis is situated within \emph{latent space modelling}. The main idea is that observed football statistics may be viewed as noisy, high-dimensional manifestations of a smaller number of underlying dimensions related to playing style, role execution, and tactical behaviour. In this work, factor-analytic representations provide the route used to extract interpretable latent structure from correlated performance variables. This is especially useful in a longitudinal setting, where repeated player--season observations motivate extensions with hierarchical structure and raise substantive questions about persistence, evolution, and context dependence in football style.
+
+The overarching objectives of this master's thesis are therefore:
+\begin{enumerate}
+  \item to construct a robust and interpretable representation of player performance profiles at the player--season level, grounded in football-relevant blocks of execution;
+  \item to study how multivariate football data can be represented in lower-dimensional latent spaces without losing their most important stylistic and tactical information;
+  \item to investigate factor-analytic latent-variable approaches for the representation and comparison of player profiles;
+  \item to provide Bayesian posterior uncertainty for the latent-space estimation, rank selection, and variance decomposition used throughout;
+  \item to frame the resulting representations as practical tools for scouting, player profiling, and tactical interpretation in modern football analytics \cite{teixeira2025mapping,orucc2024analysis}.
+\end{enumerate}
+
+The remainder of this work is organised as follows. Chapter~\ref{chap:data_source} describes the construction of the player--season dataset, from the raw match-event data through feature engineering to the final analytical sample. Chapter~\ref{chap:background} introduces the exploratory methodology used to establish that the resulting feature space contains meaningful lower-dimensional structure, including classical factor analysis and multidimensional scaling. Chapter~\ref{chap:methodology} specifies the hierarchical Bayesian factor model used for the main analysis: its additive decomposition, covariance structure, identification strategy, and rank selection. Chapter~\ref{chap:results} reports model diagnostics, the resulting canonical factor directions and player archetypes, and case studies on player similarity and its scouting applications, and closes with the model's limitations and directions for future work, connecting this line of work to broader Bayesian modelling in sports \cite{baio2010bayesian,ribeiro2025bayesian,swinton2023bayesian}.
+
+Part of the R and Stan code supporting this thesis --- model implementation, debugging, and pipeline refactoring --- was developed with the assistance of an AI coding assistant (Claude, Anthropic), used under the author's direction and review throughout. The statistical modelling decisions, the analysis, and the interpretation of results are the author's own.
+
+\input{data_source}
+
+\input{background}
+
+\input{methodology}
+
+\input{results}
+
+% ------------------------------------------------------------%
+% Appendices
+% ------------------------------------------------------------%
+\appendix
+\chapter{Full intraclass-correlation table}
+\label{app:icc}
+
+The full 48-feature player, season, and residual ICC table referenced from \S\ref{sec:results-icc} is given
+below (posterior median with 90\% credible interval), ordered by descending player ICC; Figure~\ref{fig:icc-top5}
+highlights the ten most informative rows directly in the main text.
+
+{\scriptsize
+\input{tables/41_icc_full48.tex}
+}
+
+\chapter{SQL extraction and construction queries}
+\label{app:sql}
+
+This appendix sketches the logic of the query used to extract and assemble the staged Wyscout data underlying
+the player--season dataset analysed in this master's thesis. The real query runs to several hundred lines,
+dominated by long, mechanically repeated column lists (one line per raw statistic, one per per-90 feature, one
+per efficiency ratio); the sketch below reproduces its seven-stage logic without reproducing every column, so
+that the extraction and aggregation logic can be understood and, in principle, reproduced without reading
+several hundred near-identical lines. The complete, literal query is kept in the project repository at
+\texttt{appendix/sql/wyscout\_extraction\_query.sql} for anyone who needs it.
+
+\section{Extraction and construction logic}
+
+\lstinputlisting[
+  caption={Condensed sketch of the LaLiga player-season extraction and construction query. Ellipsis comments
+  mark places where the real query repeats the same pattern across additional columns.},
+  label={lst:sql_extraction}
+]{appendix/sql/wyscout_extraction_sketch.sql}
+
+% ------------------------------------------------------------%
+% Bibliography
+% ------------------------------------------------------------%
+
+% Option B: BibTeX (recommended)
+\bibliographystyle{amsplain}
+\bibliography{tfm}
+
+\end{document}
+% ------------------------------------------------------------%
