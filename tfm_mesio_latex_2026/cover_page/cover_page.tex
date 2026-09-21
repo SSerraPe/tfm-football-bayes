@@ -1,0 +1,47 @@
+\documentclass[a4paper]{article}
+\usepackage[a4paper,margin=0pt]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+
+\definecolor{coverblue}{RGB}{51,117,193}
+
+\begin{document}
+\begin{tikzpicture}[remember picture, overlay]
+  % sidebar
+  \fill[coverblue] (current page.south west) rectangle ([xshift=2.2cm]current page.north west);
+
+  % header text block
+  \node[anchor=north west, align=left, text width=15.5cm, inner sep=0pt] at ([xshift=3.1cm,yshift=-2.3cm]current page.north west) {
+    \fontsize{10}{13}\selectfont UNIVERSITAT POLIT\`ECNICA DE CATALUNYA - BarcelonaTech (UPC)\\[2pt]
+    \fontsize{10}{13}\selectfont\textbf{FME - FACULTAT DE MATEM\`ATIQUES I ESTAD\'ISTICA}\\[14pt]
+    \fontsize{10}{13}\selectfont\textbf{MASTER'S DEGREE IN STATISTICS AND OPERATIONS RESEARCH (MESIO UPC-UB)}\\[2pt]
+    \fontsize{10}{13}\selectfont\textbf{MASTER'S THESIS}
+  };
+
+  % Title
+  \node[anchor=north west, align=left, text width=15.5cm, inner sep=0pt] at ([xshift=3.1cm,yshift=-7.0cm]current page.north west) {
+    \fontsize{27}{32}\selectfont\textbf{\raggedright\hyphenpenalty=10000\exhyphenpenalty=10000 Uncovering latent structure\\ in soccer data}
+  };
+
+  % Building illustration
+  \node[anchor=north] at ([yshift=-13.2cm]current page.north) {\includegraphics[width=14.2cm]{building.png}};
+
+  % Author/Director/Department/Date block
+  \node[anchor=north west, align=left, text width=15.5cm, inner sep=0pt] at ([xshift=3.1cm,yshift=-23.2cm]current page.north west) {
+    \fontsize{10.5}{16}\selectfont\textbf{Author:} Sebasti\'an Serra Pe\~na \quad\quad \textbf{Director:} Victor Pe\~na Pizarro\\
+    \fontsize{10.5}{16}\selectfont\textbf{Department:} Departament d'Estad\'istica i Investigaci\'o Operativa (EIO)\\
+    \fontsize{10.5}{16}\selectfont Barcelona, September 21, 2026
+  };
+
+  % Bottom logos
+  \node[anchor=south west, inner sep=0pt] at ([xshift=3.1cm,yshift=1.4cm]current page.south west) {\includegraphics[height=1.25cm]{ub_logo.png}};
+  \node[anchor=south east, inner sep=0pt] at ([xshift=-1.3cm,yshift=1.4cm]current page.south east) {\includegraphics[height=1.05cm]{upc_fme_logo.jpeg}};
+\end{tikzpicture}
+\end{document}
