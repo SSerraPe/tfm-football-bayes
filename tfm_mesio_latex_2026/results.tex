@@ -4,11 +4,7 @@ This chapter reports the results of fitting the model of Chapter~\ref{chap:metho
 La Liga player--season dataset described in Chapter~\ref{chap:data_source}. Unless stated otherwise, every
 number, table, and figure in this chapter comes from the minutes-scaled, fixed-$\phi=1/2$, Student-$t$
 production fit at $K^*=3$ (Definition~\ref{def:additive}, $\boldsymbol\Sigma_a$ as in
-Definition~\ref{def:sigma_a}, residual scale as in Definition~\ref{def:phi}), the model whose
-specification, identification, and rank selection were argued for in Chapter~\ref{chap:methodology}.
-\S\ref{sec:results-rank} confirms $K^*=3$ directly on this family, alongside $K=2$; \S\ref{sec:results-phi}
-reports the diagnostic comparison against an earlier constant-residual-scale fit and against a fit with $\phi$
-estimated rather than fixed, which is why numbers from those two fits appear there and only there.
+Definition~\ref{def:sigma_a}, residual scale as in Definition~\ref{def:phi}).
 
 \section{Model diagnostics and convergence}
 \label{sec:results-diagnostics}
@@ -75,8 +71,7 @@ model-implied off-diagonal correlation comes entirely from $\boldsymbol\Sigma_a 
 \boldsymbol\Lambda_a^\top + \boldsymbol\Psi_a$. The right panel's near-perfect agreement ($r=0.975$) across all
 $\binom{48}{2} = 1{,}128$ feature pairs shows the shared factors, plus feature-specific uniqueness, are jointly
 sufficient to explain almost all of the pairwise dependence structure in the data. \S\ref{sec:results-rank}
-returns to the left panel directly: it is the evidence that shared structure is not merely helpful but
-necessary.
+returns to the left panel directly.
 
 \begin{figure}[tbp]
 \centering
@@ -343,11 +338,9 @@ factors (Table~\ref{tab:pca-variance-shares}), a meaningful idiosyncratic compon
 \begin{figure}[tbp]
 \centering
 \includegraphics[width=0.97\textwidth]{images/47_loading_heatmap.png}
-\caption{Posterior-mean loading of all 48 features on the three canonical factors -- Defensive engagement,
-Technical orientation, and Possession retention -- grouped into eight feature categories and
-coloured on a fixed $[-1,+1]$ diverging scale centred at zero. Each feature group's block of cells is bordered
-as a unit, with the group's colour shown as a strip to its left. All but seven of the 144 cell-loadings shown
-have a 90\% credible interval excluding zero.}
+\caption{Posterior-mean loading of all 48 features on the three canonical factors, grouped into eight feature
+categories and coloured on a fixed $[-1,+1]$ diverging scale centred at zero. All but seven of the 144
+loadings shown have a 90\% credible interval excluding zero.}
 \label{fig:loading-heatmap}
 \end{figure}
 
@@ -520,7 +513,7 @@ this sample: nothing about how much either player scored enters $\mathbf f_i$, b
 someone's shared style position is exactly what a nearest style-neighbour means; matching every idiosyncratic
 thing that makes a generational player singular is a different, much harder claim this chapter does not make.
 Whether a genuinely well-defined production score belongs alongside style similarity, and how to build one
-that is not just a raw goals count, is future work (\S\ref{sec:results-future}).
+that is not just a raw goals count, is future work (Chapter~\ref{chap:conclusion}).
 
 \subsection{The similarity score}
 
@@ -691,7 +684,7 @@ His three closest style-neighbours, Manucho Gonçalves, E. Boateng, and G. Carri
 $78\%$--$74\%$), are journeyman target forwards, not other recognised strikers of comparable stature, a real
 finding about his position in the space rather than a data-quality artefact: style distance alone has no way
 to separate a prolific aerial striker from a similarly-built one who produces far less, and that is exactly
-the gap a future performance score (\S\ref{sec:results-future}) would let this chapter close instead of
+the gap a future performance score (Chapter~\ref{chap:conclusion}) would let this chapter close instead of
 gesture at. His three most distant players are, strikingly, Xavi, Messi, and Andrés Iniesta, two of the other
 three case-study targets and one of the most celebrated passers of the same generation, all drawn from the
 same short list of players who anchor the technical-orientation axis's technical pole: among the cleanest
@@ -727,7 +720,7 @@ affordable options plays in the right \emph{way}.
 The recipe follows directly from \S\ref{sec:results-similarity}: fix a target profile, take a candidate pool
 already filtered on the hard, non-style criteria a club actually needs, rank what remains by similarity score,
 and return a scored, ranked shortlist. A club will not get a player who performs at the target's level from
-this alone, that half of the question is a genuine performance score, taken up as future work below, but it is
+this alone, that half of the question is a genuine performance score, taken up as future work in Chapter~\ref{chap:conclusion}, but it is
 considerably more likely to find a player who \emph{plays like} the target than by working from reputation or
 price tier alone. Being similar in style does not require being as good.
 
@@ -738,39 +731,3 @@ scout's individual judgement, applied one remembered name at a time, cannot: a p
 representation computed across an entire league at once. This kind of comparison already happens, by hand,
 every transfer window; a tool that does it directly from data, at this level of precision and across a whole
 population rather than a shortlist of remembered names, is not something readily available off the shelf.
-
-\section{Future work}
-\label{sec:results-future}
-
-Four directions were considered during this work and are reported here as scoped future work rather than as
-contributions of the present thesis.
-
-\textbf{A performance score alongside similarity.} \S\ref{sec:results-similarity} deliberately measures style
-only: two players can share a high similarity score while producing very differently, Stuani's case study
-being the clearest example. A genuinely useful companion is a performance score, defined carefully enough to
-survive scrutiny rather than a raw goals count (which conflates opportunity, minutes, and finishing quality)
-or any single loose per90 rate. Paired with the similarity score, it would let a shortlist be built in two
-steps instead of one: filter to players who play like the target, then rank that shortlist by this measure to
-surface the best of them, rather than asking one number to do both jobs.
-
-\textbf{Uncertainty beyond posterior means.} The model is fully Bayesian throughout, but two summaries still
-reduce a full posterior to a single number: the archetype clustering of \S\ref{sec:results-stylespace} assigns
-one hard $k$-means cluster per player rather than a soft, probability-weighted membership, and the similarity
-scores of \S\ref{sec:results-similarity} report one distance per pair rather than a credible interval on it.
-The first is a direct extension of the uncertainty already reported for canonical scores; the second is
-harder, since a pairwise distance's uncertainty depends on the joint draw-by-draw behaviour of both players
-together, not either one's marginal interval, and was not attempted here.
-
-\textbf{Distance-based latent-space models.} Chapter~\ref{chap:methodology}'s factor-analytic model represents
-style through a shared covariance structure; a complementary alternative represents it directly through
-pairwise dissimilarities via Bayesian multidimensional scaling \cite{oh2001bayesian}, with hierarchical
-extensions for repeated player--season observations \cite{yanchenko2020hierarchical}. Chapter~\ref{chap:background}'s
-classical MDS is a first, non-probabilistic step in that direction; a fully Bayesian version would attach
-posterior uncertainty directly to each player's position rather than obtaining it indirectly through canonical
-factor scores.
-
-\textbf{Team-season effects and tactical fit.} No team identifier exists anywhere in the current data
-pipeline, so a genuine player-vs-system comparison is not buildable without new data engineering. A
-team-season effect $c_{t(i,j),j}$ would separate manager and tactical-system effects from stable player
-identity and would be the natural foundation for a real tactical-fit score; the closest available proxy today
-is simply a player's archetype cluster (\S\ref{sec:results-stylespace}).

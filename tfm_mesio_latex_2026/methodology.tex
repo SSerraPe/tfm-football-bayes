@@ -5,7 +5,7 @@
 
 The exploratory analyses presented in Chapter~\ref{chap:background} establish that the player--season feature space contains meaningful lower-dimensional structure. Principal component analysis revealed that approximately nineteen components are needed to account for ninety per cent of the total sample variance, while an eleven-factor oblimin solution provided an interpretable account of the empirical correlation structure through recognisable football dimensions such as goal threat, chance creation, pass circulation, defensive work, and duel efficiency. Classical multidimensional scaling applied to the cosine-based dissimilarity confirmed that the pairwise similarity structure admits a low-dimensional Euclidean approximation. Taken together, these findings support the view that player--season performance profiles are governed by a moderate number of shared latent traits, and that the feature space is rich enough for such traits to be recoverable from the data.
 
-What the exploratory analyses cannot do, however, is quantify uncertainty in the latent structure. PCA scores and factor loadings are point estimates computed from the sample; they carry no natural notion of sampling variability, posterior distribution, or credible interval. This matters especially in a longitudinal setting, where the same player is observed in multiple seasons. The exploratory analyses treat all player--season rows as exchangeable, whereas a proper account of the data-generating process recognises that two observations belonging to the same player are not independent: they share the player's stable latent characteristics. Ignoring this structure risks confusing player persistence with seasonal noise, and overstating the precision of latent-dimension estimates.
+What the exploratory analyses do not do, however, is commit to a structure for how a player's statistics arise. PCA scores and factor loadings summarise the sample as given, treating every player--season row as exchangeable and saying nothing about why two rows from the same player should resemble each other more than two rows from different players. The model developed in this chapter states that structure directly: an additive decomposition that separates a stable player effect from a season effect, with a residual specification chosen to match how the data actually behave rather than assumed by default. This matters especially in a longitudinal setting, where the same player is observed in multiple seasons and two such observations are not independent: they share the player's stable latent characteristics, which the exploratory analyses' exchangeability assumption does not recognise.
 
 This chapter specifies a probabilistic model designed to address these limitations. The model is hierarchical: each player's observed performance vector in a given season is the sum of three parts; a stable player effect, a season-specific shift, and residual noise. The player effects are themselves modelled as draws from a distribution whose covariance is structured as a low-rank factor model, directly encoding the finding from Chapter~\ref{chap:background} that player-level variation is largely explained by a small number of shared latent dimensions.
 
@@ -108,9 +108,9 @@ The off-diagonal entries in \eqref{eq:sigma_offdiag} reflect the pairwise covari
 
 This covariance structure is motivated directly by the exploratory findings of Chapter~\ref{chap:background}. There, classical factor analysis showed that the 48 features are not independent at the player level: they cluster into correlated groups, and a number of shared latent traits (eleven, by parallel analysis) were needed to reproduce their correlation pattern.
 
-The low-rank form $\boldsymbol{\Sigma}_a = \boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top + \boldsymbol{\Psi}_a$ builds that same idea into the model's assumptions, rather than just describing it after the fact. It says exactly this: player-level covariance among features is mostly explained by $K$ shared dimensions ($\boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top$), plus a small, purely feature-specific leftover ($\boldsymbol{\Psi}_a$).
+The low-rank form $\boldsymbol{\Sigma}_a = \boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top + \boldsymbol{\Psi}_a$ builds that same idea into the model's assumptions. It says exactly this: player-level covariance among features is mostly explained by $K$ shared dimensions ($\boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top$), plus a small, purely feature-specific leftover ($\boldsymbol{\Psi}_a$).
 
-The difference from the earlier exploratory chapter is that this is now a fully probabilistic (Bayesian) model, not a one-off descriptive result \cite{lopes2004bayesian}. Classical factor analysis gives a single point-estimate set of loadings, with no sense of how uncertain they are. Here, $\boldsymbol{\Lambda}$, $\boldsymbol{\Psi}_a$, and everything built from them instead get a full posterior distribution: the model does not just claim that shared structure exists, it quantifies how confident it is about it. The rank $K$ actually adopted for $\boldsymbol{\Sigma}_a$ is selected separately in Section~\ref{sec:rank}, and Remark~\ref{rem:k_not_comparable} explains why it need not, and does not, match the raw factor count above.
+The difference from the earlier exploratory chapter is that this is now a fully probabilistic (Bayesian) model, not a one-off descriptive result \cite{lopes2004bayesian}. Classical factor analysis gives a single point-estimate set of loadings, with no sense of how uncertain they are. Here, $\boldsymbol{\Lambda}$, $\boldsymbol{\Psi}_a$, and everything built from them instead get a full posterior distribution: the model does not just claim that shared structure exists, it quantifies how confident it is about it. The rank $K$ adopted for $\boldsymbol{\Sigma}_a$ is selected separately in Section~\ref{sec:rank}.
 
 \subsection{Season covariance: diagonal}
 
@@ -189,7 +189,7 @@ Proposition~\ref{prop:t_variance} assumes the constant residual scale $\sigma_{e
 
 The residual scale $\sigma_{e,p}$ in \eqref{eq:normal_resid} and \eqref{eq:t_resid} is constant across observations. Section~\ref{sec:t_likelihood}'s Student-$t$ specification is stated this way because it is the natural point to introduce heavy tails on their own, but a constant residual scale does not hold for this data and is not what the production model uses. The performance features $\mathbf{y}_n$ are constructed as per-90 rates or efficiency ratios, both of which are ratio estimators: for a player who accumulated $m_n$ minutes, the sampling variance of the per-90 estimate of feature $p$ is approximately proportional to $m_n^{-1}$, independently of any structural player or season effects. An observation with 600 minutes of playing time is therefore inherently noisier than one with 2{,}500 minutes, even if both belong to players with identical latent profiles.
 
-Left unaddressed, this heteroscedasticity causes the model to attribute the elevated variance of low-minute observations to heavy residual tails (via a smaller $\nu$) instead of to exposure, which is a misspecification, not a modelling nicety to defer. The production model removes it by scaling the residual variance at the observation level, as follows.
+Left unaddressed, this heteroscedasticity causes the model to attribute the elevated variance of low-minute observations to heavy residual tails (via a smaller $\nu$) instead of to exposure, which is a misspecification. The production model removes it by scaling the residual variance at the observation level, as follows.
 
 \begin{definition}[Minutes-weighted residual scale]
 \label{def:phi}
@@ -267,7 +267,44 @@ The result in Proposition~\ref{prop:ltpd_ident} is established in \cite{anderson
 
 \begin{remark}[The LT-PD constraint is not an interpretive rotation]
 \label{rem:ltpd_notinterp}
-The LT-PD constraint resolves the mathematical non-identifiability \cite{anderson1956statistical,geweke1996measuring}, but it does not produce loadings that are interpretable in a football sense. A simple-structure rotation such as varimax or oblimin minimises cross-loadings and maximises the separation of features across factors, yielding loading patterns that correspond to recognisable dimensions. The LT-PD constraint does neither: it fixes a coordinate system by zeroing out the upper triangle of $\boldsymbol{\Lambda}$, a choice determined by feature ordering rather than by football logic. The resulting columns of $\boldsymbol{\Lambda}$ do not correspond to canonical latent directions and should not be reported or interpreted as such. Interpretable factor directions are recovered through the post-processing procedure described in Section~\ref{sec:pca_postprocessing}.
+The LT-PD constraint resolves the mathematical non-identifiability \cite{anderson1956statistical,geweke1996measuring}, but it does not produce loadings that are interpretable in a football sense. A simple-structure rotation such as varimax or oblimin minimises cross-loadings and maximises the separation of features across factors, yielding loading patterns that correspond to recognisable dimensions. The LT-PD constraint does neither: it fixes a coordinate system by zeroing out the upper triangle of $\boldsymbol{\Lambda}$, a choice determined by feature ordering rather than by football logic. The resulting columns of $\boldsymbol{\Lambda}$ do not correspond to canonical latent directions and should not be reported or interpreted as such. Interpretable factor directions are recovered through the post-processing procedure described in Section~\ref{sec:spectral}.
+\end{remark}
+
+\subsection{Identified summaries of the factor structure}
+\label{sec:spectral}
+
+We report the spectral decomposition of the common variance matrix $\mathbf{C} = \boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top$ rather than the raw loadings $\boldsymbol{\Lambda}$ themselves, because $\mathbf{C}$ is invariant to the LT-PD identification constraint (Proposition~\ref{prop:spectral_inv} below): it is uniquely determined by the model regardless of which constraint was used to fit $\boldsymbol{\Lambda}$. What follows are therefore identified summaries of the factor structure, not an interpretive rotation.
+
+\begin{definition}[Spectral post-processing]
+\label{def:pca_postproc}
+For each posterior draw $s = 1, \ldots, S_{\mathrm{mc}}$, let $\boldsymbol{\Lambda}^{(s)}$ denote the sampled loading matrix. Compute the common variance matrix
+\begin{equation}
+\mathbf{C}^{(s)} = \boldsymbol{\Lambda}^{(s)}\!\left(\boldsymbol{\Lambda}^{(s)}\right)^\top \in \mathcal{S}^+_P,
+\label{eq:common_variance}
+\end{equation}
+and perform its spectral decomposition
+\begin{equation}
+\mathbf{C}^{(s)} = \mathbf{V}^{(s)}\mathbf{D}^{(s)}\!\left(\mathbf{V}^{(s)}\right)^\top,
+\label{eq:spectral_eq}
+\end{equation}
+where $\mathbf{D}^{(s)} = \mathrm{diag}\!\left(d_1^{(s)} \geq \cdots \geq d_K^{(s)} \geq 0\right)$ and $\mathbf{V}^{(s)} \in \mathbb{R}^{P \times K}$ has orthonormal columns. The $k$-th column $\mathbf{v}_k^{(s)}$ of $\mathbf{V}^{(s)}$ is the $k$-th principal eigenvector of $\mathbf{C}^{(s)}$; the corresponding eigenvalue $d_k^{(s)}$ is the amount of player-effect common variance explained by the $k$-th canonical factor direction. The rotated factor score for player $i$ in draw $s$ is
+\begin{equation}
+\mathbf{f}_i^{(s)} \;=\; \left(\mathbf{V}^{(s)}\right)^\top \boldsymbol{\eta}_i^{(s)} \;\in\; \mathbb{R}^K.
+\label{eq:rotated_scores}
+\end{equation}
+\end{definition}
+
+\begin{proposition}[Invariance of the spectral decomposition]
+\label{prop:spectral_inv}
+The eigenvalues $\{d_k^{(s)}\}_{k=1}^K$ and the common variance matrix $\mathbf{C}^{(s)}$ are invariant to any orthogonal transformation of the loading matrix. Replacing $\boldsymbol{\Lambda}^{(s)}$ by $\boldsymbol{\Lambda}^{(s)}\mathbf{Q}$ for any $\mathbf{Q} \in O(K)$ yields the same $\mathbf{C}^{(s)}$ and hence the same spectral decomposition \eqref{eq:spectral_eq}.
+\end{proposition}
+\begin{proof}
+By Proposition~\ref{prop:rotation}, $(\boldsymbol{\Lambda}^{(s)}\mathbf{Q})(\boldsymbol{\Lambda}^{(s)}\mathbf{Q})^\top = \boldsymbol{\Lambda}^{(s)}\boldsymbol{\Lambda}^{(s)\top} = \mathbf{C}^{(s)}$.
+\end{proof}
+
+\begin{remark}[Sign convention]
+\label{rem:sign}
+Eigenvectors are defined up to sign: if $\mathbf{v}$ is an eigenvector of $\mathbf{C}^{(s)}$, so is $-\mathbf{v}$. A sign convention is applied draw-by-draw before computing posterior summaries: for each canonical factor $k$, the sign of $\mathbf{v}_k^{(s)}$ is chosen so that the feature with the largest absolute loading on that eigenvector has a positive loading. This convention ensures that the posterior mean of $\mathbf{v}_k^{(s)}$ reflects a coherent direction rather than cancelling between draws of opposite sign.
 \end{remark}
 
 \section{Prior specification}
@@ -331,7 +368,7 @@ where $p_{\mathrm{HN}}$ denotes the Half-Normal$(0,1)$ density and $p_{\mathrm{G
 \section{Rank selection}
 \label{sec:rank}
 
-The factor rank $K$ governs the dimension of the latent space used to model the player covariance $\boldsymbol{\Sigma}_a$. Unlike the parameters $\boldsymbol{\Lambda}$, $\boldsymbol{\Psi}_a$, and $\nu$, the rank $K$ is not a continuous model parameter that can be assigned a prior and sampled within a single model: it determines the parametric family itself. The selection of $K$ is therefore a model comparison problem.
+The factor rank $K$ governs the dimension of the latent space used to model the player covariance $\boldsymbol{\Sigma}_a$. Unlike the parameters $\boldsymbol{\Lambda}$, $\boldsymbol{\Psi}_a$, and $\nu$, $K$ could in principle be given a prior and estimated jointly with the rest of the model; here it is instead fixed by a qualitative, post-hoc argument, since $K$ determines the parametric family itself and a within-model treatment was not pursued.
 
 For any fixed value of $K \in \{0, 1, 2, \ldots\}$, the model specification in Sections~\ref{sec:covariance}--\ref{sec:priors} is complete. The case $K = 0$ is a special case: it sets $\boldsymbol{\Sigma}_a = \boldsymbol{\Psi}_a$ (diagonal player covariance), corresponding to the assumption that all player-level cross-feature correlation is zero. This \emph{diagonal model} serves as a natural baseline; the gain in predictive performance relative to it quantifies the value of modelling shared player-level covariance structure.
 
@@ -340,13 +377,13 @@ Whether shared player-level covariance is worth modelling at all is answered by 
 \subsection{A qualitative argument for the rank}
 \label{sec:rank_qualitative}
 
-One caveat is worth flagging briefly before making that argument: the rank $K^*=3$ selected here is not expected to match the eleven-factor count found in Chapter~\ref{chap:background}'s exploratory analysis. The two describe different things, for reasons given in full in Remark~\ref{rem:k_not_comparable} below.
+One caveat is worth flagging briefly before making that argument: the rank $K^*=3$ selected here is not expected to match the eleven-factor count found in Chapter~\ref{chap:background}'s exploratory analysis. The two describe different things.
 
 The rank actually adopted for the production model is selected on qualitative, structural grounds instead: the adequacy of each fit's own residuals, and the extent to which the shared player-effect covariance $\boldsymbol{\Sigma}_a$ is still adding well-identified structure as $K$ increases. This mirrors standard practice in exploratory and confirmatory factor analysis, where the number of retained factors is routinely set by fit diagnostics and interpretability rather than by a single automated rule, and is consistent with the professional decision making process in my day-to-day job: that a qualitative argument, grounded in residuals and in the variance structure of $\boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top$, is an appropriate and sufficient basis for closing the choice of $K$.
 
 \begin{remark}[Anchoring to the posterior mean, not to per-draw estimates]
 \label{rem:posterior_mean_anchor}
-Both criteria below require the eigendecomposition of the common-variance matrix $\boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top$ introduced in Section~\ref{sec:pca_postprocessing}. Proposition~\ref{prop:spectral_inv} shows that, \emph{for a fixed posterior draw}, this eigendecomposition is invariant to the identification constraint used to fit $\boldsymbol{\Lambda}$. It is not, however, invariant \emph{across} posterior draws in the sense needed to build a credible interval directly: sampling variability in $\boldsymbol{\Lambda}^{(s)}$ can rotate the leading eigenvectors within the subspace they span from one draw to the next, so naively comparing $\mathbf{V}^{(s)}$ across draws risks comparing different rotations of the same subspace rather than a stable estimate of one direction. To avoid this, the analyses below fix a single reference orientation---the eigendecomposition of the \emph{posterior-mean} common-variance matrix $\bar{\boldsymbol{\Lambda}}\bar{\boldsymbol{\Lambda}}^\top$, where $\bar{\boldsymbol{\Lambda}} = \tfrac{1}{S_{\mathrm{mc}}}\sum_s \boldsymbol{\Lambda}^{(s)}$---and project each draw's loadings onto this fixed reference before summarising uncertainty. The same construction gives comparable per-player credible intervals: replacing $\mathbf{V}^{(s)}$ by the fixed $\bar{\mathbf{V}}$ in \eqref{eq:rotated_scores} yields $\mathbf{f}_i^{(s)} = \bar{\mathbf{V}}^\top\boldsymbol{\Lambda}^{(s)}\boldsymbol{\eta}_i^{(s)}$, used in Chapter~\ref{chap:results} to report posterior credible intervals on individual players' canonical scores.
+Both criteria below require the eigendecomposition of the common-variance matrix $\boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top$ introduced in Section~\ref{sec:spectral}. Proposition~\ref{prop:spectral_inv} shows that, \emph{for a fixed posterior draw}, this eigendecomposition is invariant to the identification constraint used to fit $\boldsymbol{\Lambda}$. It is not, however, invariant \emph{across} posterior draws in the sense needed to build a credible interval directly: sampling variability in $\boldsymbol{\Lambda}^{(s)}$ can rotate the leading eigenvectors within the subspace they span from one draw to the next, so naively comparing $\mathbf{V}^{(s)}$ across draws risks comparing different rotations of the same subspace rather than a stable estimate of one direction. To avoid this, the analyses below fix a single reference orientation---the eigendecomposition of the \emph{posterior-mean} common-variance matrix $\bar{\boldsymbol{\Lambda}}\bar{\boldsymbol{\Lambda}}^\top$, where $\bar{\boldsymbol{\Lambda}} = \tfrac{1}{S_{\mathrm{mc}}}\sum_s \boldsymbol{\Lambda}^{(s)}$---and project each draw's loadings onto this fixed reference before summarising uncertainty. The same construction gives comparable per-player credible intervals: replacing $\mathbf{V}^{(s)}$ by the fixed $\bar{\mathbf{V}}$ in \eqref{eq:rotated_scores} yields $\mathbf{f}_i^{(s)} = \bar{\mathbf{V}}^\top\boldsymbol{\Lambda}^{(s)}\boldsymbol{\eta}_i^{(s)}$, used in Chapter~\ref{chap:results} to report posterior credible intervals on individual players' canonical scores.
 \end{remark}
 
 \begin{description}
@@ -357,19 +394,10 @@ Both criteria below require the eigendecomposition of the common-variance matrix
 \subsection{Selected rank}
 \label{sec:rank_selection}
 
-$K=2$ and $K=3$ below are evaluated on the production, minutes-scaled, fixed-$\phi=1/2$ family; $K=4$ is
-carried over from the constant-scale family (Decision 2 of the revision that corrected this chapter: refitting
-$K=4$ under minutes-scaling was not undertaken, since the existing constant-scale $K=4$ fit already required
-substantially relaxed sampler settings and multi-day runtime for reasons unrelated to residual scaling). The
-three numbers move only marginally between families.
-Applying Criteria A and B across $K=2, 3, 4$ gives the following picture. The last canonical factor's common-variance share declines from $30.7\%$ at $K=2$ to $10.4\%$ at $K=3$ to $7.1\%$ at $K=4$---a continued but decelerating decline, not a sharp drop to a noise floor at any point (Criterion A). Mean residual exceedance under $\tau_{99}$ is $0.77\%$, $0.79\%$, and $0.79\%$ at $K=2,3,4$ respectively---all comfortably below the $1\%$ floor and essentially flat, so residual adequacy holds at every rank examined and does not discriminate among them (Criterion B).
+Applying Criteria A and B across $K=2, 3, 4$ gives the following picture. The last canonical factor's common-variance share declines steadily from $K=2$ to $K=3$ to $K=4$---a continued but decelerating decline, not a sharp drop to a noise floor at any point (Criterion A). Mean residual exceedance under $\tau_{99}$ stays below the $1\%$ floor and essentially flat across all three ranks, so residual adequacy holds at every rank examined and does not discriminate among them (Criterion B).
 
-Taken together, this comparison does not produce a clean reversal at $K=4$ the way it does at $K=3$ relative to $K=2$: Criterion A mildly favours stopping at $K=3$ (the fourth factor's contribution, while still non-trivial, is smaller than the third's), while Criterion B is uninformative at this rank range and offers no separate support either way. Read honestly, choosing $K=3$ over $K=4$ rests on Criterion A alone, and amounts to a preference for the simpler model: the fourth factor's contribution is smaller, but not small enough to ignore. This is a much weaker result than the case for $K\geq 1$ over $K=0$, or even the milder case for $K=3$ over $K=2$; both of those were clear-cut, this one is not. The honest summary is that the data do not sharply distinguish $K=3$ from $K=4$. $K=3$ is nonetheless retained as the production rank $K^*=3$, used throughout the remainder of this chapter and in Chapter~\ref{chap:results}: it is the more parsimonious of two ranks that the evidence does not clearly separate, and closing the model at a defensible, adequately-supported rank was judged preferable to an open-ended search for further, likely similarly ambiguous, comparisons at $K \geq 5$.
+Taken together, this comparison does not produce a clean reversal at $K=4$ the way it does at $K=3$ relative to $K=2$: Criterion A mildly favours stopping at $K=3$ (the fourth factor's contribution, while still non-trivial, is smaller than the third's), while Criterion B is uninformative at this rank range and offers no separate support either way. Choosing $K=3$ over $K=4$ rests on the preference for the simpler model. This is a much weaker result than the case for $K\geq 1$ over $K=0$, or even the milder case for $K=3$ over $K=2$; both of those were clear-cut, this one is not. The honest summary is that the data do not sharply distinguish $K=3$ from $K=4$. $K=3$ is nonetheless retained as the production rank $K^*=3$, used throughout the remainder of this chapter and in Chapter~\ref{chap:results}: it is the more parsimonious of two ranks that the evidence does not clearly separate, and closing the model at a defensible, adequately-supported rank was judged preferable to an open-ended search for further, likely similarly ambiguous, comparisons at $K \geq 5$.
 
-\begin{remark}[Comparability with the exploratory factor count of Chapter~\ref{chap:background}]
-\label{rem:k_not_comparable}
-Chapter~\ref{chap:background} reports an eleven-factor solution from classical, maximum-likelihood factor analysis of the raw player--season feature matrix. It is natural to ask why the Bayesian model's rank, $K^*=3$, is so much smaller. The two quantities are not estimates of the same object. The exploratory factor analysis of Chapter~\ref{chap:background} is fit directly to the raw player--season observations $\mathbf{y}_n$, treated as exchangeable rows with no player/season structure: its factor count therefore describes the rank of the \emph{total, unpartitioned} covariance of $\mathbf{y}_n$, in which any two features that co-vary for any reason shared stable player skill, a league-wide tactical shift common to a subset of seasons, or coincidental season-to-season drift---contribute jointly to the recovered factor structure. The additive decomposition of Definition~\ref{def:additive}, by contrast, first partitions this total covariance into player ($\boldsymbol{\Sigma}_a$), season ($\boldsymbol{\Sigma}_b$), and residual ($\boldsymbol{\Sigma}_e$) components, and the rank $K$ studied in this section governs only $\boldsymbol{\Sigma}_a$: the covariance of what is stable about a player once season-level drift and observation-level noise have already been subtracted out. Since $\boldsymbol{\Sigma}_b$ is diagonal by construction (\S\ref{sec:covariance}, justified there on identifiability grounds given only $S=12$ seasons), any genuine cross-feature covariance that is specifically season-driven cannot be absorbed by $\boldsymbol{\Sigma}_b$ and is instead either left in the residual or folded into $\boldsymbol{\Sigma}_a$'s estimate; either way, $K$ is not required to reproduce the rank of a covariance matrix that additionally contains season-level and idiosyncratic sources of dependence. A smaller $K$ for the player-only covariance than the raw factor count is therefore the expected outcome of conditioning on more structure, not evidence against either analysis. This reasoning is offered as an explanation for the direction of the discrepancy; it has not been separately validated (for instance, by fitting a raw factor analysis restricted to a player only, season averaged version of the data to check whether its factor count moves closer to three), and should be read as such.
-\end{remark}
 
 \section{Variance decomposition and intraclass correlation}
 \label{sec:icc}
@@ -404,49 +432,4 @@ The quantity $\mathrm{ICC}_{a,p}$ measures the proportion of total variance in f
 Because all variance parameters are sampled from the posterior, the quantities defined in Definition~\ref{def:icc} are themselves posterior quantities. For each posterior draw, a value of $\mathrm{ICC}_{a,p}$ can be computed from the sampled values of $\boldsymbol{\Lambda}$, $\boldsymbol{\Psi}_a$, $\sigma_{b,p}$, $\sigma_{e,p}$, and $\nu$, yielding a full posterior distribution over each coefficient. Posterior medians and $95\%$ credible intervals are reported in Chapter~\ref{chap:results}. The ICC framing is preferred over the raw variance decomposition because it is scale-free and comparable across features with different marginal variances.
 \end{remark}
 
-\section{Canonical factor directions via spectral decomposition}
-\label{sec:pca_postprocessing}
-
-\subsection{Why the identification constraint does not yield interpretable directions}
-
-The LT-PD constraint of Definition~\ref{def:ltpd} resolves the rotational non-identifiability by fixing a particular coordinate system in the $K$-dimensional factor space, but it does so in a way that is mathematically convenient rather than interpretable. Specifically, the first column of $\boldsymbol{\Lambda}$ is constrained to load only on features 1 through $P$ with feature 1 carrying the positive diagonal; the second column is constrained to load on features 2 through $P$ with feature 2 carrying the positive diagonal; and so on. This triangular structure is a consequence of zeroing out the upper triangle of $\boldsymbol{\Lambda}$, not of any reasoning about football-domain structure. A different ordering of the $P$ features would produce a different fitted $\boldsymbol{\Lambda}$, even though the resulting $\boldsymbol{\Sigma}_a$ would be unchanged. The columns of the fitted LT-PD loading matrix therefore cannot be reported or interpreted as football archetypes.
-
-\subsection{Spectral decomposition of the common variance matrix}
-\label{sec:spectral}
-
-A rotation-invariant representation of the factor structure is obtained by working directly with the common variance matrix $\mathbf{C} = \boldsymbol{\Lambda}\boldsymbol{\Lambda}^\top$, which is uniquely determined by the model regardless of which identification constraint was used.
-
-\begin{definition}[Spectral post-processing]
-\label{def:pca_postproc}
-For each posterior draw $s = 1, \ldots, S_{\mathrm{mc}}$, let $\boldsymbol{\Lambda}^{(s)}$ denote the sampled loading matrix. Compute the common variance matrix
-\begin{equation}
-\mathbf{C}^{(s)} = \boldsymbol{\Lambda}^{(s)}\!\left(\boldsymbol{\Lambda}^{(s)}\right)^\top \in \mathcal{S}^+_P,
-\label{eq:common_variance}
-\end{equation}
-and perform its spectral decomposition
-\begin{equation}
-\mathbf{C}^{(s)} = \mathbf{V}^{(s)}\mathbf{D}^{(s)}\!\left(\mathbf{V}^{(s)}\right)^\top,
-\label{eq:spectral}
-\end{equation}
-where $\mathbf{D}^{(s)} = \mathrm{diag}\!\left(d_1^{(s)} \geq \cdots \geq d_K^{(s)} \geq 0\right)$ and $\mathbf{V}^{(s)} \in \mathbb{R}^{P \times K}$ has orthonormal columns. The $k$-th column $\mathbf{v}_k^{(s)}$ of $\mathbf{V}^{(s)}$ is the $k$-th principal eigenvector of $\mathbf{C}^{(s)}$; the corresponding eigenvalue $d_k^{(s)}$ is the amount of player-effect common variance explained by the $k$-th canonical factor direction. The rotated factor score for player $i$ in draw $s$ is
-\begin{equation}
-\mathbf{f}_i^{(s)} \;=\; \left(\mathbf{V}^{(s)}\right)^\top \boldsymbol{\eta}_i^{(s)} \;\in\; \mathbb{R}^K.
-\label{eq:rotated_scores}
-\end{equation}
-\end{definition}
-
-\begin{proposition}[Invariance of the spectral decomposition]
-\label{prop:spectral_inv}
-The eigenvalues $\{d_k^{(s)}\}_{k=1}^K$ and the common variance matrix $\mathbf{C}^{(s)}$ are invariant to any orthogonal transformation of the loading matrix. Replacing $\boldsymbol{\Lambda}^{(s)}$ by $\boldsymbol{\Lambda}^{(s)}\mathbf{Q}$ for any $\mathbf{Q} \in O(K)$ yields the same $\mathbf{C}^{(s)}$ and hence the same spectral decomposition \eqref{eq:spectral}.
-\end{proposition}
-\begin{proof}
-By Proposition~\ref{prop:rotation}, $(\boldsymbol{\Lambda}^{(s)}\mathbf{Q})(\boldsymbol{\Lambda}^{(s)}\mathbf{Q})^\top = \boldsymbol{\Lambda}^{(s)}\boldsymbol{\Lambda}^{(s)\top} = \mathbf{C}^{(s)}$.
-\end{proof}
-
-Proposition~\ref{prop:spectral_inv} is the key justification for reporting the eigenvectors $\mathbf{V}^{(s)}$ and eigenvalues $\{d_k^{(s)}\}$ as the canonical factor structure: their values depend only on the posterior common variance $\mathbf{C}^{(s)}$, not on which identification constraint was used to fit $\boldsymbol{\Lambda}$.
-
-\begin{remark}[Sign convention]
-\label{rem:sign}
-Eigenvectors are defined up to sign: if $\mathbf{v}$ is an eigenvector of $\mathbf{C}^{(s)}$, so is $-\mathbf{v}$. A sign convention is applied draw-by-draw before computing posterior summaries: for each canonical factor $k$, the sign of $\mathbf{v}_k^{(s)}$ is chosen so that the feature with the largest absolute loading on that eigenvector has a positive loading. This convention ensures that the posterior mean of $\mathbf{v}_k^{(s)}$ reflects a coherent direction rather than cancelling between draws of opposite sign.
-\end{remark}
 

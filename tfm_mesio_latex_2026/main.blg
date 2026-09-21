@@ -5,42 +5,42 @@ The style file: amsplain.bst
 Database file #1: tfm.bib
 You've used 28 entries,
             2213 wiz_defined-function locations,
-            675 strings with 8617 characters,
-and the built_in function-call counts, 9485 in all, are:
-= -- 854
-> -- 469
-< -- 1
-+ -- 187
-- -- 155
-* -- 823
-:= -- 1539
+            676 strings with 8677 characters,
+and the built_in function-call counts, 9381 in all, are:
+= -- 846
+> -- 453
+< -- 2
++ -- 181
+- -- 149
+* -- 813
+:= -- 1520
 add.period$ -- 28
 call.type$ -- 28
-change.case$ -- 163
+change.case$ -- 160
 chr.to.int$ -- 0
 cite$ -- 28
-duplicate$ -- 350
-empty$ -- 786
-format.name$ -- 155
-if$ -- 1954
+duplicate$ -- 351
+empty$ -- 784
+format.name$ -- 149
+if$ -- 1935
 int.to.chr$ -- 0
 int.to.str$ -- 28
 missing$ -- 60
 newline$ -- 94
 num.names$ -- 60
-pop$ -- 200
+pop$ -- 196
 preamble$ -- 1
-purify$ -- 131
+purify$ -- 128
 quote$ -- 0
-skip$ -- 213
+skip$ -- 211
 stack$ -- 0
-substring$ -- 637
-swap$ -- 51
-text.length$ -- 1
+substring$ -- 631
+swap$ -- 53
+text.length$ -- 2
 text.prefix$ -- 0
 top$ -- 0
 type$ -- 100
 warning$ -- 0
 while$ -- 99
 width$ -- 30
-write$ -- 260
+write$ -- 261

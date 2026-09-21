@@ -54,6 +54,13 @@
 \setcounter{bottomnumber}{2}
 \setcounter{totalnumber}{5}
 
+% Chapter-qualified section numbers (advisor revision pass): amsbook's section counter is
+% already chapter-scoped (\newcounter{section}[chapter] in amsbook.cls), but its display macro
+% is bare \arabic{section} -- sections were rendering as "1. Model diagnostics" instead of
+% "5.1 Model diagnostics". \thesubsection already builds on \thesection in amsbook.cls, so it
+% inherits this fix automatically.
+\renewcommand{\thesection}{\thechapter.\arabic{section}}
+
 % longtable's own \LT@makecaption hardcodes "Table N: caption" (colon), independent
 % of amsbook's \@makecaption, which formats every other float in this document as
 % "Table N. caption" (period). Patch it to match, so the one longtable in this
@@ -85,6 +92,18 @@
   sensitive=false,
   morecomment=[l]{--},
   morestring=[b]'
+}
+
+% Stan syntax highlighting for the model-code appendix (Appendix D).
+\lstdefinelanguage{Stan}{
+  morekeywords={functions, data, transformed, parameters, model, generated, quantities,
+    int, real, vector, row_vector, matrix, array, ordered, positive_ordered, simplex,
+    unit_vector, cholesky_factor_corr, cholesky_factor_cov, corr_matrix, cov_matrix,
+    for, in, while, if, else, return, print, target, lower, upper, void},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]"
 }
 
 \lstset{
@@ -127,7 +146,13 @@
 % ------------------------------------------------------------%
 % Optional: Dedication page
 % ------------------------------------------------------------%
-\dedicatoria{A short dedication placed on its own page, where I have no idea who to dedicate this too...}
+\dedicatoria{%
+To my mother, for showing me what never giving up means.\\[10pt]
+To my father, for showing me what passion looks like.\\[10pt]
+To my grandmother, for teaching me that empathy is learned, practiced, and chosen.\\[10pt]
+To my girlfriend, for showing me that life is better when you don't have to walk through it alone.\\[10pt]
+And to my grandfather, whom I carry in my heart, in every step I take, and in the dreams I finally get to call my own.%
+}
 
 % ------------------------------------------------------------%
 % Frontmatter numbering (roman)
@@ -150,31 +175,25 @@ summarised by 48 standardised performance features spanning passing, duelling, d
 attacking output.
 
 Each player-season observation is decomposed additively into a stable player effect, a season
-effect, and a residual term. The player effect follows a low-rank factor structure, and
-residuals follow a Student-$t$ distribution whose scale is further adjusted for minutes played,
-correcting a systematic under-fit of low-minute seasons observed under a constant-variance
-specification. A standard identifiability constraint on the factor loadings is resolved after
-fitting through a rotation-invariant transformation, recovering interpretable canonical
-directions of style. Posterior diagnostics show excellent convergence, and the fitted covariance
-reproduces the observed cross-feature correlation structure closely ($r = 0.975$). A three-factor
-solution is retained on a qualitative variance-share and loading-reliability argument, after
-comparison with alternative ranks.
+effect, and a residual term. The player effect follows a low-rank factor structure. Residuals
+are given a Student-$t$ rather than a Gaussian distribution, since thin tails let a handful of
+extreme player-seasons distort the player and season effects; the residual scale is weighted by
+minutes played, reflecting the larger sampling error of per-90 rates computed over few minutes.
+Three factors are retained on a qualitative argument.
 
 The three recovered factors admit a direct football reading: Defensive engagement (defensive
 build-up volume against attacking output), Technical orientation (ball circulation against
 aerial and physical duels), and Possession retention (clean possession and direct threat against
 wide delivery). Projecting every player onto these three axes recovers five clusters that align
-closely with recognisable positional roles, from forwards to centre-backs. Building on the same
+ with recognisable positional roles, from forwards to centre-backs. Building on the same
 shared covariance structure, the thesis introduces a bounded similarity score between any two
-players, calibrated against the population's own typical style distance. Four case studies
+players. Four case studies
 illustrate its behaviour: Lionel Messi is simultaneously extreme on all three axes, and even his
 closest style-neighbour, Neymar, reaches only 45\% similarity; Sergio Ramos's closest match,
 Gerard Piqué, reaches 93\%, consistent with their well-known on-pitch pairing; and Cristian
-Stuani's closest style-neighbours share his profile but not, by reputation, his output, exposing
-a genuine limit of a style-only measure.
+Stuani's closest style-neighbours share his profile as an all out striker and a clear aerial threat, independently of his output.
 
-The resulting framework offers a reproducible route from raw event data to a low-dimensional,
-uncertainty-aware representation of playing style, directly applicable to style-based scouting
+The resulting framework offers a reproducible route from raw event data to a low-dimensional representation of playing style, directly applicable to style-based scouting
 shortlists that complement, rather than replace, judgement on age, price, and performance.
 
 \keywords{hierarchical Bayesian models, factor analysis, latent variable models, soccer analytics, player similarity, Markov chain Monte Carlo}
@@ -195,13 +214,13 @@ shortlists that complement, rather than replace, judgement on age, price, and pe
 
 Modern football data analysis increasingly depends on the ability to compare players and teams in a principled, scalable manner. Clubs, analysts, and recruitment departments are often faced with questions that are conceptually simple yet technically demanding: \emph{Which players are truly similar in style? How does a player’s role change across seasons or clubs? Can we characterise tactical profiles in a way that is both interpretable and statistically grounded?} Recent work in sports analytics and the broader literature on tactical behaviour highlights the growing importance of data-driven representations of playing style, collective dynamics, and contextual effects \cite{teixeira2025mapping,orucc2024analysis}. However, many operational approaches remain either heuristic or too tightly tied to one-off visualisations, making it difficult to quantify similarity consistently across large populations, seasons, and evolving contexts.
 
-This masters' thesis is motivated by a practical and scientific aim: to build a framework for \emph{modelling} latent football style from player performance data using a hierarchical Bayesian model. Rather than attempting to predict a single outcome (e.g., goals or match results), the focus is on constructing a space in which players (and, ultimately, groups such as teams or positional archetypes) can be compared meaningfully. The Bayesian approach adopted here provides, as a direct consequence rather than an added feature, posterior uncertainty on the quantities of interest --- the player/season/residual variance decomposition, the canonical factor loadings, and each player's latent position --- rather than point estimates alone \cite{swinton2023bayesian}. While Bayesian hierarchical modelling has a long track record for football outcome prediction \cite{baio2010bayesian} and performance modelling \cite{ribeiro2025bayesian}, comparatively less attention has been paid to Bayesian latent-space constructions tailored to similarity and style, particularly with hierarchical structure reflecting repeated measures across seasons.
+This masters' thesis is motivated by a practical and an academic aim: to build a framework for \emph{modelling} latent football style from player performance data using a hierarchical Bayesian model. Rather than attempting to predict a single outcome (e.g., goals or match results), the focus is on constructing a space in which players can be compared meaningfully. The Bayesian approach adopted here provides, as a direct consequence rather than an added feature, posterior uncertainty on the quantities of interest, the player/season/residual variance decomposition, the canonical factor loadings, and each player's latent position --- rather than point estimates alone \cite{swinton2023bayesian}. While Bayesian hierarchical modelling has a long track record for football outcome prediction \cite{baio2010bayesian} and performance modelling \cite{ribeiro2025bayesian}, comparatively less attention has been paid to Bayesian latent-space constructions tailored to similarity and style, particularly with hierarchical structure reflecting repeated measures across seasons.
 
-The starting point of this work is a longitudinal dataset of player match statistics from LaLiga, covering twelve seasons (2011/12 to 2022/23) and aggregated to the player--season level. Each observation corresponds to a player in a given season, with a minimum exposure threshold to reduce noise from small samples. From these aggregates, we construct feature vectors designed to be comparable across players and seasons: volume and intensity measures expressed per 90 minutes, efficiency ratios (such as passing accuracy or duel win rates), and interpretable blocks reflecting common scouting and coaching perspectives (offensive production; progression and creation; carrying and 1v1 actions; defence and pressing; duels and physical contests). This block structure is not merely cosmetic, but rather facilitates encoding a domain-informed decomposition of performance into components that are often discussed qualitatively, and it provides a natural handle for weighting or extending the dataset when needed.
+The starting point of this work is a longitudinal dataset of player match statistics from LaLiga, covering twelve seasons (2011/12 to 2022/23) and aggregated to the player--season level. Each observation corresponds to a player in a given season, with a minimum exposure threshold to reduce noise from small samples. From these aggregates, we construct feature vectors designed to be comparable across players and seasons: volume and intensity measures expressed per 90 minutes, efficiency ratios (such as passing accuracy or duel win rates), and interpretable blocks reflecting common scouting and coaching perspectives (offensive production; progression and creation; carrying and 1v1 actions; defence and pressing; duels and physical contests). This block structure facilitates encoding a domain-informed decomposition of performance into components that are often discussed qualitatively, and it provides a natural handle for weighting or extending the dataset when needed.
 
-The resulting player--season observations are inherently multivariate, with substantial dependence structure across variables. Many football actions co-occur mechanically or tactically, and performance indicators often reflect overlapping dimensions of role, team context, and style. In such settings, analysing each variable in isolation can obscure the broader structure of the data, while naive comparisons in the original feature space may overstate noise, redundancy, or scale effects. A central methodological idea of this thesis is therefore to seek lower-dimensional latent representations that preserve the most relevant structure for comparison and interpretation. In practical terms, the goal is to represent player profiles in a way that is compact enough to visualise and reason about, yet rich enough to retain meaningful distinctions in style, usage, and tactical function.
+The resulting player--season observations are multivariate, with substantial dependence structure across variables. Many football actions co-occur mechanically or tactically, and performance indicators often reflect overlapping dimensions of role, team context, and style. In such settings, analysing each variable in isolation can obscure the broader structure of the data, while naive comparisons in the original feature space may overstate noise, redundancy, or scale effects. A central methodological idea of this thesis is therefore to seek lower-dimensional latent representations that preserve the most relevant structure for comparison and interpretation. In practical terms, the goal is to represent player profiles in a way that is compact enough to visualise and reason about, yet rich enough to retain meaningful distinctions in style, usage, and tactical function.
 
-From this perspective, the thesis is situated within \emph{latent space modelling}. The main idea is that observed football statistics may be viewed as noisy, high-dimensional manifestations of a smaller number of underlying dimensions related to playing style, role execution, and tactical behaviour. In this work, factor-analytic representations provide the route used to extract interpretable latent structure from correlated performance variables. This is especially useful in a longitudinal setting, where repeated player--season observations motivate extensions with hierarchical structure and raise substantive questions about persistence, evolution, and context dependence in football style.
+The main idea is that observed football statistics may be viewed as noisy, high-dimensional manifestations of a smaller number of underlying dimensions related to playing style, role execution, and tactical behaviour. In this work, factor-analytic representations provide the route used to extract interpretable latent structure from correlated performance variables. This is especially useful in our longitudinal setting, where repeated player--season observations motivate extensions with hierarchical structure and raise substantive questions about persistence, evolution, and context dependence in football style.
 
 The overarching objectives of this master's thesis are therefore:
 \begin{enumerate}
@@ -212,9 +231,9 @@ The overarching objectives of this master's thesis are therefore:
   \item to frame the resulting representations as practical tools for scouting, player profiling, and tactical interpretation in modern football analytics \cite{teixeira2025mapping,orucc2024analysis}.
 \end{enumerate}
 
-The remainder of this work is organised as follows. Chapter~\ref{chap:data_source} describes the construction of the player--season dataset, from the raw match-event data through feature engineering to the final analytical sample. Chapter~\ref{chap:background} introduces the exploratory methodology used to establish that the resulting feature space contains meaningful lower-dimensional structure, including classical factor analysis and multidimensional scaling. Chapter~\ref{chap:methodology} specifies the hierarchical Bayesian factor model used for the main analysis: its additive decomposition, covariance structure, identification strategy, and rank selection. Chapter~\ref{chap:results} reports model diagnostics, the resulting canonical factor directions and player archetypes, and case studies on player similarity and its scouting applications, and closes with the model's limitations and directions for future work, connecting this line of work to broader Bayesian modelling in sports \cite{baio2010bayesian,ribeiro2025bayesian,swinton2023bayesian}.
+Chapter~\ref{chap:data_source} describes the construction of the player--season dataset, from the raw match-event data through feature engineering to the final analytical sample. Chapter~\ref{chap:background} introduces the exploratory methodology used to establish that the resulting feature space contains meaningful lower-dimensional structure, including classical factor analysis and multidimensional scaling. Chapter~\ref{chap:methodology} specifies the hierarchical Bayesian factor model used for the main analysis: its additive decomposition, covariance structure, identification strategy, and rank selection. Chapter~\ref{chap:results} reports model diagnostics, the resulting canonical factor directions and player archetypes, and case studies on player similarity and its scouting applications; Chapter~\ref{chap:conclusion} discusses the model's limitations and directions for future work, connecting this line of work to broader Bayesian modelling in sports \cite{baio2010bayesian,ribeiro2025bayesian,swinton2023bayesian}.
 
-Part of the R and Stan code supporting this thesis --- model implementation, debugging, and pipeline refactoring --- was developed with the assistance of an AI coding assistant (Claude, Anthropic), used under the author's direction and review throughout. The statistical modelling decisions, the analysis, and the interpretation of results are the author's own.
+\textbf{AI disclosure:} An AI assistant (Claude, Anthropic) was used in preparing this thesis: for R and Stan implementation, debugging and pipeline refactoring, for drafting and editing prose, and for locating and verifying literature references. All output was reviewed and revised by myself. The statistical modelling decisions, the analysis, and the interpretation of results are my own.
 
 \input{data_source}
 
@@ -270,6 +289,27 @@ several hundred near-identical lines. The complete, literal query is kept in the
   mark places where the real query repeats the same pattern across additional columns.},
   label={lst:sql_extraction}
 ]{appendix/sql/wyscout_extraction_sketch.sql}
+
+\chapter{Stan code for the production model}
+\label{app:stan}
+
+The full Stan program for the production model used throughout Chapter~\ref{chap:results} is given below,
+reproduced verbatim from the project repository at
+\texttt{stan/additive\_lowrank\_a\_diag\_b\_t\_mv.stan}. It implements the low-rank player covariance
+$\boldsymbol\Sigma_a$ under the LT-PD identification constraint of \S\ref{sec:ltpd} at the production rank
+$K^*=3$ (\texttt{Q\_a} in the code), the diagonal season covariance $\boldsymbol\Sigma_b$, and the
+minutes-scaled Student-$t$ residual of Definition~\ref{def:phi} at the fixed exponent $\phi=0.5$ argued for in
+\S\ref{sec:results-phi} -- baked directly into the \texttt{sigma\_scale} transformation rather than sampled.
+No other part of the model differs from Definition~\ref{def:additive} and Definition~\ref{def:sigma_a}.
+
+\section{Model program}
+
+\lstinputlisting[
+  language=Stan,
+  caption={Stan program for the production model: low-rank $\boldsymbol\Sigma_a$ under the LT-PD constraint,
+  diagonal $\boldsymbol\Sigma_b$, and minutes-scaled Student-$t$ residuals at fixed $\phi=0.5$.},
+  label={lst:stan_model}
+]{appendix/stan/additive_lowrank_a_diag_b_t_mv.stan}
 
 % ------------------------------------------------------------%
 % Bibliography

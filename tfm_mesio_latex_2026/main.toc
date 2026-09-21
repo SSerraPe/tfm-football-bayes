@@ -2,58 +2,57 @@
 \contentsline {chapter}{\tocchapter {Chapter}{1}{Introduction}}{1}{chapter.1}%
 \contentsline {chapter}{\tocchapter {Chapter}{2}{Data source and construction}}{3}{chapter.2}%
 \contentsline {chapter}{\tocchapter {Chapter}{3}{Background}}{7}{chapter.3}%
-\contentsline {section}{\tocsection {}{1}{Similarity representation}}{8}{section.3.1}%
-\contentsline {section}{\tocsection {}{2}{Exploratory low-dimensional structure}}{9}{section.3.2}%
-\contentsline {subsection}{\tocsubsection {}{2.1}{Principal component analysis}}{10}{subsection.3.2.1}%
-\contentsline {subsection}{\tocsubsection {}{2.2}{Factor analysis}}{11}{subsection.3.2.2}%
-\contentsline {subsection}{\tocsubsection {}{2.3}{Classical multidimensional scaling}}{14}{subsection.3.2.3}%
-\contentsline {subsection}{\tocsubsection {}{2.4}{Summary of the exploratory role of PCA, FA, and CMDS}}{17}{subsection.3.2.4}%
+\contentsline {section}{\tocsection {}{3.1}{Similarity representation}}{7}{section.3.1}%
+\contentsline {section}{\tocsection {}{3.2}{Exploratory low-dimensional structure}}{9}{section.3.2}%
+\contentsline {subsection}{\tocsubsection {}{3.2.1}{Principal component analysis}}{9}{subsection.3.2.1}%
+\contentsline {subsection}{\tocsubsection {}{3.2.2}{Factor analysis}}{11}{subsection.3.2.2}%
+\contentsline {subsection}{\tocsubsection {}{3.2.3}{Classical multidimensional scaling}}{14}{subsection.3.2.3}%
+\contentsline {subsection}{\tocsubsection {}{3.2.4}{Summary of the exploratory role of PCA, FA, and CMDS}}{17}{subsection.3.2.4}%
 \contentsline {chapter}{\tocchapter {Chapter}{4}{Model}}{19}{chapter.4}%
-\contentsline {section}{\tocsection {}{1}{Motivation and overview}}{19}{section.4.1}%
-\contentsline {section}{\tocsection {}{2}{Notation}}{19}{section.4.2}%
-\contentsline {section}{\tocsection {}{3}{The additive hierarchical decomposition}}{20}{section.4.3}%
-\contentsline {section}{\tocsection {}{4}{Covariance structure}}{21}{section.4.4}%
-\contentsline {subsection}{\tocsubsection {}{4.1}{Player covariance: low-rank plus diagonal}}{21}{subsection.4.4.1}%
-\contentsline {subsection}{\tocsubsection {}{4.2}{Season covariance: diagonal}}{22}{subsection.4.4.2}%
-\contentsline {subsection}{\tocsubsection {}{4.3}{Residual covariance}}{22}{subsection.4.4.3}%
-\contentsline {section}{\tocsection {}{5}{Likelihood specification}}{22}{section.4.5}%
-\contentsline {subsection}{\tocsubsection {}{5.1}{Normal baseline}}{22}{subsection.4.5.1}%
-\contentsline {subsection}{\tocsubsection {}{5.2}{Student-$t$ residuals}}{23}{subsection.4.5.2}%
-\contentsline {subsection}{\tocsubsection {}{5.3}{Observation-level variance scaling}}{23}{subsection.4.5.3}%
-\contentsline {section}{\tocsection {}{6}{Model identification}}{24}{section.4.6}%
-\contentsline {subsection}{\tocsubsection {}{6.1}{Rotational non-identifiability}}{24}{subsection.4.6.1}%
-\contentsline {subsection}{\tocsubsection {}{6.2}{Lower-triangular positive-diagonal parametrisation}}{25}{subsection.4.6.2}%
-\contentsline {section}{\tocsection {}{7}{Prior specification}}{25}{section.4.7}%
-\contentsline {section}{\tocsection {}{8}{Rank selection}}{26}{section.4.8}%
-\contentsline {subsection}{\tocsubsection {}{8.1}{A qualitative argument for the rank}}{27}{subsection.4.8.1}%
-\contentsline {subsection}{\tocsubsection {}{8.2}{Selected rank}}{27}{subsection.4.8.2}%
-\contentsline {section}{\tocsection {}{9}{Variance decomposition and intraclass correlation}}{28}{section.4.9}%
-\contentsline {section}{\tocsection {}{10}{Canonical factor directions via spectral decomposition}}{29}{section.4.10}%
-\contentsline {subsection}{\tocsubsection {}{10.1}{Why the identification constraint does not yield interpretable directions}}{29}{subsection.4.10.1}%
-\contentsline {subsection}{\tocsubsection {}{10.2}{Spectral decomposition of the common variance matrix}}{30}{subsection.4.10.2}%
+\contentsline {section}{\tocsection {}{4.1}{Motivation and overview}}{19}{section.4.1}%
+\contentsline {section}{\tocsection {}{4.2}{Notation}}{19}{section.4.2}%
+\contentsline {section}{\tocsection {}{4.3}{The additive hierarchical decomposition}}{20}{section.4.3}%
+\contentsline {section}{\tocsection {}{4.4}{Covariance structure}}{21}{section.4.4}%
+\contentsline {subsection}{\tocsubsection {}{4.4.1}{Player covariance: low-rank plus diagonal}}{21}{subsection.4.4.1}%
+\contentsline {subsection}{\tocsubsection {}{4.4.2}{Season covariance: diagonal}}{22}{subsection.4.4.2}%
+\contentsline {subsection}{\tocsubsection {}{4.4.3}{Residual covariance}}{22}{subsection.4.4.3}%
+\contentsline {section}{\tocsection {}{4.5}{Likelihood specification}}{22}{section.4.5}%
+\contentsline {subsection}{\tocsubsection {}{4.5.1}{Normal baseline}}{22}{subsection.4.5.1}%
+\contentsline {subsection}{\tocsubsection {}{4.5.2}{Student-$t$ residuals}}{23}{subsection.4.5.2}%
+\contentsline {subsection}{\tocsubsection {}{4.5.3}{Observation-level variance scaling}}{23}{subsection.4.5.3}%
+\contentsline {section}{\tocsection {}{4.6}{Model identification}}{24}{section.4.6}%
+\contentsline {subsection}{\tocsubsection {}{4.6.1}{Rotational non-identifiability}}{24}{subsection.4.6.1}%
+\contentsline {subsection}{\tocsubsection {}{4.6.2}{Lower-triangular positive-diagonal parametrisation}}{25}{subsection.4.6.2}%
+\contentsline {subsection}{\tocsubsection {}{4.6.3}{Identified summaries of the factor structure}}{25}{subsection.4.6.3}%
+\contentsline {section}{\tocsection {}{4.7}{Prior specification}}{26}{section.4.7}%
+\contentsline {section}{\tocsection {}{4.8}{Rank selection}}{27}{section.4.8}%
+\contentsline {subsection}{\tocsubsection {}{4.8.1}{A qualitative argument for the rank}}{27}{subsection.4.8.1}%
+\contentsline {subsection}{\tocsubsection {}{4.8.2}{Selected rank}}{28}{subsection.4.8.2}%
+\contentsline {section}{\tocsection {}{4.9}{Variance decomposition and intraclass correlation}}{28}{section.4.9}%
 \contentsline {chapter}{\tocchapter {Chapter}{5}{Results}}{31}{chapter.5}%
-\contentsline {section}{\tocsection {}{1}{Model diagnostics and convergence}}{31}{section.5.1}%
-\contentsline {section}{\tocsection {}{2}{Resolving the observation-level variance scaling ($\phi $)}}{33}{section.5.2}%
-\contentsline {section}{\tocsection {}{3}{Rank selection: results}}{34}{section.5.3}%
+\contentsline {section}{\tocsection {}{5.1}{Model diagnostics and convergence}}{31}{section.5.1}%
+\contentsline {section}{\tocsection {}{5.2}{Resolving the observation-level variance scaling ($\phi $)}}{33}{section.5.2}%
+\contentsline {section}{\tocsection {}{5.3}{Rank selection: results}}{34}{section.5.3}%
 \contentsline {paragraph}{\tocparagraph {}{}{$K=0$ vs.\ $K\geq 1$: decisive.}}{34}{section*.14}%
 \contentsline {paragraph}{\tocparagraph {}{}{Choosing $K^*$ among $K \geq 1$: qualitative, per \S \ref {sec:rank_qualitative}.}}{34}{section*.15}%
-\contentsline {section}{\tocsection {}{4}{Variance decomposition: intraclass correlations}}{35}{section.5.4}%
-\contentsline {section}{\tocsection {}{5}{Season profiles}}{36}{section.5.5}%
-\contentsline {section}{\tocsection {}{6}{Canonical factor loadings by feature group}}{37}{section.5.6}%
-\contentsline {section}{\tocsection {}{7}{The canonical style space}}{39}{section.5.7}%
-\contentsline {section}{\tocsection {}{8}{Player similarity: measuring playing style}}{41}{section.5.8}%
-\contentsline {subsection}{\tocsubsection {}{8.1}{Motivation: measuring style}}{41}{subsection.5.8.1}%
-\contentsline {subsection}{\tocsubsection {}{8.2}{The similarity score}}{41}{subsection.5.8.2}%
-\contentsline {subsection}{\tocsubsection {}{8.3}{Case studies: four targets}}{41}{subsection.5.8.3}%
-\contentsline {subsubsection}{\tocsubsubsection {}{8.3.1}{Messi: no one like him}}{43}{subsubsection.5.8.3.1}%
-\contentsline {subsubsection}{\tocsubsubsection {}{8.3.2}{Xavi: the pinnacle of possession football}}{44}{subsubsection.5.8.3.2}%
-\contentsline {subsubsection}{\tocsubsubsection {}{8.3.3}{Ramos: the art of defending}}{45}{subsubsection.5.8.3.3}%
-\contentsline {subsubsection}{\tocsubsubsection {}{8.3.4}{Stuani: the definition of a 9}}{45}{subsubsection.5.8.3.4}%
-\contentsline {section}{\tocsection {}{9}{Applications: scouting and recommendations}}{46}{section.5.9}%
-\contentsline {section}{\tocsection {}{10}{Future work}}{46}{section.5.10}%
-\contentsline {chapter}{\tocchapter {Chapter}{6}{Conclusion}}{49}{chapter.6}%
-\contentsline {chapter}{\tocappendix {Appendix}{A}{Full intraclass-correlation table}}{51}{appendix.A}%
-\contentsline {chapter}{\tocappendix {Appendix}{B}{Full canonical factor loadings}}{53}{appendix.B}%
-\contentsline {chapter}{\tocappendix {Appendix}{C}{SQL extraction and construction queries}}{59}{appendix.C}%
-\contentsline {section}{\tocsection {}{1}{Extraction and construction logic}}{59}{section.C.1}%
-\contentsline {chapter}{\tocappendix {Appendix}{}{Bibliography}}{63}{appendix*.31}%
+\contentsline {section}{\tocsection {}{5.4}{Variance decomposition: intraclass correlations}}{35}{section.5.4}%
+\contentsline {section}{\tocsection {}{5.5}{Season profiles}}{36}{section.5.5}%
+\contentsline {section}{\tocsection {}{5.6}{Canonical factor loadings by feature group}}{37}{section.5.6}%
+\contentsline {section}{\tocsection {}{5.7}{The canonical style space}}{39}{section.5.7}%
+\contentsline {section}{\tocsection {}{5.8}{Player similarity: measuring playing style}}{41}{section.5.8}%
+\contentsline {subsection}{\tocsubsection {}{5.8.1}{Motivation: measuring style}}{41}{subsection.5.8.1}%
+\contentsline {subsection}{\tocsubsection {}{5.8.2}{The similarity score}}{41}{subsection.5.8.2}%
+\contentsline {subsection}{\tocsubsection {}{5.8.3}{Case studies: four targets}}{41}{subsection.5.8.3}%
+\contentsline {subsubsection}{\tocsubsubsection {}{5.8.3.1}{Messi: no one like him}}{43}{subsubsection.5.8.3.1}%
+\contentsline {subsubsection}{\tocsubsubsection {}{5.8.3.2}{Xavi: the pinnacle of possession football}}{44}{subsubsection.5.8.3.2}%
+\contentsline {subsubsection}{\tocsubsubsection {}{5.8.3.3}{Ramos: the art of defending}}{45}{subsubsection.5.8.3.3}%
+\contentsline {subsubsection}{\tocsubsubsection {}{5.8.3.4}{Stuani: the definition of a 9}}{45}{subsubsection.5.8.3.4}%
+\contentsline {section}{\tocsection {}{5.9}{Applications: scouting and recommendations}}{46}{section.5.9}%
+\contentsline {chapter}{\tocchapter {Chapter}{6}{Discussion and future work}}{47}{chapter.6}%
+\contentsline {chapter}{\tocappendix {Appendix}{A}{Full intraclass-correlation table}}{49}{appendix.A}%
+\contentsline {chapter}{\tocappendix {Appendix}{B}{Full canonical factor loadings}}{51}{appendix.B}%
+\contentsline {chapter}{\tocappendix {Appendix}{C}{SQL extraction and construction queries}}{57}{appendix.C}%
+\contentsline {section}{\tocsection {}{C.1}{Extraction and construction logic}}{57}{section.C.1}%
+\contentsline {chapter}{\tocappendix {Appendix}{D}{Stan code for the production model}}{61}{appendix.D}%
+\contentsline {section}{\tocsection {}{D.1}{Model program}}{61}{section.D.1}%
+\contentsline {chapter}{\tocappendix {Appendix}{}{Bibliography}}{65}{appendix*.31}%

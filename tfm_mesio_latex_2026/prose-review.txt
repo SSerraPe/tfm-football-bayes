@@ -1,0 +1,283 @@
+PROSE REVIEW — "AI slop" scan
+Full line-by-line read of main.tex, data_source.tex, background.tex, methodology.tex,
+results.tex, conclusion.tex. Line numbers below are POST Phase-2 revision (re-verified against
+the edited files). No prose, table, or plot has been changed as a result of this file — this is
+a catalog for the author's own rewrite pass.
+
+Entries whose flagged sentence was itself deleted by a Phase-2 task have been removed (noted
+under REMOVED below for traceability). Entries whose sentence moved to a different file
+(the Future-work items, now in conclusion.tex) have updated locations. Everything else keeps
+its original quote with a corrected line number.
+
+================================================================================
+PRIORITY — worst 15 offenders, worst first (Abstract and Conclusion weighted first,
+since those get read most closely)
+================================================================================
+
+1.  [conclusion.tex:39-45]   (was conclusion.tex:41-46)
+2.  [methodology.tex:399]    (was methodology.tex:367)
+3.  [main.tex:179]           (was main.tex:176)
+4.  [main.tex:176-177]       (was main.tex:173-174)
+5.  [conclusion.tex:47]      (was results.tex:745-746 — section moved to Chapter 6, Task 14a)
+6.  [methodology.tex:382]    (was methodology.tex:345 — "day-to-day job" aside; note
+    methodology.tex:361-363, the "Decision 2 of the revision" passage, was REMOVED by Task 8)
+7.  [conclusion.tex:34]      (was conclusion.tex:34-36; the sentence survives Task 14c's trim)
+8.  [main.tex:203]           (was main.tex:200)
+9.  [conclusion.tex:19]      (unchanged)
+10. [methodology.tex:192]    (unchanged)
+11. REMOVED — was [main.tex:157-158], deleted in full by Task 2/3 (Abstract identifiability +
+    posterior-diagnostics sentences no longer exist)
+12. [results.tex:9-11]       (unchanged)
+13. [methodology.tex:113]    (unchanged location; quote is now shorter — see entry below)
+14. [results.tex:631] / [results.tex:686]  (was 632/686 — Xavi's shifted by one line)
+15. REMOVED — was [main.tex:159], deleted in full by Task 3 (r=0.975 sentence no longer exists)
+
+================================================================================
+REMOVED — flagged text deleted outright by Phase 2 (kept here for traceability only)
+================================================================================
+
+- was [main.tex:157-158] "recovering interpretable canonical directions... excellent
+  convergence" — the identifiability-constraint and posterior-diagnostics sentences were
+  deleted by PLAN.md Tasks 2-3.
+- was [main.tex:159] "reproduces the observed cross-feature correlation structure closely
+  ($r=0.975$)" — deleted by Task 3.
+- was [methodology.tex:361-363] "carried over from the constant-scale family (Decision 2 of
+  the revision that corrected this chapter...)" — deleted in full by Task 8.
+
+================================================================================
+FULL FINDINGS BY FILE
+================================================================================
+
+--- main.tex (Abstract + Introduction) ---
+
+[main.tex:153] OVER-CLAIMED CONTRIBUTION
+  > "to recover interpretable stylistic dimensions directly from match-event data"
+  why: echoes the boilerplate "recovering interpretable X" over-claim template from the
+  Abstract's opening sentence.
+
+[main.tex:170] INTENSIFIER
+  > "align closely with recognisable positional roles"
+  why: "closely" is doing rhetorical, not technical, work.
+
+[main.tex:176-177] PERFORMED CANDOUR
+  > "share his profile but not, by reputation, his output, exposing a genuine limit of a
+  style-only measure"
+  why: "exposing a genuine limit" is meta-commentary narrating the honesty/scope of the work
+  itself.
+
+[main.tex:179] OVER-CLAIMED CONTRIBUTION
+  > "The resulting framework offers a reproducible route from raw event data to a
+  low-dimensional, uncertainty-aware representation of playing style"
+  why: exact match to the "offers a reproducible route" grand-claim template.
+
+[main.tex:201] NEGATIVE-PARALLEL
+  > "provides, as a direct consequence rather than an added feature, posterior uncertainty on
+  the quantities of interest --- the player/season/residual variance decomposition, the
+  canonical factor loadings, and each player's latent position --- rather than point estimates
+  alone"
+  why: rhetorical "X rather than Y" framing plus an em-dash-set-off tricolon list used more for
+  rhythm than necessity.
+
+[main.tex:203] NEGATIVE-PARALLEL
+  > "This block structure is not merely cosmetic, but rather facilitates encoding a
+  domain-informed decomposition"
+  why: exact match to the "not merely X, but rather Y" template.
+
+[main.tex:218] REDUNDANT SIGNPOSTING
+  > "The remainder of this work is organised as follows."
+  why: pure roadmap-announcement opener adding nothing beyond what the following sentences
+  already state.
+
+--- data_source.tex ---
+
+[data_source.tex:6] NEGATIVE-PARALLEL / INTENSIFIER
+  > "The scope of the dataset is deliberately restricted to historical LaLiga data. This is not
+  intended as a deficiency of the analysis, but as a design choice."
+  why: "deliberately" as rhetorical intensifier, paired with a "not X but Y" self-justifying
+  construction that reads as performed candour about a design decision.
+
+--- background.tex ---
+
+[background.tex:4] REDUNDANT SIGNPOSTING
+  > "This chapter introduces the statistical background needed to study similarity between
+  football players from a multivariate latent-space perspective."
+  why: announces chapter's purpose without adding content beyond the announcement.
+
+[background.tex:212] INTENSIFIER
+  > "Importantly, the estimated factor correlations are not negligible"
+  why: "Importantly" is a bare rhetorical intensifier flagging its own significance rather than
+  a technical qualifier.
+
+--- methodology.tex (Chapter 4) ---
+
+[methodology.tex:111] PERFORMED CANDOUR
+  > "builds that same idea into the model's assumptions, rather than just describing it after
+  the fact. It says exactly this:"
+  why: "It says exactly this:" is a conversational, self-narrating aside uncharacteristic of
+  formal technical prose.
+
+[methodology.tex:113] PERFORMED CANDOUR / NEGATIVE-PARALLEL
+  > "the model does not just claim that shared structure exists, it quantifies how confident it
+  is about it"
+  why: anthropomorphized meta-commentary on the model's own epistemic honesty, using the "not
+  just X, it Y" rhetorical template. (Note: the sentence that used to follow this one, forward-
+  referencing the now-deleted Remark 4.19, was trimmed by Task 9b — that trim is not itself a
+  prose-quality fix and this flagged clause is unaffected by it.)
+
+[methodology.tex:192] PERFORMED CANDOUR
+  > "which is a misspecification, not a modelling nicety to defer"
+  why: near-verbatim match to the "not a modelling nicety to defer" self-narrating phrase named
+  directly by the advisor.
+
+[methodology.tex:382] REVISION-HISTORY / PERFORMED CANDOUR
+  > "is consistent with the professional decision making process in my day-to-day job"
+  why: a personal, informal aside about the author's job that reads as leaked commentary rather
+  than thesis prose.
+
+[methodology.tex:397] INTENSIFIER
+  > "essentially flat across all three ranks"
+  why: "essentially flat" is evaluative filler rather than a precise qualifier. (Note: this
+  sentence's explicit percentages and the word "comfortably" were already stripped by Task 13 —
+  "essentially flat" is what's left over and is still worth a look for your own pass.)
+
+[methodology.tex:399] PERFORMED CANDOUR
+  > "Read honestly, choosing $K=3$ over $K=4$ rests on Criterion A alone... This is a much
+  weaker result than the case for $K\geq 1$ over $K=0$... both of those were clear-cut, this one
+  is not. The honest summary is that the data do not sharply distinguish $K=3$ from $K=4$."
+  why: near-verbatim matches to three of the advisor's own named phrases ("Read honestly", "much
+  weaker result", "honest summary") — the single worst concentration of self-narrating candour
+  in the document. NOT touched by any Phase-2 task — left for your own rewrite.
+
+--- results.tex (Chapter 5) ---
+
+[results.tex:9-11] REVISION-HISTORY LEAKAGE
+  > "\S\ref{sec:results-phi} reports the diagnostic comparison against an earlier
+  constant-residual-scale fit and against a fit with $\phi$ estimated rather than fixed"
+  why: "an earlier constant-residual-scale fit" is a near-verbatim match to the advisor's named
+  example "an earlier constant-scale fit."
+
+[results.tex:36] INTENSIFIER
+  > "Convergence is excellent for the scalar and per-feature parameters"
+  why: "excellent" is an empty intensifier.
+
+[results.tex:78] NEGATIVE-PARALLEL
+  > "it is the evidence that shared structure is not merely helpful but necessary"
+  why: exact match to the "not merely X but Y" rhetorical template.
+
+[results.tex:114-115] NEGATIVE-PARALLEL
+  > "Scaling addresses the diagnosed problem; it does not just reshuffle it."
+  why: rhetorical "not just X" flourish rather than technical qualification.
+
+[results.tex:143-144] PERFORMED CANDOUR / NEGATIVE-PARALLEL
+  > "This is not a directional or approximate comparison: it follows from the structure of the
+  $K=0$ model itself, not from any diagnostic that could be read as inconclusive."
+  why: self-assuring meta-commentary about the strength/honesty of the evidence, doubled "not X"
+  construction.
+
+[results.tex:168] INTENSIFIER
+  > "all three ranks comfortably under the $1\%$ adequacy floor"
+  why: "comfortably" as empty evaluative filler. (This is Chapter 5's own rank-selection
+  section, which per Task 13's resolution keeps its numbers — untouched by Phase 2.)
+
+[results.tex:264] NEGATIVE-PARALLEL
+  > "Smart passes stands out not just for its range but for its shape"
+  why: rhetorical "not just X but Y" flourish.
+
+[results.tex:443] INTENSIFIER
+  > "align closely with recognisable positional roles"
+  why: "closely" as rhetorical filler (duplicate of the Abstract's use at main.tex:170).
+
+[results.tex:522] INTENSIFIER
+  > "Whether a genuinely well-defined production score belongs alongside style similarity"
+  why: "genuinely" doing no technical work.
+
+[results.tex:614] INTENSIFIER
+  > "overlap Messi's own comfortably even so, while the three distant players sit clearly apart"
+  why: "comfortably" as evaluative filler.
+
+[results.tex:631] OVER-CLAIMED CONTRIBUTION
+  > "That is a deep-lying playmaker read directly off the axes:"
+  why: formulaic echo of the "translated into quantities that a football analyst can read
+  directly" over-claim, repeated verbatim across case studies (see also line 686).
+
+[results.tex:667] INTENSIFIER
+  > "Umtiti's and García's overlap each other closely"
+  why: "closely" as rhetorical filler.
+
+[results.tex:684] INTENSIFIER
+  > "and, more strikingly, the 2nd most extreme value on Technical orientation"
+  why: "strikingly" as rhetorical intensifier.
+
+[results.tex:686] OVER-CLAIMED CONTRIBUTION
+  > "That is a classic target forward read directly off the axes:"
+  why: second formulaic recurrence of the "read directly off the axes" over-claim phrase.
+
+[results.tex:695] INTENSIFIER
+  > "His three most distant players are, strikingly, Xavi, Messi, and Andrés Iniesta"
+  why: "strikingly" as rhetorical intensifier.
+
+[results.tex:721] NEGATIVE-PARALLEL
+  > "is not an edge case, it is one of the most common requests a recruitment department makes"
+  why: rhetorical "not X, it is Y" flourish.
+
+[results.tex:732] PERFORMED CANDOUR
+  > "Being similar in style does not require being as good."
+  why: aphoristic self-narrating summary of the tool's own limitation, tacked on for rhetorical
+  effect.
+
+--- conclusion.tex (Chapter 6, "Discussion and future work") ---
+
+[conclusion.tex:14] INTENSIFIER
+  > "all pointed to genuine, moderate-dimensional structure"
+  why: "genuine" as rhetorical filler rather than a precise qualifier.
+
+[conclusion.tex:19] NEGATIVE-PARALLEL / PERFORMED CANDOUR
+  > "The results chapter showed that this structure is not a modelling convenience: the fitted
+  covariance reproduces..."
+  why: rhetorical "not a modelling X" template, self-narrating about the work's own rigor
+  (echoes methodology.tex:192's "not a modelling nicety").
+
+[conclusion.tex:21] INTENSIFIER
+  > "three canonical axes, named directly from their own loadings"
+  why: "directly" as rhetorical intensifier.
+
+[conclusion.tex:30] INTENSIFIER
+  > "it separates genuinely rare profiles (Messi...) from tightly clustered ones"
+  why: "genuinely" doing no technical work.
+
+[conclusion.tex:34] PERFORMED CANDOUR
+  > "That last result is informative in its own right: a style-only measure should not be
+  expected to recover output, and showing exactly where it stops is more useful than a measure
+  that quietly conflates the two."
+  why: meta-commentary narrating the honesty/scope of the thesis's own findings — classic
+  performed candour. (The sentence immediately after this one was trimmed by Task 14c to remove
+  a 3-of-4-item preview of the future-work section that now follows directly; this flagged
+  sentence itself is unchanged.)
+
+[conclusion.tex:39-45] OVER-CLAIMED CONTRIBUTION / NEGATIVE-PARALLEL / TRICOLON
+  > "it demonstrates that a fully Bayesian, identifiable factor model can be fit to a real,
+  moderately sized sports dataset, diagnosed rigorously, and translated into quantities,
+  canonical axes, a similarity score, positional archetypes, that a football analyst, not only a
+  statistician, can read directly. That combination of statistical accountability and domain
+  interpretability is what a purely descriptive or a purely predictive approach to player data
+  cannot offer on its own."
+  why: single worst passage in the document — "demonstrates that" and "statistical
+  accountability and domain interpretability" are grand-claim boilerplate almost verbatim from
+  the advisor's list; "canonical axes, a similarity score, positional archetypes" is the exact
+  rhythmic tricolon example the advisor cited; "not only a statistician... can read directly" is
+  a rhetorical negative-parallel construction. NOT touched by any Phase-2 task — left for your
+  own rewrite. (Note: this paragraph now sits immediately before the Future-work items that
+  moved into this chapter from Results — was previously the thesis's closing paragraph, now
+  leads into "Four directions were considered..." at line 47.)
+
+[conclusion.tex:47] PERFORMED CANDOUR
+  > "Four directions were considered during this work and are reported here as scoped future
+  work rather than as contributions of the present thesis."
+  why: near-verbatim match to the advisor's own named example phrase. Moved here unchanged from
+  results.tex (was results.tex:745-746) by Task 14a — the section relocated, the sentence itself
+  was not rewritten.
+
+[conclusion.tex:52] INTENSIFIER
+  > "A genuinely useful companion is a performance score"
+  why: "genuinely" as rhetorical intensifier. Moved here unchanged from results.tex (was
+  results.tex:750) by Task 14a.

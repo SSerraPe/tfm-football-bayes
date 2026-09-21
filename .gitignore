@@ -42,6 +42,7 @@ Rplots.pdf
 !docs/professor/professor_summary.pdf
 !docs/thesis/thesis_technical_document.pdf
 !tfm_mesio_latex_2026/main.pdf
+!tfm_mesio_latex_2026/tfm_serra_sebastian_mesio.pdf
 
 # LaTeX build intermediates and Quarto render caches
 *.aux

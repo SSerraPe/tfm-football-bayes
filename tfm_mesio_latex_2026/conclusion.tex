@@ -1,4 +1,4 @@
-\chapter{Conclusion}
+\chapter{Discussion and future work}
 \label{chap:conclusion}
 
 Football clubs and analysts routinely ask which players resemble each other in style, yet
@@ -33,10 +33,8 @@ who share his style but not, by reputation, his end product.
 
 That last result is informative in its own right: a style-only measure should not be expected to
 recover output, and showing exactly where it stops is more useful than a measure that quietly
-conflates the two. It is also the most direct link to the further work identified alongside the
-results themselves, where a companion performance score, uncertainty on the similarity scores,
-and team-level effects are the natural next steps, each building on the representation
-established here rather than replacing it.
+conflates the two. It is also the most direct link to the four directions taken up below, each
+building on the representation established here rather than replacing it.
 
 Beyond its use as a scouting tool, the contribution of this thesis is methodological: it
 demonstrates that a fully Bayesian, identifiable factor model can be fit to a real, moderately
@@ -45,3 +43,36 @@ similarity score, positional archetypes, that a football analyst, not only a sta
 read directly. That combination of statistical accountability and domain interpretability is
 what a purely descriptive or a purely predictive approach to player data cannot offer on its
 own.
+
+Four directions were considered during this work and are reported here as scoped future work rather than as
+contributions of the present thesis.
+
+\textbf{A performance score alongside similarity.} \S\ref{sec:results-similarity} deliberately measures style
+only: two players can share a high similarity score while producing very differently, Stuani's case study
+being the clearest example. A genuinely useful companion is a performance score, defined carefully enough to
+survive scrutiny rather than a raw goals count (which conflates opportunity, minutes, and finishing quality)
+or any single loose per90 rate. Paired with the similarity score, it would let a shortlist be built in two
+steps instead of one: filter to players who play like the target, then rank that shortlist by this measure to
+surface the best of them, rather than asking one number to do both jobs.
+
+\textbf{Uncertainty beyond posterior means.} The model is fully Bayesian throughout, but two summaries still
+reduce a full posterior to a single number: the archetype clustering of \S\ref{sec:results-stylespace} assigns
+one hard $k$-means cluster per player rather than a soft, probability-weighted membership, and the similarity
+scores of \S\ref{sec:results-similarity} report one distance per pair rather than a credible interval on it.
+The first is a direct extension of the uncertainty already reported for canonical scores; the second is
+harder, since a pairwise distance's uncertainty depends on the joint draw-by-draw behaviour of both players
+together, not either one's marginal interval, and was not attempted here.
+
+\textbf{Distance-based latent-space models.} Chapter~\ref{chap:methodology}'s factor-analytic model represents
+style through a shared covariance structure; a complementary alternative represents it directly through
+pairwise dissimilarities via Bayesian multidimensional scaling \cite{oh2001bayesian}, with hierarchical
+extensions for repeated player--season observations \cite{yanchenko2020hierarchical}. Chapter~\ref{chap:background}'s
+classical MDS is a first, non-probabilistic step in that direction; a fully Bayesian version would attach
+posterior uncertainty directly to each player's position rather than obtaining it indirectly through canonical
+factor scores.
+
+\textbf{Team-season effects and tactical fit.} No team identifier exists anywhere in the current data
+pipeline, so a genuine player-vs-system comparison is not buildable without new data engineering. A
+team-season effect $c_{t(i,j),j}$ would separate manager and tactical-system effects from stable player
+identity and would be the natural foundation for a real tactical-fit score; the closest available proxy today
+is simply a player's archetype cluster (\S\ref{sec:results-stylespace}).
