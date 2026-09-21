@@ -15,7 +15,7 @@ The model has three principal objectives. First, it provides a principled varian
 
 Throughout this chapter, the following notation is used consistently. Let $N$ denote the total number of player--season observations, $I$ the number of unique players, $S$ the number of seasons, $P$ the number of standardised performance features, and $K$ a positive integer referred to as the factor rank, whose selection will be discussed in Section~\ref{sec:rank}. Observation indices run from $n = 1, \ldots, N$; $i[n] \in \{1, \ldots, I\}$ and $j[n] \in \{1, \ldots, S\}$ are the player and season indices of observation $n$, respectively.
 
-\begin{table}[h]
+\begin{table}[tbp]
 \centering
 \caption{Summary of notation used throughout this chapter.}
 \label{tab:notation_model}
@@ -127,7 +127,7 @@ This is an asymmetric design choice relative to the player covariance. A richer 
 
 \subsection{Residual covariance}
 
-The residuals $\boldsymbol{\varepsilon}_n$ are assigned a diagonal covariance $\boldsymbol{\Sigma}_e = \mathrm{diag}(\sigma_{e,1}^2, \ldots, \sigma_{e,P}^2)$, reflecting the assumption that, conditional on the player and season effects, the $P$ features are uncorrelated at the observation level.
+The residuals $\boldsymbol{\varepsilon}_n$ are assigned a diagonal covariance $\boldsymbol{\Sigma}_e = \mathrm{diag}(\sigma_{e,1}^2, \ldots, \sigma_{e,P}^2)$, reflecting the assumption that, conditional on the player and season effects, the $P$ features are uncorrelated at the observation level. The diagonal entries themselves are not constant across observations in the production model: Section~\ref{sec:phi} makes $\sigma_{e,p}$ depend on the observation's playing time, $\sigma_{e,n,p}$, to account for the fact that per-90 features are noisier estimates for players with fewer minutes. The cross-feature independence encoded by the diagonal structure is unaffected by that refinement.
 
 \section{Likelihood specification}
 \label{sec:likelihood}
@@ -182,12 +182,14 @@ The variance of a Student-$t$ random variable with $\nu$ degrees of freedom and 
 
 The tail-weight parameter $\nu$ has a direct interpretation: small values of $\nu$ produce heavier tails and greater likelihood of extreme residuals; large values recover the Gaussian behaviour \cite{lange1989robust,geweke1993bayesian}. The degrees-of-freedom parameter is treated as unknown and estimated from the data; its posterior summarises the evidence in favour of heavy-tailed residuals conditional on the model specification and the prior.
 
+Proposition~\ref{prop:t_variance} assumes the constant residual scale $\sigma_{e,p}$ of this section's base specification. Section~\ref{sec:phi} replaces $\sigma_{e,p}$ by an observation-dependent scale in the production model, and the residual variance below is restated accordingly (Corollary~\ref{cor:t_variance_mv}).
+
 \subsection{Observation-level variance scaling}
 \label{sec:phi}
 
-The residual scale $\sigma_{e,p}$ in \eqref{eq:normal_resid} and \eqref{eq:t_resid} is constant across observations. This is a simplification. The performance features $\mathbf{y}_n$ are constructed as per-90 rates or efficiency ratios, both of which are ratio estimators: for a player who accumulated $m_n$ minutes, the sampling variance of the per-90 estimate of feature $p$ is approximately proportional to $m_n^{-1}$, independently of any structural player or season effects. An observation with 600 minutes of playing time is therefore inherently noisier than one with 2{,}500 minutes, even if both belong to players with identical latent profiles.
+The residual scale $\sigma_{e,p}$ in \eqref{eq:normal_resid} and \eqref{eq:t_resid} is constant across observations. Section~\ref{sec:t_likelihood}'s Student-$t$ specification is stated this way because it is the natural point to introduce heavy tails on their own, but a constant residual scale does not hold for this data and is not what the production model uses. The performance features $\mathbf{y}_n$ are constructed as per-90 rates or efficiency ratios, both of which are ratio estimators: for a player who accumulated $m_n$ minutes, the sampling variance of the per-90 estimate of feature $p$ is approximately proportional to $m_n^{-1}$, independently of any structural player or season effects. An observation with 600 minutes of playing time is therefore inherently noisier than one with 2{,}500 minutes, even if both belong to players with identical latent profiles.
 
-Failing to account for this heteroscedasticity may cause the model to attribute the elevated variance of low-minute observations to heavy residual tails (via a smaller $\nu$), which would represent misspecification. A natural extension introduces a scaling of the residual variance on an observational level.
+Left unaddressed, this heteroscedasticity causes the model to attribute the elevated variance of low-minute observations to heavy residual tails (via a smaller $\nu$) instead of to exposure, which is a misspecification, not a modelling nicety to defer. The production model removes it by scaling the residual variance at the observation level, as follows.
 
 \begin{definition}[Minutes-weighted residual scale]
 \label{def:phi}
@@ -196,14 +198,24 @@ Let $m_{\mathrm{ref}} > 0$ denote a reference exposure level, taken as the sampl
 \sigma_{e,n,p} \;=\; \sigma_{e,p} \cdot \left(\frac{m_{\mathrm{ref}}}{m_n}\right)^{\!\phi},
 \label{eq:phi_scaling}
 \end{equation}
-where $\phi \geq 0$ is the scaling exponent. The Student-$t$ model with minutes-weighting replaces $\sigma_{e,p}$ in \eqref{eq:t_resid} with $\sigma_{e,n,p}$.
+where $\phi \geq 0$ is the scaling exponent. The Student-$t$ model with minutes-weighting replaces $\sigma_{e,p}$ in \eqref{eq:t_resid} with $\sigma_{e,n,p}$. This is the residual specification used by the production model throughout the remainder of this chapter and in Chapter~\ref{chap:results}: Definition~\ref{def:student_t} combined with \eqref{eq:phi_scaling}, not Definition~\ref{def:student_t} in isolation.
 \end{definition}
 
-Three canonical values of $\phi$ are immediately interpretable. Setting $\phi = 0$ recovers the base model \eqref{eq:t_resid}, in which the residual scale is constant. Setting $\phi = 1/2$ corresponds to a square-root scaling analogous to the standard deviation of a Poisson count: variance grows linearly with event rate and standard deviation grows as the square root of inverse minutes. Setting $\phi = 1$ imposes full inverse-minutes scaling, so that the residual standard deviation is proportional to $m_n^{-1/2}$, as it would be for a simple average estimator under a constant-intensity Poisson process.
+\begin{corollary}[Variance under the minutes-weighted scale]
+\label{cor:t_variance_mv}
+Replacing $\sigma_{e,p}$ by $\sigma_{e,n,p}$ in Proposition~\ref{prop:t_variance} gives
+\begin{equation}
+\mathrm{Var}(\varepsilon_{np}) \;=\; \sigma_{e,n,p}^2\,\frac{\nu}{\nu-2} \;=\; \sigma_{e,p}^2 \left(\frac{m_{\mathrm{ref}}}{m_n}\right)^{\!2\phi}\frac{\nu}{\nu-2},
+\label{eq:t_variance_mv}
+\end{equation}
+which depends on the observation $n$ through $m_n$ and reduces to Proposition~\ref{prop:t_variance}'s expression when $m_n = m_{\mathrm{ref}}$.
+\end{corollary}
 
-\begin{remark}[Fixed or estimated $\phi$]
+Three canonical values of $\phi$ are immediately interpretable. Setting $\phi = 0$ recovers the constant-scale case of \eqref{eq:t_resid}. Setting $\phi = 1/2$ corresponds to a square-root scaling analogous to the standard deviation of a Poisson count: variance grows linearly with event rate and standard deviation grows as the square root of inverse minutes. Setting $\phi = 1$ imposes full inverse-minutes scaling, so that the residual standard deviation is proportional to $m_n^{-1/2}$, as it would be for a simple average estimator under a constant-intensity Poisson process.
+
+\begin{remark}[$\phi$ is fixed, not estimated]
 \label{rem:phi}
-The exponent $\phi$ may be handled in two ways. If $\phi$ is fixed at a pre-specified value $\phi_0$ (for example, $\phi_0 = 1/2$), no additional parameters are introduced and the model remains as otherwise described; the choice of $\phi_0$ encodes a prior judgement about the degree of heteroscedasticity due to playing time. If $\phi$ is treated as a free parameter, it is assigned a prior and sampled jointly with the remaining parameters. Identifiability of a free $\phi$ rests on the contrast between the residuals of high- and low-minute observations: given estimates of $\mathbf{a}_i$ and $\mathbf{b}_j$, the relationship between $|\varepsilon_{np}|$ and $m_n$ is informative about $\phi$. However, $\phi$ must be identified against $\sigma_{e,p}$ and $\nu$ simultaneously, since all three govern the scale and shape of the marginal residual distribution. Whether the fixed or estimated treatment is more appropriate for the present data is a diagnostic question addressed in Chapter~\ref{chap:results}.
+The production model fixes $\phi = 1/2$, the Poisson-rate value described above, rather than treating it as a free parameter. Fixing $\phi$ introduces no additional parameter and requires no prior on $\phi$ in \eqref{eq:joint_prior}. The alternative --- assigning $\phi$ a prior and sampling it jointly with the remaining parameters --- is a well-posed model: identifiability of a free $\phi$ rests on the contrast between the residuals of high- and low-minute observations, since, given estimates of $\mathbf{a}_i$ and $\mathbf{b}_j$, the relationship between $|\varepsilon_{np}|$ and $m_n$ is informative about $\phi$, though $\phi$ must be identified jointly with $\sigma_{e,p}$ and $\nu$, all three of which govern the scale and shape of the marginal residual distribution. This alternative was fit as a diagnostic check, with $\phi$ assigned a $\mathrm{Normal}(0.5,\, 0.2)$ prior (Chapter~\ref{chap:results}): its posterior concentrates below $0.5$ but close to it, which is read there as support for fixing $\phi$ at the theoretically motivated value rather than as a reason to prefer the estimated one.
 \end{remark}
 
 \section{Model identification}
@@ -300,29 +312,21 @@ The Student-$t$ degrees-of-freedom parameter is assigned
 supported on $\nu > 2$ to ensure finite residual variance. The $\mathrm{Gamma}(2, 0.1)$ distribution has mean $20$ and standard deviation approximately $14$. It places substantial mass below $\nu = 10$, heavy tails, while also allowing the posterior to concentrate near larger values if the data support behaviour close to Gaussian. The prior does not favour either the Gaussian limit $\nu \to \infty$ nor the extreme heavy-tail regime $\nu \to 2^+$\cite{juarez2010model}.
 \end{definition}
 
-\begin{definition}[Prior on the scaling exponent]
-\label{def:prior_phi}
-If the minutes-weighted residual scale of Definition~\ref{def:phi} is used with $\phi$ treated as an unknown parameter, it is assigned
-\begin{equation}
-\phi \;\sim\; \mathrm{Half\text{-}Normal}(0,\, 1),
-\label{eq:prior_phi}
-\end{equation}
-which places most mass on moderate scaling effects ($\phi \lesssim 1$) while permitting stronger heteroscedasticity if supported by the data.
-\end{definition}
+Since the production model fixes $\phi=1/2$ (Remark~\ref{rem:phi}) rather than estimating it, $\phi$ is not a random variable and is not assigned a prior here; it enters \eqref{eq:phi_scaling} as a known constant. (The diagnostic fit mentioned in Remark~\ref{rem:phi}, which does estimate $\phi$, assigns it $\phi \sim \mathrm{Normal}(0.5,\, 0.2)$ --- reported there for completeness, not as part of the production prior stack below.)
 
-The joint prior is the product of all terms in Definitions~\ref{def:prior_lambda}--\ref{def:prior_phi}, since all parameters are treated as independent then the joint prior density is:
+The joint prior is the product of all terms in Definitions~\ref{def:prior_lambda}--\ref{def:prior_nu}, since all parameters are treated as independent then the joint prior density is:
 \begin{align}
-p\!\left(\boldsymbol{\Lambda}, \boldsymbol{\psi}_a, \boldsymbol{\sigma}_b, \boldsymbol{\sigma}_e, \nu, \phi\right)
+p\!\left(\boldsymbol{\Lambda}, \boldsymbol{\psi}_a, \boldsymbol{\sigma}_b, \boldsymbol{\sigma}_e, \nu\right)
 \;=\;
 &\prod_{k=1}^{K} p_{\mathrm{HN}}(\Lambda_{kk})
 \prod_{\substack{p=1\\p>k}}^{P} \mathcal{N}(\Lambda_{pk};\, 0, 1) \notag \\
 &\;\times\;
 \prod_{p=1}^{P} p_{\mathrm{HN}}(\psi_{a,p})\,p_{\mathrm{HN}}(\sigma_{b,p})\,p_{\mathrm{HN}}(\sigma_{e,p}) \notag \\
 &\;\times\;
-p_{\mathrm{Ga}}(\nu)\;p_{\mathrm{HN}}(\phi),
+p_{\mathrm{Ga}}(\nu),
 \label{eq:joint_prior}
 \end{align}
-where $p_{\mathrm{HN}}$ denotes the Half-Normal$(0,1)$ density and $p_{\mathrm{Ga}}$ denotes the Gamma$(2,0.1)$ density. The term involving $\phi$ is omitted when $\phi$ is held fixed.
+where $p_{\mathrm{HN}}$ denotes the Half-Normal$(0,1)$ density and $p_{\mathrm{Ga}}$ denotes the Gamma$(2,0.1)$ density; $\phi$ does not appear, being fixed rather than estimated.
 
 \section{Rank selection}
 \label{sec:rank}
@@ -331,7 +335,7 @@ The factor rank $K$ governs the dimension of the latent space used to model the 
 
 For any fixed value of $K \in \{0, 1, 2, \ldots\}$, the model specification in Sections~\ref{sec:covariance}--\ref{sec:priors} is complete. The case $K = 0$ is a special case: it sets $\boldsymbol{\Sigma}_a = \boldsymbol{\Psi}_a$ (diagonal player covariance), corresponding to the assumption that all player-level cross-feature correlation is zero. This \emph{diagonal model} serves as a natural baseline; the gain in predictive performance relative to it quantifies the value of modelling shared player-level covariance structure.
 
-Whether shared player-level covariance is worth modelling at all is answered decisively, and is reported in Chapter~\ref{chap:results}; the choice of rank among $K \geq 1$ is argued qualitatively, as follows.
+Whether shared player-level covariance is worth modelling at all is answered by the posterior-predictive check reported in Chapter~\ref{chap:results} (\S\ref{sec:results-rank}), which compares model-implied and observed cross-feature correlations under $K=0$ and $K\geq1$ directly, without appeal to cross-validation; the choice of rank among $K \geq 1$ is argued qualitatively, as follows.
 
 \subsection{A qualitative argument for the rank}
 \label{sec:rank_qualitative}
@@ -347,15 +351,20 @@ Both criteria below require the eigendecomposition of the common-variance matrix
 
 \begin{description}
 \item[Criterion A: variance share of the PCs of $\bar{\boldsymbol{\Lambda}}\bar{\boldsymbol{\Lambda}}^\top$] For a candidate rank $K$, the eigenvalue $d_K$ of the \emph{last} (smallest) canonical factor, expressed as a share of $\sum_{k=1}^K d_k$, measures how much additional common-variance structure the $K$-th dimension contributes. A last-component share close to the trailing eigenvalues of the full uniqueness spectrum indicates that dimension is not resolving substantive shared structure.
-\item[Criterion B: residual adequacy under the fit's own $t(\hat\nu)$ noise model] For each candidate fit, the standardised residuals $z_{np} = (y_{np} - \hat a_{i[n],p} - \hat b_{j[n],p})/(\hat\sigma_{e,p}\sqrt{\hat\nu/(\hat\nu-2)})$ are compared against the $99$th-percentile threshold $\tau_{99}$ implied by $t(\hat\nu)$. If the empirical exceedance rate across all $N \times P$ cells is at or below the nominal $1\%$, the residual distribution is adequate under the fitted noise model; this is a floor check on model misspecification, not a criterion that discriminates between two ranks that both pass it.
+\item[Criterion B: residual adequacy under the fit's own $t(\hat\nu)$ noise model] For each candidate fit, the standardised residuals $z_{np} = (y_{np} - \hat a_{i[n],p} - \hat b_{j[n],p})/(\hat\sigma_{e,n,p}\sqrt{\hat\nu/(\hat\nu-2)})$ are compared against the $99$th-percentile threshold $\tau_{99}$ implied by $t(\hat\nu)$, where $\hat\sigma_{e,n,p}$ is the fit's own residual scale at observation $n$ (Definition~\ref{def:phi} for a minutes-scaled fit; $\hat\sigma_{e,n,p}=\hat\sigma_{e,p}$, constant in $n$, for a constant-scale fit). If the empirical exceedance rate across all $N \times P$ cells is at or below the nominal $1\%$, the residual distribution is adequate under the fitted noise model; this is a floor check on model misspecification, not a criterion that discriminates between two ranks that both pass it.
 \end{description}
 
 \subsection{Selected rank}
 \label{sec:rank_selection}
 
-Applying Criteria A and B across $K=2, 3, 4$ gives the following picture. The last canonical factor's common-variance share declines from $30.8\%$ at $K=2$ to $10.5\%$ at $K=3$ to $7.1\%$ at $K=4$---a continued but decelerating decline, not a sharp drop to a noise floor at any point (Criterion A). Mean residual exceedance under $\tau_{99}$ is $0.74\%$, $0.77\%$, and $0.79\%$ at $K=2,3,4$ respectively---all comfortably below the $1\%$ floor and essentially flat, so residual adequacy holds at every rank examined and does not discriminate among them (Criterion B).
+$K=2$ and $K=3$ below are evaluated on the production, minutes-scaled, fixed-$\phi=1/2$ family; $K=4$ is
+carried over from the constant-scale family (Decision 2 of the revision that corrected this chapter: refitting
+$K=4$ under minutes-scaling was not undertaken, since the existing constant-scale $K=4$ fit already required
+substantially relaxed sampler settings and multi-day runtime for reasons unrelated to residual scaling). The
+three numbers move only marginally between families.
+Applying Criteria A and B across $K=2, 3, 4$ gives the following picture. The last canonical factor's common-variance share declines from $30.7\%$ at $K=2$ to $10.4\%$ at $K=3$ to $7.1\%$ at $K=4$---a continued but decelerating decline, not a sharp drop to a noise floor at any point (Criterion A). Mean residual exceedance under $\tau_{99}$ is $0.77\%$, $0.79\%$, and $0.79\%$ at $K=2,3,4$ respectively---all comfortably below the $1\%$ floor and essentially flat, so residual adequacy holds at every rank examined and does not discriminate among them (Criterion B).
 
-Taken together, this comparison does not produce a clean reversal at $K=4$ the way it does at $K=3$ relative to $K=2$: Criterion A mildly favours stopping at $K=3$ (the fourth factor's contribution, while still non-trivial, is smaller than the third's), while Criterion B is uninformative at this rank range and offers no separate support either way. Read honestly, choosing $K=3$ over $K=4$ rests on Criterion A alone, and amounts to a preference for the simpler model: the fourth factor's contribution is smaller, but not small enough to ignore. This is a much weaker result than the case for $K\geq 1$ over $K=0$, or even the milder case for $K=3$ over $K=2$, both of those were clear-cut; this one is not. Combined with the cross-validation trials described above, where $K=4$ is likewise never clearly dominated, the honest summary is that the data do not sharply distinguish $K=3$ from $K=4$. $K=3$ is nonetheless retained as the production rank $K^*=3$, used throughout the remainder of this chapter and in Chapter~\ref{chap:results}: it is the more parsimonious of two ranks that the evidence does not clearly separate, and closing the model at a defensible, adequately-supported rank was judged preferable to an open-ended search for further, likely similarly ambiguous, comparisons at $K \geq 5$.
+Taken together, this comparison does not produce a clean reversal at $K=4$ the way it does at $K=3$ relative to $K=2$: Criterion A mildly favours stopping at $K=3$ (the fourth factor's contribution, while still non-trivial, is smaller than the third's), while Criterion B is uninformative at this rank range and offers no separate support either way. Read honestly, choosing $K=3$ over $K=4$ rests on Criterion A alone, and amounts to a preference for the simpler model: the fourth factor's contribution is smaller, but not small enough to ignore. This is a much weaker result than the case for $K\geq 1$ over $K=0$, or even the milder case for $K=3$ over $K=2$; both of those were clear-cut, this one is not. The honest summary is that the data do not sharply distinguish $K=3$ from $K=4$. $K=3$ is nonetheless retained as the production rank $K^*=3$, used throughout the remainder of this chapter and in Chapter~\ref{chap:results}: it is the more parsimonious of two ranks that the evidence does not clearly separate, and closing the model at a defensible, adequately-supported rank was judged preferable to an open-ended search for further, likely similarly ambiguous, comparisons at $K \geq 5$.
 
 \begin{remark}[Comparability with the exploratory factor count of Chapter~\ref{chap:background}]
 \label{rem:k_not_comparable}
@@ -365,16 +374,18 @@ Chapter~\ref{chap:background} reports an eleven-factor solution from classical, 
 \section{Variance decomposition and intraclass correlation}
 \label{sec:icc}
 
-A key inferential output of the model is a decomposition of the total variance of each feature into contributions from the player, season, and residual components. Under the additive model \eqref{eq:additive} and the mutual independence of $\mathbf{a}_i$, $\mathbf{b}_j$, and $\boldsymbol{\varepsilon}_n$, the marginal variance of feature $p$ in any observation is
+A key inferential output of the model is a decomposition of the total variance of each feature into contributions from the player, season, and residual components. Under the additive model \eqref{eq:additive} and the mutual independence of $\mathbf{a}_i$, $\mathbf{b}_j$, and $\boldsymbol{\varepsilon}_n$, the marginal variance of feature $p$ in observation $n$ is
 \begin{equation}
 \mathrm{Var}(y_{np}) \;=\; [\boldsymbol{\Sigma}_a]_{pp} + \sigma_{b,p}^2 + \mathrm{Var}(\varepsilon_{np}),
 \label{eq:total_variance}
 \end{equation}
-where $[\boldsymbol{\Sigma}_a]_{pp}$ is given by \eqref{eq:sigma_diag}, and $\mathrm{Var}(\varepsilon_{np}) = \sigma_{e,p}^2 \cdot \nu/(\nu-2)$ by Proposition~\ref{prop:t_variance} for the Student-$t$ model, or $\sigma_{e,p}^2$ for the Normal model.
+where $[\boldsymbol{\Sigma}_a]_{pp}$ is given by \eqref{eq:sigma_diag}, and, for the production model's minutes-weighted Student-$t$ residual, $\mathrm{Var}(\varepsilon_{np}) = \sigma_{e,n,p}^2 \cdot \nu/(\nu-2)$ by Corollary~\ref{cor:t_variance_mv} --- a quantity that depends on $n$ through the observation's playing time $m_n$, not on $p$ alone.
+
+Because $\mathrm{Var}(\varepsilon_{np})$ varies across observations of the same feature, so does $\mathrm{Var}(y_{np})$: there is no longer a single total variance, or a single variance decomposition, per feature, only one per feature at each exposure level. The definition below resolves this by fixing $m_n = m_{\mathrm{ref}}$, the reference exposure of Definition~\ref{def:phi}, at which the scaling factor $(m_{\mathrm{ref}}/m_n)^\phi$ equals one and $\sigma_{e,n,p}$ reduces to $\sigma_{e,p}$. This recovers a single number per feature, interpretable as the variance decomposition for a player--season observation at the reference playing time.
 
 \begin{definition}[Intraclass correlation coefficients]
 \label{def:icc}
-The player, season, and residual intraclass correlation coefficients for feature $p$ are, respectively,
+The player, season, and residual intraclass correlation coefficients for feature $p$, evaluated at the reference exposure $m_n = m_{\mathrm{ref}}$, are, respectively,
 \begin{align}
 \mathrm{ICC}_{a,p} &= \frac{[\boldsymbol{\Sigma}_a]_{pp}}{[\boldsymbol{\Sigma}_a]_{pp} + \sigma_{b,p}^2 + \mathrm{Var}(\varepsilon_{np})},
 \label{eq:icc_a} \\[4pt]

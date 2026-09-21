@@ -30,6 +30,29 @@
 \usepackage{multirow}  % target-name spanning rows in the similarity table (Chapter 5)
 \usepackage{siunitx}   % decimal-aligned numeric columns in the similarity table
 \usepackage{placeins} % \FloatBarrier, to stop floats drifting across sections in Chapter 5
+\usepackage{float}    % [H] exact placement for a few Chapter 5 figures that must stay pinned
+                      % between two specific paragraphs (see results.tex comments at each use)
+\usepackage{tikz}     % small pole-direction diagrams in the PC-comparison table (Chapter 5)
+\usepackage{enumitem} % compact bullet lists in the full-loadings appendix table
+\usepackage{subcaption} % side-by-side CMDS figures in Chapter 3 (Background)
+
+% Float placement tuning (added to reduce blank-space pages / awkward gaps around figures and
+% tables): LaTeX's stock defaults (topfraction=0.7, bottomfraction=0.3, textfraction=0.2,
+% floatpagefraction=0.5) are conservative and, combined with this document's many \FloatBarrier
+% boundaries (Chapter 5), can strand a float at the bottom of an otherwise-empty page. Loosening
+% these lets floats claim more of a page's top and reduces forced float-only pages, with no effect
+% on wording, figure/table content, or ordering.
+% NOTE: bottomfraction is deliberately left at its LaTeX default (0.3), not raised -- raising it
+% was tried and reverted: it made LaTeX *more* willing to wedge a figure at the bottom of a page
+% that doesn't have enough preceding text to fill it (exactly the page-37 defect this tuning is
+% meant to prevent), producing new gaps under Chapter 5's case-study figures (§8.3) that were not
+% there before. Only topfraction/textfraction/floatpagefraction are loosened.
+\renewcommand{\topfraction}{0.85}
+\renewcommand{\textfraction}{0.1}
+\renewcommand{\floatpagefraction}{0.75}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{5}
 
 % longtable's own \LT@makecaption hardcodes "Table N: caption" (colon), independent
 % of amsbook's \@makecaption, which formats every other float in this document as
@@ -86,12 +109,12 @@
 % plus the new fields introduced by the MESIO templateTFE2026:
 % month/year, keywords, MSC, acknowledgements)
 % ------------------------------------------------------------%
-\title{Title of the Thesis}
+\title{Uncovering latent structure in soccer data}
 \autor{Sebastián Serra Peña}
 \treball{Master Thesis}
 \advisor{Victor Peña Pizarro}
 \departament{Departament d'Estadística i Investigació Operativa (EIO)}
-\monthYear{Month, year}
+\monthYear{September, 2026}
 % \agraiments{Thanks to...}   % uncomment and fill in if you want an acknowledgements page
 
 \begin{document}
@@ -117,11 +140,45 @@
 \begin{abstract}
 
 \vspace{1cm}
-Will write the abstract here (about 300–500 words). Explain the problem,
-methodology, main contributions, and results.
+Comparing football players by playing style is usually done informally, from memory and
+reputation, rather than from a principled statistical representation of what a player actually
+does on the pitch. This thesis builds a hierarchical Bayesian factor model of La Liga
+player-season performance to recover interpretable stylistic dimensions directly from
+match-event data and to measure player similarity with quantified uncertainty. The data cover
+4,586 player-seasons from 1,529 outfield players across twelve seasons (2011/12--2022/23),
+summarised by 48 standardised performance features spanning passing, duelling, defending, and
+attacking output.
 
-\keywords{keyword1, keyword2, keyword3}
-\msc{MSC1, MSC2}
+Each player-season observation is decomposed additively into a stable player effect, a season
+effect, and a residual term. The player effect follows a low-rank factor structure, and
+residuals follow a Student-$t$ distribution whose scale is further adjusted for minutes played,
+correcting a systematic under-fit of low-minute seasons observed under a constant-variance
+specification. A standard identifiability constraint on the factor loadings is resolved after
+fitting through a rotation-invariant transformation, recovering interpretable canonical
+directions of style. Posterior diagnostics show excellent convergence, and the fitted covariance
+reproduces the observed cross-feature correlation structure closely ($r = 0.975$). A three-factor
+solution is retained on a qualitative variance-share and loading-reliability argument, after
+comparison with alternative ranks.
+
+The three recovered factors admit a direct football reading: Defensive engagement (defensive
+build-up volume against attacking output), Technical orientation (ball circulation against
+aerial and physical duels), and Possession retention (clean possession and direct threat against
+wide delivery). Projecting every player onto these three axes recovers five clusters that align
+closely with recognisable positional roles, from forwards to centre-backs. Building on the same
+shared covariance structure, the thesis introduces a bounded similarity score between any two
+players, calibrated against the population's own typical style distance. Four case studies
+illustrate its behaviour: Lionel Messi is simultaneously extreme on all three axes, and even his
+closest style-neighbour, Neymar, reaches only 45\% similarity; Sergio Ramos's closest match,
+Gerard Piqué, reaches 93\%, consistent with their well-known on-pitch pairing; and Cristian
+Stuani's closest style-neighbours share his profile but not, by reputation, his output, exposing
+a genuine limit of a style-only measure.
+
+The resulting framework offers a reproducible route from raw event data to a low-dimensional,
+uncertainty-aware representation of playing style, directly applicable to style-based scouting
+shortlists that complement, rather than replace, judgement on age, price, and performance.
+
+\keywords{hierarchical Bayesian models, factor analysis, latent variable models, soccer analytics, player similarity, Markov chain Monte Carlo}
+\msc{62F15, 62H25, 62H30}
 \end{abstract}
 
 % ------------------------------------------------------------%
@@ -167,6 +224,8 @@ Part of the R and Stan code supporting this thesis --- model implementation, deb
 
 \input{results}
 
+\input{conclusion}
+
 % ------------------------------------------------------------%
 % Appendices
 % ------------------------------------------------------------%
@@ -180,6 +239,17 @@ highlights the ten most informative rows directly in the main text.
 
 {\scriptsize
 \input{tables/41_icc_full48.tex}
+}
+
+\chapter{Full canonical factor loadings}
+\label{app:full-loadings}
+
+Table~\ref{tab:pc-comparison} in \S\ref{sec:results-loadings} shows only the four largest reliable loadings per
+pole per canonical factor, for readability. The full list, every loading with a 90\% credible interval
+excluding zero, is given below, grouped by feature category and sign.
+
+{\small
+\input{tables/43b_full_loadings_appendix.tex}
 }
 
 \chapter{SQL extraction and construction queries}

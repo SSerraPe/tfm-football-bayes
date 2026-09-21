@@ -42,12 +42,13 @@ level_tbl <- eff |>
 
 # "Xavi" added for the Results-chapter rewrite (three-target similarity treatment:
 # Messi/Ramos/Xavi) -- previously absent, so the similarity table's level-gap column
-# had no data for him.
+# had no data for him. "G. Bale" swapped for "C. Stuani" (fourth case-study target,
+# 2026-09 revision) for the same reason.
 CASE_STUDY_PLAYERS <- c(
   "L. Messi", "Cristiano Ronaldo", "Neymar", "L. Suárez", "K. Benzema",
   "A. Griezmann", "Iago Aspas", "Sergio Busquets", "Saúl Ñíguez",
   "L. Modrić", "D. Carvajal", "Koke", "Sergio Ramos", "Gerard Piqué",
-  "J. Giménez", "Í. Martínez", "Iñaki Williams", "Xavi"
+  "J. Giménez", "Í. Martínez", "Iñaki Williams", "Xavi", "C. Stuani"
 )
 
 case_pairs <- top10 |>

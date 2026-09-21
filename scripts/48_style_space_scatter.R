@@ -28,11 +28,25 @@
 #           PC1-3, for the population cloud and the distance computation)
 #         outputs/tables/37_player_similarity_top10.csv (top-10 neighbours per player,
 #           reused for the 3 nearest neighbours per target)
-#         outputs/tables/46_case_studies_posterior_mean.csv (level_gap, for the table)
 # Writes: images/48_style_space_scatter.png
-#         outputs/tables/48_distant_players.csv (target, player, rank, style_dist -- for
-#           stage 49/50 and for disclosure in the thesis text)
-#         tables/48_similarity_table.tex (booktabs/multirow/siunitx fragment)
+#         outputs/tables/48_distant_players.csv (target, player, rank, style_dist,
+#           similarity_score -- for stage 50 and for disclosure in the thesis text)
+#         outputs/tables/48_similarity_scores.csv (target, player, role, style_dist,
+#           similarity_score -- neighbours + distant players together, for stage 50's
+#           per-target forest-plot cards)
+#         tables/48_similarity_table.tex (booktabs/multirow/siunitx fragment; Style
+#           distance + Similarity score, no longer level gap -- level is deferred to
+#           future work as of the 2026-09 §8 revision, see results.tex)
+#
+# Similarity score (2026-09 revision, replaces the level-gap column): Similarity(i,j) =
+# 100 * exp(-d(i,j) / dbar), where dbar is the mean pairwise style distance across all
+# outfield players -- a single, dataset-derived calibration constant, not a free
+# parameter tuned to taste. A percentile-rank transform was tried first and rejected: it
+# makes every already-selected top-3 neighbour score ~99-100% regardless of how tight or
+# loose the match actually is, which is useless for a table whose whole point is to show
+# that gradation (Ramos-Pique's 0.158 and Messi-Neymar's 1.818 are both "rank 1" but very
+# different matches). The exponential-decay version reproduces exactly the gradation the
+# surrounding prose already describes qualitatively.
 
 script_arg  <- grep("^--file=", commandArgs(FALSE), value = TRUE)
 script_path <- if (length(script_arg) > 0) sub("^--file=", "", script_arg[1]) else
@@ -42,28 +56,19 @@ check_packages(c(required_base_packages, "ggplot2", "patchwork", "ggrepel"))
 
 suppressPackageStartupMessages({ library(readr); library(dplyr); library(tidyr); library(ggplot2); library(patchwork); library(ggrepel) })
 
-# SIGN CORRECTION (found during this revision): 29_outlier_study.R's eigendecomposition
-# (`eig <- eigen(LLt); V <- eig$vectors[,1:K]`) is never sign-anchored, unlike stage 31's
-# (`31_pca_with_ci.R`, which anchors each PC so the feature with the largest |loading| is
-# positive -- the convention Remark 4.24/rem:sign specifies and the one the new loading
-# heatmap, stage 47, is built on). Checked directly: stage 29's PC1 happens to already
-# agree with that convention (coincidentally, whatever LAPACK returned), but its PC2 and
-# PC3 are the exact reflection of it -- e.g. Xavi, an elite deep-lying passer, comes out at
-# pc2_score = -7.40 under stage 29's raw sign, when a passing-heavy player should score
-# strongly POSITIVE on a "passing volume/quality (+) vs. aerial/physical (-)" axis. Left
-# uncorrected, this figure's population cloud (and Table 8, patched separately in
-# scripts/43_results_tables.R) would visibly contradict the loading heatmap's own sign
-# convention within the same section. A sign flip is an isometry, so no distance, ranking,
-# or nearest-neighbour result anywhere in this thesis is affected -- only which quadrant
-# things are plotted in.
+# SIGN CORRECTION -- NO LONGER NEEDED, removed 2026-09-20: this used to compensate for
+# 29_outlier_study.R's eigendecomposition never anchoring PC2/PC3's sign (Remark rem:sign),
+# a bug independently found and fixed at the source in this same revision pass. Keeping
+# this flip on top of the now-fixed source would silently double-flip back to the wrong
+# (uncontrolled) sign. Distances/rankings were never affected either way (a sign flip is an
+# isometry), only which quadrant things plot in -- which is exactly what this stale flip
+# would have gotten wrong again had it stayed.
 scores <- read_csv(file.path(paths$tables, "29_player_factor_scores.csv"), show_col_types = FALSE) |>
-  filter(!is.na(player_name)) |>
-  mutate(pc2_score = -pc2_score, pc3_score = -pc3_score)
+  filter(!is.na(player_name))
 top10  <- read_csv(file.path(paths$tables, "37_player_similarity_top10.csv"), show_col_types = FALSE)
-lvl    <- read_csv(file.path(paths$tables, "46_case_studies_posterior_mean.csv"), show_col_types = FALSE)
 
-TARGETS <- c("L. Messi", "Sergio Ramos", "Xavi")
-TARGET_COL <- c("L. Messi" = "#C0392B", "Sergio Ramos" = "#1F6F8B", "Xavi" = "#7B3294")
+TARGETS <- c("L. Messi", "Sergio Ramos", "Xavi", "C. Stuani")
+TARGET_COL <- c("L. Messi" = "#C0392B", "Sergio Ramos" = "#1F6F8B", "Xavi" = "#7B3294", "C. Stuani" = "#2E7D32")
 # Xavi's colour is a violet substitute for the brief's dark-goldenrod (#B8860B): under
 # deuteranopia/protanopia (the most common colour-vision deficiencies), brick-red and dark
 # goldenrod both lose their red/green contribution and collapse toward a similar muddy
@@ -83,22 +88,57 @@ rownames(Dmat) <- colnames(Dmat) <- as.character(scores$player_id)
 name_to_id <- setNames(as.character(scores$player_id), scores$player_name)
 name_to_id <- name_to_id[!duplicated(scores$player_name)]
 
+# ---- similarity score: Similarity(i,j) = 100 * exp(-d(i,j) / dbar) ----------------------
+# dbar = mean pairwise style distance across all outfield players (a single, dataset-
+# derived constant; see the header comment for why this beats a percentile-rank transform).
+dbar <- mean(Dmat[upper.tri(Dmat)])
+message(sprintf("Similarity-score calibration: mean pairwise style distance (dbar) = %.4f", dbar))
+similarity_score <- function(d) 100 * exp(-d / dbar)
+
 DISTANT_PICKS <- list(
   "L. Messi"     = c("O. Vranješ", "Juan Iglesias", "Iván Alejo"),      # raw top-3 (no recognisable player in-decile)
   "Sergio Ramos" = c("Hélder Costa", "L. Messi", "Pedro Porro"),          # recognisable, within top 15 by distance
-  "Xavi"         = c("A. Budimir", "C. Stuani", "Y. En-Nesyri")           # recognisable, within top 30 by distance
+  # "C. Stuani" replaced by "C. Larin" here (2026-09 revision): Stuani became a case-study
+  # target in his own right, so listing him as Xavi's distant comparator too would be
+  # confusing even though the distance is real. C. Larin sits one rank further down Xavi's
+  # own top-30 (rank 23 vs Stuani's 20) and is the next reasonably recognisable name there.
+  "Xavi"         = c("A. Budimir", "C. Larin", "Y. En-Nesyri"),          # recognisable, within top 30 by distance
+  # C. Stuani's top-30 by distance is dominated by elite technical midfielders -- exactly
+  # the profile furthest from an aerial target-man -- so the three most recognisable names
+  # are also the three most extreme: Xavi (rank 1, and itself a case-study target -- the
+  # same overlap already accepted for Sergio Ramos's list above, e.g. L. Messi), L. Messi
+  # (rank 2, likewise a target), and Andrés Iniesta (rank 4, not a separate target).
+  "C. Stuani"    = c("Xavi", "L. Messi", "Andrés Iniesta")
 )
 
 distant_df <- lapply(TARGETS, function(tg) {
   pid <- name_to_id[[tg]]
   dvec <- Dmat[pid, ]; dvec <- dvec[names(dvec) != pid]
   picks <- DISTANT_PICKS[[tg]]
+  d <- dvec[name_to_id[picks]]
   tibble(target = tg, player_name = picks, rank = seq_along(picks),
-         style_dist = round(dvec[name_to_id[picks]], 4))
+         style_dist = round(d, 4), similarity_score = round(similarity_score(d), 1))
 }) |> bind_rows()
 write_csv(distant_df, file.path(paths$tables, "48_distant_players.csv"))
 message("Wrote 48_distant_players.csv:")
 print(as.data.frame(distant_df))
+
+# ---- combined neighbours + distant scores, for stage 50's per-target forest-plot cards ----
+neighbour_scores_df <- lapply(TARGETS, function(tg) {
+  pid <- name_to_id[[tg]]
+  dvec <- Dmat[pid, ]; dvec <- dvec[names(dvec) != pid]
+  nb <- neighbours |> filter(target == tg) |> arrange(rank)
+  d <- dvec[name_to_id[nb$player_name]]
+  tibble(target = tg, player_name = nb$player_name, role = "neighbour", rank = nb$rank,
+         style_dist = round(d, 4), similarity_score = round(similarity_score(d), 1))
+}) |> bind_rows()
+
+similarity_scores_df <- bind_rows(
+  neighbour_scores_df,
+  distant_df |> mutate(role = "distant") |> select(target, player_name, role, rank, style_dist, similarity_score)
+)
+write_csv(similarity_scores_df, file.path(paths$tables, "48_similarity_scores.csv"))
+message("Wrote 48_similarity_scores.csv (", nrow(similarity_scores_df), " rows)")
 
 # ---- scatter -------------------------------------------------------------------------------
 pos <- scores |> select(player_name, pc1_score, pc2_score, pc3_score)
@@ -135,33 +175,29 @@ make_panel <- function(a_var, b_var, a_lab, b_lab) {
           panel.grid.minor = element_blank())
 }
 
-p1 <- make_panel("pc1_score", "pc2_score", "PC1", "PC2")
-p2 <- make_panel("pc1_score", "pc3_score", "PC1", "PC3")
-p3 <- make_panel("pc2_score", "pc3_score", "PC2", "PC3")
+p1 <- make_panel("pc1_score", "pc2_score", "Defensive engagement", "Technical orientation")
+p2 <- make_panel("pc1_score", "pc3_score", "Defensive engagement", "Possession retention")
+p3 <- make_panel("pc2_score", "pc3_score", "Technical orientation", "Possession retention")
 
-fig <- (p1 | p2 | p3) +
-  plot_annotation(
-    title = "Canonical style space: case-study players (diamonds) and their three closest style-neighbours (circles)",
-    theme = theme(plot.title = element_text(size = 10.5, face = "bold", family = "serif"))
-  )
+# Title deliberately omitted (G2): the LaTeX caption states what the panels, diamonds, and
+# circles are.
+fig <- (p1 | p2 | p3)
 
 ggsave(file.path(paths$figures, "48_style_space_scatter.png"), fig, width = 9.4, height = 3.4, dpi = 200)
 message("Stage 48 complete: images/48_style_space_scatter.png")
 
 # ---- similarity table fragment (booktabs + multirow + siunitx) ----------------------------
-tbl_rows <- lapply(TARGETS, function(tg) {
-  lvl |> filter(query_player_name == tg, rank <= 3) |> arrange(rank) |>
-    transmute(target = tg, neighbor = neighbor_player_name, style_dist = style_dist, level_gap = level_gap)
-}) |> bind_rows()
+tbl_rows <- neighbour_scores_df |> arrange(match(target, TARGETS), rank)
 
-fmt <- function(x) sprintf("%.3f", x)
+fmt_dist <- function(x) sprintf("%.3f", x)
+fmt_pct  <- function(x) sprintf("%.0f\\%%", x)
 
 # Numeric columns use siunitx's S type for decimal alignment; target/neighbour stay plain
 # text (l). \multirow marks the first row of each target's 3-row block.
 tex <- c(
-  "\\begin{tabular}{l l S[table-format=1.3] S[table-format=1.3]}",
+  "\\begin{tabular}{l l S[table-format=1.3] r}",
   "\\toprule",
-  "Target & Similar player & {Style distance} & {Level gap} \\\\",
+  "Target & Similar player & {Style distance} & Similarity score \\\\",
   "\\midrule"
 )
 for (tg in TARGETS) {
@@ -169,7 +205,7 @@ for (tg in TARGETS) {
   for (i in seq_len(nrow(sub))) {
     r <- sub[i, ]
     target_cell <- if (i == 1) sprintf("\\multirow{3}{*}{%s}", tg) else ""
-    tex <- c(tex, sprintf("%s & %s & %s & %s \\\\", target_cell, r$neighbor, fmt(r$style_dist), fmt(r$level_gap)))
+    tex <- c(tex, sprintf("%s & %s & %s & %s \\\\", target_cell, r$player_name, fmt_dist(r$style_dist), fmt_pct(r$similarity_score)))
   }
   if (tg != tail(TARGETS, 1)) tex <- c(tex, "\\midrule")
 }

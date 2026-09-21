@@ -1,8 +1,11 @@
-# Stage 29 — Outlier Study on the Final Model (Stage 28, K=3, P=48, N=4586, nu≈4.902)
+# Stage 29 — Outlier Study on the Final Model (production fit: minutes-scaled, fixed
+# phi=0.5, K=3, P=48, N=4586; repointed from the constant-scale stage 28 to stage 34a in
+# revision pass 3, Execution step F, after Execution step D confirmed K*=3 unchanged)
 #
-# Extracts posterior-mean player and season effects from stage 28 CSVs via a streaming
-# Python column-range reader (avoids loading 9.6 GB into R). Computes standardised
-# residuals z[n,p] ~ t(nu)/sqrt(nu/(nu-2)) with unit variance. Produces:
+# Extracts posterior-mean player and season effects from the production fit's CSVs via a
+# streaming Python column-range reader (avoids loading multi-GB files into R). Computes
+# standardised residuals using the fit's own (observation-dependent, for a minutes-scaled
+# fit) residual scale. Produces:
 #   29_residual_feature_summary.csv   — per-feature tail statistics
 #   29_residual_worst_cells.csv       — top 200 (player-season, feature) cells by |z|
 #   29_residual_skew_triangulation.csv — feature classification
@@ -70,14 +73,17 @@ row_map       <- read_csv(file.path(paths$processed, "model_row_mapping.csv"),
 Y_raw <- read_csv(file.path(paths$processed, "Y_scaled.csv"), show_col_types = FALSE)
 Y_scaled <- as.matrix(Y_raw[, feature_names])   # N=4586 × P=48, rows = model_row order
 
-dc      <- read_csv(file.path(paths$tables, "28_diagnostics_cache.csv"),
+# Read sigma_e/nu directly from the fit's own posterior summary (always available,
+# unlike the diagnostics cache which is a separate, script-specific artifact) --
+# decoupled from B_block_b_diagnostics_28.R's cache naming/output.
+ps      <- read_csv(file.path(paths$tables, "34a_real_lowrank_a_diag_b_t_mv_k3_posterior_summary.csv"),
                     show_col_types = FALSE)
-sigma_e <- dc |>
-  filter(grepl("^sigma_e\\.", param)) |>
-  mutate(idx = as.integer(sub("sigma_e\\.(\\d+)", "\\1", param))) |>
+sigma_e <- ps |>
+  filter(grepl("^sigma_e\\[", variable)) |>
+  mutate(idx = as.integer(sub("sigma_e\\[(\\d+)\\]", "\\1", variable))) |>
   arrange(idx) |>
   pull(mean)                                   # length P=48
-nu_hat  <- dc |> filter(param == "nu") |> pull(mean)  # 4.902
+nu_hat  <- ps |> filter(variable == "nu") |> pull(mean)
 
 I <- length(unique(row_map$player_index))    # 1529
 S <- length(unique(row_map$season_index))    # 12
@@ -88,23 +94,49 @@ K <- 3L
 stopifnot(nrow(Y_scaled) == N, ncol(Y_scaled) == P, length(sigma_e) == P)
 message(sprintf("Loaded: N=%d, I=%d, S=%d, P=%d, K=%d, nu=%.4f", N, I, S, P, K, nu_hat))
 
-# ── Step 2 — Extract A_mean[I,P] and B_mean[S,P] from stage 28 CSVs ──────────
+# ── Step 2 — Extract A_mean[I,P] and B_mean[S,P] from the production fit CSVs ────
+# Repointed (revision pass 3, Execution step F) to the corrected production fit, stage
+# 34a (minutes-scaled, fixed phi=0.5), K*=3 confirmed unchanged by Execution step D.
+#
+# The column indices below used to be hardcoded to stage 28's exact CSV layout. That is
+# not safe across model files -- 34a's Stan file has a different parameter/generated-
+# quantities layout, so the same absolute offsets would silently read the wrong columns
+# with no error. Switched to header-based discovery (same pattern as
+# scripts/29b_kcompare_residuals.R) so this is correct for whichever fit MODEL_ID names.
 
-csv_files <- discover_cmdstan_csv_files("28_real_lowrank_a_diag_b_t_k3")
-message(sprintf("Using %d stage-28 CSV chains for extraction", length(csv_files)))
+MODEL_ID  <- "34a_real_lowrank_a_diag_b_t_mv_k3"
+csv_files <- discover_cmdstan_csv_files(MODEL_ID)
+message(sprintf("Using %d CSV chains for extraction (fit_id=%s)", length(csv_files), MODEL_ID))
 
-# A.i.p: cols 157022-230413 (0-indexed, verified via header probe)
+find_col_indices <- function(csv_path, param_names) {
+  con <- file(csv_path, "r"); on.exit(close(con))
+  repeat {
+    line <- readLines(con, n = 1L)
+    if (length(line) == 0L) return(setNames(rep(NA_integer_, length(param_names)), param_names))
+    if (!startsWith(line, "#")) {
+      hdr <- strsplit(line, ",")[[1]]
+      return(setNames(match(param_names, hdr) - 1L, param_names))  # 0-indexed, for extract_col_range_means
+    }
+  }
+}
+ab_bounds <- find_col_indices(csv_files[1], c("A.1.1", sprintf("A.%d.%d", I, P), "B.1.1", sprintf("B.%d.%d", S, P)))
+if (anyNA(ab_bounds)) stop("Could not locate A/B parameter columns in the CSV header of ", csv_files[1])
+a_first <- ab_bounds[["A.1.1"]]; a_last  <- ab_bounds[[sprintf("A.%d.%d", I, P)]]
+b_first <- ab_bounds[["B.1.1"]]; b_last  <- ab_bounds[[sprintf("B.%d.%d", S, P)]]
+stopifnot(a_last - a_first + 1L == I * P, b_last - b_first + 1L == S * P)
+message(sprintf("A block cols [%d..%d], B block cols [%d..%d] (discovered from header)",
+                a_first, a_last, b_first, b_last))
+
 # Stan stores matrix[I,P] column-major: block k = A[1..I, k] (k = feature index)
 message("Extracting A_mean (player effects, I×P = 73,392 values) ...")
 t0 <- proc.time()[["elapsed"]]
-A_vec  <- extract_col_range_means(csv_files, 157022L, 230413L)
+A_vec  <- extract_col_range_means(csv_files, a_first, a_last)
 A_mean <- matrix(A_vec, nrow = I, ncol = P, byrow = FALSE)  # column-major → correct
 colnames(A_mean) <- feature_names
 message(sprintf("  done in %.0f s", proc.time()[["elapsed"]] - t0))
 
-# B.j.p: cols 231038-231613 (0-indexed)
 message("Extracting B_mean (season effects, S×P = 576 values) ...")
-B_vec  <- extract_col_range_means(csv_files, 231038L, 231613L)
+B_vec  <- extract_col_range_means(csv_files, b_first, b_last)
 B_mean <- matrix(B_vec, nrow = S, ncol = P, byrow = FALSE)
 colnames(B_mean) <- feature_names
 
@@ -129,16 +161,28 @@ write_csv(data.frame(season_index = seq_len(S), B_mean, check.names = FALSE),
 message("Saved: 29_player_effect_means_k3.csv, 29_season_effect_means_k3.csv")
 
 # ── Step 3 — Standardised residuals ──────────────────────────────────────────
+# The production fit's residual scale is observation-dependent (Definition def:phi):
+# sigma_e[n,p] = sigma_e[p] * (m_ref/m_n)^0.5. A single constant scale_e per feature
+# (as the constant-sigma_e stage-28 fit used) is no longer correct here.
 
-scale_e <- sigma_e * sqrt(nu_hat / (nu_hat - 2))
 tau_99  <- qt(0.995, df = nu_hat) / sqrt(nu_hat / (nu_hat - 2))
-message(sprintf("tau_99 at nu=%.4f: %.4f", nu_hat, tau_99))  # expect ~3.135
+message(sprintf("tau_99 at nu=%.4f: %.4f", nu_hat, tau_99))
+
+PHI     <- 0.5
+minutes <- mo$metadata$minutes
+stopifnot(length(minutes) == N)
+m_ref   <- median(minutes)
+scale_factor_n <- (m_ref / minutes)^PHI
+sigma_e_np     <- outer(scale_factor_n, sigma_e)
+scale_e_np     <- sigma_e_np * sqrt(nu_hat / (nu_hat - 2))
+message(sprintf("mv family: m_ref=%.0f minutes, phi=%.2f, scale_factor range [%.3f, %.3f]",
+                m_ref, PHI, min(scale_factor_n), max(scale_factor_n)))
 
 # Vectorised: broadcast A_mean and B_mean to N rows using player/season indices
 A_n     <- A_mean[row_map$player_index, ]   # N × P
 B_n     <- B_mean[row_map$season_index, ]   # N × P
 eps_raw <- Y_scaled - A_n - B_n             # N × P raw residuals
-z_std   <- sweep(eps_raw, 2, scale_e, "/")  # N × P standardised residuals
+z_std   <- eps_raw / scale_e_np             # N × P standardised residuals (per-observation scale)
 rm(A_n, B_n)
 
 message(sprintf("Residuals: mean=%.4f, sd=%.4f, p99(|z|)=%.4f",
@@ -261,7 +305,7 @@ worst_top20 <- worst_tbl |>
   )
 
 context_lines <- c(
-  "Stage 28 (K=3, P=48, N=4586, nu=4.902) — Top 20 worst cells by |z_std|",
+  sprintf("Production fit (minutes-scaled, phi=0.5, K=3, P=48, N=4586, nu=%.3f) — Top 20 worst cells by |z_std|", nu_hat),
   sprintf("tau_99 = %.4f (nu=%.4f). z|z| > tau_99 = model's own 99th-pct threshold.", tau_99, nu_hat),
   "",
   format(worst_top20 |> select(rank, player_name, season_label, feature, z_std, context),
@@ -271,10 +315,8 @@ writeLines(context_lines, file.path(paths$notes, "29_worst_cells_context.txt"))
 message("Saved: 29_worst_cells_context.txt")
 
 # ── Step 8 — Player factor scores and rankings ────────────────────────────────
-
-ps <- read_csv(file.path(paths$tables,
-                         "28_real_lowrank_a_diag_b_t_k3_posterior_summary.csv"),
-               show_col_types = FALSE)
+# Reuses `ps` (the production fit's posterior summary) loaded at the top of the script --
+# was previously a redundant, separately-hardcoded re-read of stage 28's file specifically.
 
 la_rows <- ps |>
   filter(grepl("^Lambda_a\\[", variable)) |>
@@ -288,6 +330,18 @@ for (r in seq_len(nrow(la_rows))) L_mean[la_rows$row_i[r], la_rows$col_k[r]] <- 
 LLt      <- tcrossprod(L_mean)
 eig      <- eigen(LLt, symmetric = TRUE)
 V        <- eig$vectors[, 1:K]
+# Sign convention (Remark rem:sign, methodology.tex): anchor each PC on its
+# largest-magnitude feature loading (made positive). Previously missing here -- R's
+# eigen() returns an arbitrary, uncontrolled sign, which does not match the convention
+# already correctly applied in scripts/31_pca_with_ci.R and 49_score_credible_intervals.R.
+# Discovered 2026-09-20 by cross-checking this script's pc2_score/pc3_score against
+# 49's fixed-reference scores for the same players: PC1 happened to agree by chance,
+# PC2 and PC3 were flipped. Fixing here brings Table 8 / the style-space scatter back
+# into the same sign convention as the loading heatmap and the forest plot.
+for (k in 1:K) {
+  anchor <- which.max(abs(V[, k]))
+  if (V[anchor, k] < 0) V[, k] <- -V[, k]
+}
 var_exp  <- eig$values[1:K] / sum(eig$values[1:K])
 message(sprintf("PCA of ΛΛ': PC1=%.1f%%, PC2=%.1f%%, PC3=%.1f%%",
                 100*var_exp[1], 100*var_exp[2], 100*var_exp[3]))

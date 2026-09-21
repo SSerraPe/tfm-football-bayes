@@ -102,18 +102,10 @@ panels <- mapply(make_panel, top6_features, seq_along(top6_features),
                  SIMPLIFY = FALSE)
 
 # ── 5. Combine with patchwork: compact 3x2 grid ───────────────────────────────
-fig_combined <- wrap_plots(panels, ncol = 2, nrow = 3) +
-  plot_annotation(
-    title    = "Top 6 features by season-effect range",
-    subtitle = paste(
-      "Posterior mean season effect b̂ⱼ with 90% credible intervals.",
-      "Range = max − min of posterior mean across 12 La Liga seasons (2011/12–2022/23)."
-    ),
-    theme = theme(
-      plot.title    = element_text(face = "bold", size = 12),
-      plot.subtitle = element_text(size = 9, colour = "grey40")
-    )
-  )
+# Figure-level title/subtitle deliberately omitted (G2): the LaTeX caption states this.
+# Per-panel titles ("#rank  Feature") and subtitles (feature group) are kept -- they are
+# panel labels a reader needs to tell the six panels apart, not descriptive prose.
+fig_combined <- wrap_plots(panels, ncol = 2, nrow = 3)
 
 out_fig <- file.path(paths$figures, "36_season_top6_profiles.png")
 ggsave(out_fig, fig_combined, width = 11, height = 9, dpi = 150)

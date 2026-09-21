@@ -8,10 +8,16 @@
 #     (documented mean-rotation approximation, exactly as stage 31)
 #   * Reliable-loader count per PC (CI excludes zero)
 #
-# Selects the fit via BFA_K env var (2, 3, or 4). Maps:
-#   K=2 -> 18_real_lowrank_a_diag_b_t
-#   K=3 -> 28_real_lowrank_a_diag_b_t_k3
-#   K=4 -> 21_real_k4_t
+# Selects the fit via BFA_K env var (2, 3, or 4) and BFA_FAMILY ("constant", the default, or
+# "mv" for the minutes-scaled, fixed-phi=0.5 production family -- revision pass 3, Decision
+# 2). This script's math (PCA of Lambda_a Lambda_a') doesn't depend on the residual model at
+# all, so family only changes which fit's Lambda_a is read; no other logic differs. Maps:
+#   family=constant: K=2 -> 18_real_lowrank_a_diag_b_t
+#                    K=3 -> 28_real_lowrank_a_diag_b_t_k3
+#                    K=4 -> 21_real_k4_t
+#   family=mv:       K=2 -> 34a_real_lowrank_a_diag_b_t_mv_k2
+#                    K=3 -> 34a_real_lowrank_a_diag_b_t_mv_k3
+#                    K=4 -> not fit under this family (Decision 2); errors if requested
 #
 # Writes:
 #   outputs/tables/31b_k{K}_variance_shares.csv
@@ -33,23 +39,30 @@ suppressPackageStartupMessages({
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-K <- as.integer(Sys.getenv("BFA_K", unset = "3"))
-stopifnot(K %in% c(2L, 3L, 4L))
+K      <- as.integer(Sys.getenv("BFA_K", unset = "3"))
+FAMILY <- Sys.getenv("BFA_FAMILY", unset = "constant")
+stopifnot(K %in% c(2L, 3L, 4L), FAMILY %in% c("constant", "mv"))
 
-fit_map <- c(
+fit_map_constant <- c(
   "2" = "18_real_lowrank_a_diag_b_t",
   "3" = "28_real_lowrank_a_diag_b_t_k3",
   "4" = "21_real_k4_t"
 )
-fit_id  <- fit_map[[as.character(K)]]
+fit_map_mv <- c(
+  "2" = "34a_real_lowrank_a_diag_b_t_mv_k2",
+  "3" = "34a_real_lowrank_a_diag_b_t_mv_k3"
+)
+if (FAMILY == "mv" && !as.character(K) %in% names(fit_map_mv))
+  stop("K=", K, " has no minutes-scaled (mv) fit under Decision 2 (K=4 is not refit under ",
+       "this family -- use FAMILY=constant for K=4).")
+fit_id  <- if (FAMILY == "mv") fit_map_mv[[as.character(K)]] else fit_map_constant[[as.character(K)]]
 ps_path <- file.path(paths$tables, paste0(fit_id, "_posterior_summary.csv"))
 
 if (!file.exists(ps_path))
   stop("Posterior summary not found: ", ps_path,
-       "\n  (For K=", K, ", fit_id=", fit_id, ". ",
-       "Check that stage ", substr(fit_id, 1, 2), " has completed.)")
+       "\n  (For K=", K, ", family=", FAMILY, ", fit_id=", fit_id, ".)")
 
-message(sprintf("Stage 31b: K=%d, fit_id=%s", K, fit_id))
+message(sprintf("Stage 31b: K=%d, family=%s, fit_id=%s", K, FAMILY, fit_id))
 
 mo <- readRDS(file.path(paths$processed, "model_objects.rds"))
 feature_names <- mo$variable_names

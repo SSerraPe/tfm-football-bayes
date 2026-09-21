@@ -5,7 +5,7 @@
 # Reports: nu median/CI/ESS/Rhat; Lambda_a ESS/Rhat (all, especially LLt[1,10]);
 #          psi_a/sigma_b/sigma_e summaries; Pareto-k from existing posterior_summary;
 #          count of Rhat > 1.01.
-# Caches to outputs/tables/28_diagnostics_cache.csv.
+# Caches to outputs/tables/34a_k3_diagnostics_cache.csv.
 
 script_arg  <- grep("^--file=", commandArgs(FALSE), value = TRUE)
 script_path <- if (length(script_arg) > 0) sub("^--file=", "", script_arg[1]) else "model/scripts/B_block_b_diagnostics_28.R"
@@ -15,10 +15,14 @@ check_packages(c(required_base_packages, "posterior"))
 suppressPackageStartupMessages({ library(readr); library(dplyr); library(posterior) })
 
 py_script <- file.path(model_root, "src", "extract_stan_csv_params.py")
-SCRATCHPAD <- "/private/tmp/claude-501/-Users-sserra-Documents-01-MESIO-UPC-TFM-model/76818d40-38b9-4367-9dc1-5d60a0b70149/scratchpad"
+# Was hardcoded to a prior session's scratchpad dir (no longer exists on disk); switched
+# to tempdir() to match the pattern used by the other extraction scripts (e.g. stage 40).
+SCRATCHPAD <- file.path(tempdir(), "block_b_diagnostics_extract")
 dir.create(SCRATCHPAD, recursive = TRUE, showWarnings = FALSE)
 
-MODEL_ID <- "28_real_lowrank_a_diag_b_t_k3"
+# Repointed to the corrected production fit (Execution step F): stage 34a, minutes-scaled,
+# fixed phi=0.5, K=3 -- Execution step D confirmed K*=3 unchanged under this family.
+MODEL_ID <- "34a_real_lowrank_a_diag_b_t_mv_k3"
 csv_files <- discover_cmdstan_csv_files(MODEL_ID)
 if (length(csv_files) == 0) stop("No CSV files found for ", MODEL_ID)
 message("Found ", length(csv_files), " chain CSVs for ", MODEL_ID)
@@ -144,23 +148,66 @@ message(sprintf("  Worst ESS: %s (ESS=%.0f, Rhat=%.3f)",
 message(sprintf("  Worst Rhat: %s (ESS=%.0f, Rhat=%.3f)",
                 worst_rht$param, worst_rht$ess_bulk, worst_rht$rhat))
 
-# LLt.1.10 (= Lambda_a[1,1] × Lambda_a[10,1]; upper tri zeros don't contribute with K>=3 since Lambda_a[1,2]=Lambda_a[1,3]=0)
-la11  <- draws_df[["Lambda_a.1.1"]]
-la101 <- draws_df[["Lambda_a.10.1"]]
-llt_1_10 <- la11 * la101
-llt_arr  <- make_array(
-  data.frame(.chain = draws_df[[".chain"]], .iteration = draws_df[[".iteration"]], v = llt_1_10),
-  "v", n_iter, n_chains
-)
-llt_ess  <- ess_bulk(llt_arr)
-llt_rhat <- rhat(llt_arr)
-message(sprintf("\n  LLt[1,10] = Lambda_a[1,1] × Lambda_a[10,1]"))
-message(sprintf("  mean = %.4f  ESS = %.0f  Rhat = %.3f", mean(llt_1_10), llt_ess, llt_rhat))
-message(sprintf("  Threshold: ESS > 200 AND Rhat < 1.01"))
-verdict_s <- if (llt_ess > 200 && llt_rhat < 1.01) "PASS" else
-             if (llt_ess > 200) "BORDERLINE (Rhat still > 1.01)" else
-             sprintf("FAIL (ESS=%.0f < 200)", llt_ess)
-message(sprintf("  Task S verdict at K=3: %s", verdict_s))
+# ── Item 1.1: full Lambda_a Lambda_a' convergence summary ────────────────────
+# Replaces the single-cell LLt[1,10] bellwether with a summary over the FULL,
+# rotation-invariant common-variance matrix C = Lambda_a %*% t(Lambda_a): all
+# P*(P+1)/2 unique entries (P diagonal + P(P-1)/2 off-diagonal), computed draw-by-draw,
+# plus the K eigenvalues d_1 >= ... >= d_K that Criterion A and the variance-share table
+# actually depend on. Raw Lambda_a mixes less cleanly under the LT-PD identification
+# constraint (Remark rem:ltpd_notinterp); this checks the object that is actually of
+# substantive interest, in full, rather than by example.
+
+lambda_cols        <- lambda_names
+lambda_draws_by_row <- as.matrix(draws_df[, lambda_cols, drop = FALSE])
+storage.mode(lambda_draws_by_row) <- "double"
+n_draws_total <- nrow(lambda_draws_by_row)
+
+pair_idx <- which(upper.tri(matrix(0, P, P), diag = TRUE), arr.ind = TRUE)
+n_pairs  <- nrow(pair_idx)
+stopifnot(n_pairs == P * (P + 1) / 2)
+
+llt_mat <- matrix(NA_real_, n_draws_total, n_pairs)
+eig_mat <- matrix(NA_real_, n_draws_total, K)
+
+message("\nComputing full Lambda_a Lambda_a' (", n_pairs, " entries) and its top-", K,
+        " eigenvalues for all ", n_draws_total, " draws...")
+for (s in seq_len(n_draws_total)) {
+  L_s <- matrix(lambda_draws_by_row[s, ], P, K)
+  C_s <- tcrossprod(L_s)
+  llt_mat[s, ] <- C_s[pair_idx]
+  eig_mat[s, ] <- eigen(C_s, symmetric = TRUE, only.values = TRUE)$values[seq_len(K)]
+  if (s %% 1000 == 0) message("  draw ", s, "/", n_draws_total)
+}
+
+chain_iter_df <- data.frame(.chain = draws_df[[".chain"]], .iteration = draws_df[[".iteration"]])
+ess_rhat_of <- function(v) {
+  arr <- make_array(cbind(chain_iter_df, v = v), "v", n_iter, n_chains)
+  c(ess_bulk = ess_bulk(arr), rhat = rhat(arr))
+}
+
+llt_diag_stats <- t(vapply(seq_len(n_pairs), function(j) ess_rhat_of(llt_mat[, j]), numeric(2)))
+eig_diag_stats <- t(vapply(seq_len(K),        function(k) ess_rhat_of(eig_mat[, k]), numeric(2)))
+
+message(sprintf("\n=== Lambda_a Lambda_a' (full, %d unique entries) ===", n_pairs))
+message(sprintf("  ESS_bulk: median = %.0f  min = %.0f", median(llt_diag_stats[, "ess_bulk"]), min(llt_diag_stats[, "ess_bulk"])))
+message(sprintf("  Rhat:     max = %.4f", max(llt_diag_stats[, "rhat"])))
+message(sprintf("  N(Rhat > 1.01): %d of %d (%.1f%%) -- with %d entries, a handful above 1.01 is expected by chance",
+                sum(llt_diag_stats[, "rhat"] > 1.01), n_pairs, 100 * mean(llt_diag_stats[, "rhat"] > 1.01), n_pairs))
+
+message(sprintf("\n=== Eigenvalues d_1..d_%d of Lambda_a Lambda_a' ===", K))
+for (k in seq_len(K)) {
+  message(sprintf("  d_%d: ESS=%.0f  Rhat=%.4f", k, eig_diag_stats[k, "ess_bulk"], eig_diag_stats[k, "rhat"]))
+}
+
+# Caution (b): Rhat is unreliable for entries concentrated near zero (many off-diagonal
+# rank-3 entries near the LT-PD boundary). Report a magnitude-conditioned summary
+# alongside the unconditional one so a genuinely misleading case isn't masked -- without
+# dropping inconvenient cells from the unconditional summary above.
+llt_post_mean <- colMeans(llt_mat)
+above_floor   <- abs(llt_post_mean) > 0.05
+message(sprintf("\n  Conditional on |posterior mean| > 0.05 (%d of %d entries): max Rhat = %.4f, N(Rhat>1.01) = %d",
+                sum(above_floor), n_pairs, max(llt_diag_stats[above_floor, "rhat"]),
+                sum(llt_diag_stats[above_floor, "rhat"] > 1.01)))
 
 # Per-factor Lambda_a ESS
 for (k in 1:K) {
@@ -210,14 +257,28 @@ if (file.exists(ps_path)) {
 }
 
 # ── Save cache ────────────────────────────────────────────────────────────────
+# Full Lambda_a Lambda_a' summary: one row per unique entry, named "LLt.<p>.<q>" (p<=q)
+# so that 43_results_tables.R's family-prefix grouping ("LLt") aggregates them the same
+# way it aggregates Lambda_a/psi_a/etc. Eigenvalue rows are named "LLtEig.<k>" (own family).
 
-# Add LLt.1.10 row
-llt_row <- data.frame(param = "LLt.1.10", mean = mean(llt_1_10), sd = sd(llt_1_10),
-                      q05 = quantile(llt_1_10, 0.05), q50 = quantile(llt_1_10, 0.50),
-                      q95 = quantile(llt_1_10, 0.95), ess_bulk = llt_ess, rhat = llt_rhat,
-                      row.names = NULL)
-cache <- rbind(diag_df, llt_row)
+llt_rows <- data.frame(
+  param    = sprintf("LLt.%d.%d", pair_idx[, "row"], pair_idx[, "col"]),
+  mean     = colMeans(llt_mat), sd = apply(llt_mat, 2, sd),
+  q05      = apply(llt_mat, 2, quantile, 0.05), q50 = apply(llt_mat, 2, quantile, 0.50),
+  q95      = apply(llt_mat, 2, quantile, 0.95),
+  ess_bulk = llt_diag_stats[, "ess_bulk"], rhat = llt_diag_stats[, "rhat"],
+  row.names = NULL
+)
+eig_rows <- data.frame(
+  param    = sprintf("LLtEig.%d", seq_len(K)),
+  mean     = colMeans(eig_mat), sd = apply(eig_mat, 2, sd),
+  q05      = apply(eig_mat, 2, quantile, 0.05), q50 = apply(eig_mat, 2, quantile, 0.50),
+  q95      = apply(eig_mat, 2, quantile, 0.95),
+  ess_bulk = eig_diag_stats[, "ess_bulk"], rhat = eig_diag_stats[, "rhat"],
+  row.names = NULL
+)
+cache <- rbind(diag_df, llt_rows, eig_rows)
 
-write_csv(cache, file.path(paths$tables, "28_diagnostics_cache.csv"))
-message("\n28_diagnostics_cache.csv saved (", nrow(cache), " rows)")
+write_csv(cache, file.path(paths$tables, "34a_k3_diagnostics_cache.csv"))
+message("\n34a_k3_diagnostics_cache.csv saved (", nrow(cache), " rows)")
 message("Block B complete.")

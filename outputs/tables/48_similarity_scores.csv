@@ -1,0 +1,25 @@
+target,player_name,role,rank,style_dist,similarity_score
+L. Messi,Neymar,neighbour,1,1.8177,44.7
+L. Messi,Pedro,neighbour,2,2.1404,38.7
+L. Messi,Philippe Coutinho,neighbour,3,2.1717,38.2
+Sergio Ramos,Gerard Piqué,neighbour,1,0.1582,93.2
+Sergio Ramos,S. Umtiti,neighbour,2,0.3063,87.3
+Sergio Ramos,Javi García,neighbour,3,0.3083,87.2
+Xavi,M. Pjanić,neighbour,1,0.6473,75
+Xavi,T. Kroos,neighbour,2,1.116,61
+Xavi,Andrés Iniesta,neighbour,3,1.2289,58
+C. Stuani,Manucho Gonçalves,neighbour,1,0.5609,78
+C. Stuani,E. Boateng,neighbour,2,0.5729,77.6
+C. Stuani,G. Carrillo,neighbour,3,0.6882,73.7
+L. Messi,O. Vranješ,distant,1,8.4079,2.4
+L. Messi,Juan Iglesias,distant,2,7.8654,3.1
+L. Messi,Iván Alejo,distant,3,7.8044,3.1
+Sergio Ramos,Hélder Costa,distant,1,5.0483,10.7
+Sergio Ramos,L. Messi,distant,2,4.9348,11.2
+Sergio Ramos,Pedro Porro,distant,3,4.9508,11.1
+Xavi,A. Budimir,distant,1,6.9016,4.7
+Xavi,C. Larin,distant,2,6.7483,5
+Xavi,Y. En-Nesyri,distant,3,6.7402,5
+C. Stuani,Xavi,distant,1,6.7673,5
+C. Stuani,L. Messi,distant,2,6.6023,5.3
+C. Stuani,Andrés Iniesta,distant,3,6.0579,6.8

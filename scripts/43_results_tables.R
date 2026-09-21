@@ -21,15 +21,17 @@ suppressPackageStartupMessages({ library(readr); library(dplyr); library(tidyr) 
 
 # ── §5.1 Model diagnostics ────────────────────────────────────────────────────
 
-diag_raw <- read_csv(file.path(paths$tables, "28_diagnostics_cache.csv"), show_col_types = FALSE) |>
+diag_raw <- read_csv(file.path(paths$tables, "34a_k3_diagnostics_cache.csv"), show_col_types = FALSE) |>
   mutate(family = sub("\\..*$", "", param))
 
+# Item 1.1: "LLt" (all P*(P+1)/2 unique entries of Lambda_a Lambda_a') and "LLtEig" (the
+# K eigenvalues d_1..d_K of the same matrix) are now full families, produced by
+# B_block_b_diagnostics_28.R, and are summarised in exactly the same format as every
+# other parameter family below -- no more single-cell bellwether.
 # Exclude the LT-PD structural zeros (fixed-at-0 upper-triangular Lambda_a entries,
 # 3 of them at K=3: [1,2],[1,3],[2,3]) -- zero variance across draws makes Rhat
-# undefined (NaN) for these, not a real mixing problem. Also pull LLt.1.10 out as
-# its own bellwether row rather than an n=1 "family".
-diag <- diag_raw |> filter(family != "LLt", !is.na(rhat))
-llt_diag <- diag_raw |> filter(family == "LLt")
+# undefined (NaN) for these, not a real mixing problem.
+diag <- diag_raw |> filter(!is.na(rhat))
 
 diag_summary <- diag |>
   group_by(family) |>
@@ -46,7 +48,9 @@ write_csv(diag_summary, file.path(paths$tables, "43_diagnostics_summary.csv"))
 
 param_symbol <- c(
   Lambda_a = "$\\boldsymbol\\Lambda_a$", nu = "$\\nu$", psi_a = "$\\boldsymbol\\psi_a$",
-  sigma_b = "$\\boldsymbol\\sigma_b$", sigma_e = "$\\boldsymbol\\sigma_e$"
+  sigma_b = "$\\boldsymbol\\sigma_b$", sigma_e = "$\\boldsymbol\\sigma_e$",
+  LLt = "$\\boldsymbol\\Lambda_a\\boldsymbol\\Lambda_a^\\top$ (all entries)",
+  LLtEig = "$d_1,d_2,d_3$ (eigenvalues)"
 )
 
 diag_display <- diag_summary |>
@@ -55,16 +59,16 @@ diag_display <- diag_summary |>
     `ESS$_\\text{bulk}$: median (min)` = sprintf("%.0f (%.0f)", median_ess_bulk, min_ess_bulk),
     `Max $\\hat R$` = round(max_rhat, 3),
     `$N(\\hat R{>}1.01)$` = n_rhat_gt_1.01
-  ) |>
-  bind_rows(tibble(
-    Parameter = "$[\\boldsymbol\\Lambda_a\\boldsymbol\\Lambda_a^\\top]_{1,10}$", `$N$` = 1,
-    `ESS$_\\text{bulk}$: median (min)` = sprintf("%.0f (%.0f)", llt_diag$ess_bulk, llt_diag$ess_bulk),
-    `Max $\\hat R$` = round(llt_diag$rhat, 3),
-    `$N(\\hat R{>}1.01)$` = as.integer(llt_diag$rhat > 1.01)
-  ))
+  )
 write_latex_table(diag_display, "43_diagnostics_summary", escape = FALSE)
-message(sprintf("LLt[1,10] mixing bellwether (rotation-invariant, the goals x passes pair flagged in earlier sessions): ESS_bulk=%.0f, Rhat=%.4f -> %s",
-                llt_diag$ess_bulk, llt_diag$rhat, if (llt_diag$ess_bulk > 200 && llt_diag$rhat < 1.01) "PASS" else "borderline"))
+
+llt_summary <- diag_summary |> filter(family == "LLt")
+eig_summary <- diag_summary |> filter(family == "LLtEig")
+message(sprintf("Lambda_a Lambda_a' full-matrix summary (%d entries): median(min) ESS_bulk=%.0f(%.0f), max Rhat=%.4f, N(Rhat>1.01)=%d",
+                llt_summary$n, llt_summary$median_ess_bulk, llt_summary$min_ess_bulk,
+                llt_summary$max_rhat, llt_summary$n_rhat_gt_1.01))
+message(sprintf("Eigenvalues d_1..d_K summary: median(min) ESS_bulk=%.0f(%.0f), max Rhat=%.4f, N(Rhat>1.01)=%d",
+                eig_summary$median_ess_bulk, eig_summary$min_ess_bulk, eig_summary$max_rhat, eig_summary$n_rhat_gt_1.01))
 
 # ── §5.2 Rank-selection Criteria A/B recap (K=2,3,4) ──────────────────────────
 # NOTE (2026-09, thesis revision Phase 3): the "reliable loaders" column (the
@@ -74,6 +78,11 @@ message(sprintf("LLt[1,10] mixing bellwether (rotation-invariant, the goals x pa
 # Criterion B throughout, matching methodology.tex. Real math-mode column
 # headers replace the earlier raw-ASCII ones (K, "Last-PC share of LLt",
 # "Mean resid. > tau99", "nu_hat").
+# Item 2.3 (revision pass 3): nu_hat column dropped -- a column whose own caption
+# had to disclaim its relevance shouldn't be a column. nu_hat still matters (Criterion
+# B's tau99 threshold is each fit's own t(nu_hat)-implied value), but that's a half
+# sentence in the prose, not implied by a fourth column here. nu_hat per fit is still
+# in 29b_kcompare_summary.csv for anyone who wants it.
 
 kc_resid <- read_csv(file.path(paths$tables, "29b_kcompare_summary.csv"), show_col_types = FALSE)
 kc_var   <- read_csv(file.path(paths$tables, "31b_kcompare_variance_shares.csv"), show_col_types = FALSE)
@@ -86,8 +95,7 @@ rank_recap <- lapply(c(2, 3, 4), function(k) {
   tibble(
     `$K$` = k,
     `Last-PC share of $\\bar{\\boldsymbol\\Lambda}_a\\bar{\\boldsymbol\\Lambda}_a^\\top$` = sprintf("%.1f\\%%", 100 * v$share_LLt),
-    `Mean $\\Pr(|z|>\\tau_{99})$` = sprintf("%.2f\\%%", 100 * r$mean_frac_gt_tau99),
-    `$\\hat\\nu$` = round(r$nu_hat, 2)
+    `Mean $\\Pr(|z|>\\tau_{99})$` = sprintf("%.2f\\%%", 100 * r$mean_frac_gt_tau99)
   )
 })
 rank_recap_tbl <- bind_rows(rank_recap)
@@ -105,7 +113,8 @@ nu_34b <- get_row(file.path(paths$tables, "34b_real_lowrank_a_diag_b_t_mv_phi_k3
 phi_34b <- get_row(file.path(paths$tables, "34b_real_lowrank_a_diag_b_t_mv_phi_k3_posterior_summary.csv"), "phi")
 
 phi_tbl <- tibble(
-  Model = c("Constant $\\sigma_e$ (28)", "$\\phi=0.5$ fixed (34a)", "$\\phi$ estimated (34b)"),
+  # Item 3.2: description alone, no internal stage identifiers -- those stay in the repo.
+  Model = c("Constant $\\sigma_e$", "$\\phi=0.5$ fixed (production)", "$\\phi$ estimated"),
   `$\\nu$ (90\\% CI)` = c(
     sprintf("%.2f [%.2f, %.2f]", nu_28$mean, nu_28$q5, nu_28$q95),
     sprintf("%.2f [%.2f, %.2f]", nu_34a$mean, nu_34a$q5, nu_34a$q95),
@@ -177,7 +186,12 @@ for (pc_name in sort(unique(top_pc$pc))) {
 # convention used everywhere else in this chapter. Fixed here by flipping the retrieved
 # score's sign for PC2/PC3 and swapping which (old) direction feeds the corrected top vs.
 # bottom half of the table; PC1 needs neither, having already agreed.
-pick_pc <- function(pc_name, dir_name, names, flip_sign = FALSE) {
+# The flip_sign compensation this block used to need is gone: 29_outlier_study.R now
+# anchors PC2/PC3's sign itself (largest-magnitude loading positive, Remark rem:sign),
+# fixed 2026-09-20 at the source rather than worked around here. 29_top_players_by_pc.csv's
+# "top" direction is therefore genuinely the positive pole for every PC, matching the
+# loading heatmap and style-space scatter directly -- no relabelling needed.
+pick_pc <- function(pc_name, dir_name, names) {
   sub <- top_pc |> filter(pc == pc_name, direction == dir_name)
   score_col <- paste0(tolower(pc_name), "_score")
   out <- sub |>
@@ -185,36 +199,55 @@ pick_pc <- function(pc_name, dir_name, names, flip_sign = FALSE) {
     distinct(player_name, .keep_all = TRUE) |>
     mutate(player_name = factor(player_name, levels = names)) |>
     arrange(player_name)
-  s <- out[[score_col]] * if (flip_sign) -1 else 1
-  tibble(Player = as.character(out$player_name), Score = round(s, 2))
+  tibble(Player = as.character(out$player_name), Score = round(out[[score_col]], 2))
 }
 
-pc1_top    <- c("J. Mascherano", "Gerard Piqué", "S. Umtiti", "Raúl Albiol")
-pc1_bottom <- c("Vinícius Júnior", "Neymar", "K. Mbappé", "L. Messi")
-# Named by their CORRECTED pole (old stage-29 "top"/"bottom" is the reverse for PC2/PC3):
-pc2_positive <- c("Xavi", "Andrés Iniesta", "J. Rodríguez", "T. Kroos")               # old "bottom"
-pc2_negative <- c("C. Stuani", "A. Budimir", "S. Okazaki", "Y. En-Nesyri")            # old "top"
-pc3_positive <- c("L. Messi", "Xavi", "M. Pjanić", "Cristiano Ronaldo")               # old "bottom"
-pc3_negative <- c("Iván Alejo", "Juan Iglesias", "O. Vranješ", "Houboulang Mendes")   # old "top"
+# Re-verified against the corrected production fit (Execution step F/G), not assumed
+# stable -- the top-4/bottom-4 by magnitude changed on two of the six poles:
+#  - PC1 top: Raul Albiol is no longer in the top ~15 by magnitude; replaced by Victor
+#    Ruiz (#8 by magnitude, a recognisable Spain/Valencia/Napoli centre-back), keeping
+#    Mascherano/Pique/Umtiti (still present, reordered).
+#  - PC2 top: Kroos drops to #7 by magnitude; the new #2, L. Messi, is itself a top-4
+#    name by magnitude and clearly recognisable, so no reach further down the ranking
+#    was needed. Kept: Xavi, Iniesta, J. Rodriguez.
+# PC1 bottom, PC2 bottom, and both PC3 poles are unchanged (same four names each,
+# ranks 1-4 by magnitude, only minor internal reordering).
+pc1_top    <- c("J. Mascherano", "Gerard Piqué", "Víctor Ruíz", "S. Umtiti")
+pc1_bottom <- c("Neymar", "Vinícius Júnior", "K. Mbappé", "L. Messi")
+pc2_positive <- c("Xavi", "L. Messi", "Andrés Iniesta", "J. Rodríguez")
+pc2_negative <- c("C. Stuani", "A. Budimir", "Y. En-Nesyri", "S. Okazaki")
+pc3_positive <- c("L. Messi", "Xavi", "M. Pjanić", "Cristiano Ronaldo")
+pc3_negative <- c("Iván Alejo", "Juan Iglesias", "O. Vranješ", "Houboulang Mendes")
 
 combined <- bind_cols(
   pick_pc("PC1", "top", pc1_top),
-  pick_pc("PC2", "bottom", pc2_positive, flip_sign = TRUE),
-  pick_pc("PC3", "bottom", pc3_positive, flip_sign = TRUE),
+  pick_pc("PC2", "top", pc2_positive),
+  pick_pc("PC3", "top", pc3_positive),
   .name_repair = "unique"
 ) |> bind_rows(
   bind_cols(
     pick_pc("PC1", "bottom", pc1_bottom),
-    pick_pc("PC2", "top", pc2_negative, flip_sign = TRUE),
-    pick_pc("PC3", "top", pc3_negative, flip_sign = TRUE),
+    pick_pc("PC2", "bottom", pc2_negative),
+    pick_pc("PC3", "bottom", pc3_negative),
     .name_repair = "unique"
   )
 )
 write_csv(combined, file.path(paths$tables, "43_archetype_combined.csv"))
+# WARNING: the tracked tfm_mesio_latex_2026/tables/43_archetype_combined.tex is hand-edited
+# on top of this script's raw output -- it carries a multicolumn PC-name header, a
+# hspace-adjusted column spec, and a Top/Bottom \midrule + \multicolumn divider that
+# write_latex_table()'s plain kable() call does not produce (results.tex just \input{}s the
+# fragment directly; it does not add this formatting itself, despite what an earlier version
+# of this message claimed). Discovered 2026-09-20 when a helper path fix (latex_table_helpers.R)
+# caused this call to actually reach tfm_mesio_latex_2026/ for the first time in a while and
+# clobbered the hand formatting; player data was unaffected (identical), only the header/divider
+# were lost, and were restored from git/backup. If the underlying player rankings ever change,
+# regenerate via this script, then manually reapply the multicolumn header and Top/Bottom divider
+# -- don't just use the raw output.
 write_latex_table(combined,
   col_names = c("Player", "Score", "Player", "Score", "Player", "Score"),
   name = "43_archetype_combined")
-message("Combined archetype table written (top 4 rows = Top; bottom 4 rows = Bottom -- ",
-        "results.tex inserts the \\midrule and Top/Bottom row labels by hand).")
+message("Combined archetype table written (RAW kable output -- reapply the hand-formatted ",
+        "multicolumn header and Top/Bottom divider before using; see comment above).")
 
 message("Stage 43 complete.")

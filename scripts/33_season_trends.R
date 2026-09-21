@@ -200,11 +200,9 @@ p_group <- ggplot(group_avg,
   geom_point(size = 1.8) +
   scale_colour_manual(values = group_colours(), guide = "none") +
   facet_wrap(~group, ncol = 4, scales = "free_y") +
-  labs(
-    title    = "Group-averaged season effects, posterior mean, stage 28 K=3",
-    subtitle = "Each panel: mean posterior season effect within feature group, in Z-scaled feature units.",
-    x = "Season", y = "Mean season effect (σ, Z-scaled feature units)"
-  ) +
+  # Title/subtitle deliberately omitted (G2): the LaTeX caption and y-axis label already
+  # cover this.
+  labs(x = "Season", y = "Mean season effect (σ, Z-scaled feature units)") +
   theme_minimal(base_size = 10) +
   theme(
     axis.text.x  = element_text(angle = 45, hjust = 1, size = 7),

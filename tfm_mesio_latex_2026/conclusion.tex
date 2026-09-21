@@ -1,0 +1,47 @@
+\chapter{Conclusion}
+\label{chap:conclusion}
+
+Football clubs and analysts routinely ask which players resemble each other in style, yet
+answer that question from memory and reputation rather than from a stated, checkable definition
+of similarity. This thesis set out to replace that informal judgement with a hierarchical
+Bayesian model of player-season performance capable of recovering a small number of
+interpretable stylistic dimensions and of quantifying how similar any two players are, together
+with the uncertainty in that judgement.
+
+The evidence assembled across the preceding chapters supports that aim on its own terms.
+Exploratory analysis established that La Liga's 48 standardised performance features are
+neither redundant nor irreducibly high-dimensional: principal component analysis, factor
+analysis, and multidimensional scaling all pointed to genuine, moderate-dimensional structure,
+without settling on a single preferred representation. The additive hierarchical model
+developed afterward resolved that ambiguity by treating player style as a shared, low-rank
+component of player identity, separate from season-level drift and from residual variation
+whose heavy tails and minutes-dependence needed explicit modelling rather than being averaged
+away. The results chapter showed that this structure is not a modelling convenience: the fitted
+covariance reproduces the observed cross-feature correlations almost exactly, and three
+canonical axes, named directly from their own loadings as Defensive engagement, Technical
+orientation, and Possession retention, organise the entire outfield population into recognisable
+positional archetypes without positional labels ever entering the model.
+
+Two results connect the statistical machinery back to the practical question the thesis opened
+with. First, the same covariance structure that identifies the three axes also defines a single,
+bounded similarity score, so that how similar two players are has one consistent answer
+regardless of which pair is asked about, rather than a different ad hoc comparison each time.
+Second, the four case studies show that this score behaves the way a useful measure should: it
+separates genuinely rare profiles (Messi, whose closest match is still only $45\%$ similar) from
+tightly clustered ones (Ramos and Piqué, at $93\%$), and, in Stuani's case, it returns neighbours
+who share his style but not, by reputation, his end product.
+
+That last result is informative in its own right: a style-only measure should not be expected to
+recover output, and showing exactly where it stops is more useful than a measure that quietly
+conflates the two. It is also the most direct link to the further work identified alongside the
+results themselves, where a companion performance score, uncertainty on the similarity scores,
+and team-level effects are the natural next steps, each building on the representation
+established here rather than replacing it.
+
+Beyond its use as a scouting tool, the contribution of this thesis is methodological: it
+demonstrates that a fully Bayesian, identifiable factor model can be fit to a real, moderately
+sized sports dataset, diagnosed rigorously, and translated into quantities, canonical axes, a
+similarity score, positional archetypes, that a football analyst, not only a statistician, can
+read directly. That combination of statistical accountability and domain interpretability is
+what a purely descriptive or a purely predictive approach to player data cannot offer on its
+own.

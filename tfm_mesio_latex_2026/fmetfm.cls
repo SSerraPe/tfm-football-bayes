@@ -26,10 +26,21 @@
 \RequirePackage{hyperref}
 
 % ------------------------------------------------------------
-% MESIO template: page geometry (adopted verbatim from MESIOTFM.cls)
+% MESIO template: page geometry (adopted from MESIOTFM.cls, headsep corrected -- see G1 below)
 % ------------------------------------------------------------
+% G1 fix (revision pass 3): headsep=0mm was copied verbatim from MESIOTFM.cls, but that
+% template pairs it with a custom fancyhdr header built from absolute picture-environment
+% positioning (\put(-170,10){...}) that creates its own vertical clearance independent of
+% headsep -- confirmed by reading MESIOTFM.cls directly. This class instead uses plain
+% \pagestyle{headings} (amsbook's \ps@headings, confirmed via amscls source: ordinary
+% head-box flow, no repositioning trick), so headsep=0mm here was a literal zero-gap
+% collision between the running head and the top of the text block/floats, not a template
+% quirk to preserve. Raised to 6mm (headheight kept at 24mm) -- verified with the
+% showframe option that this clears the collision without materially changing the usable
+% text height (top margin is 18mm either way; headsep was stealing space from headheight,
+% not from the page).
 \RequirePackage[a4paper,left=20mm,top=18mm,right=20mm,bottom=18mm,%
-  includeheadfoot,headheight=24mm,headsep=0mm,footskip=15mm]{geometry}
+  includeheadfoot,headheight=24mm,headsep=6mm,footskip=15mm]{geometry}
 
 % ------------------------------------------------------------
 % MESIO template: sans-serif document + math fonts
