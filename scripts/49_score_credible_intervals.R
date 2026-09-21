@@ -36,7 +36,11 @@ check_packages(c(required_base_packages))
 
 suppressPackageStartupMessages({ library(readr); library(dplyr) })
 
-MODEL_ID <- "28_real_lowrank_a_diag_b_t_k3"
+# Repointed to the corrected production fit (revision pass 3, Execution step F): stage 34a,
+# minutes-scaled, fixed phi=0.5, K*=3 confirmed unchanged by Execution step D. No other
+# change needed -- this construction is about Lambda_a/eta_a_raw only, unaffected by the
+# residual-scale correction.
+MODEL_ID <- "34a_real_lowrank_a_diag_b_t_mv_k3"
 K <- 3L
 py_script <- file.path(model_root, "src", "extract_stan_csv_params.py")
 
@@ -48,7 +52,7 @@ scores  <- read_csv(file.path(paths$tables, "29_player_factor_scores.csv"), show
 distant <- read_csv(file.path(paths$tables, "48_distant_players.csv"), show_col_types = FALSE)
 top10   <- read_csv(file.path(paths$tables, "37_player_similarity_top10.csv"), show_col_types = FALSE)
 
-TARGETS <- c("L. Messi", "Sergio Ramos", "Xavi")
+TARGETS <- c("L. Messi", "Sergio Ramos", "Xavi", "C. Stuani")
 neighbour_names <- top10 |> filter(player_name %in% TARGETS, rank <= 3) |> pull(similar_player)
 NEEDED_PLAYERS <- unique(c(TARGETS, neighbour_names, distant$player_name))
 message("Players needed for the forest plot (", length(NEEDED_PLAYERS), "): ",

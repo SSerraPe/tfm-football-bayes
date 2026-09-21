@@ -18,13 +18,13 @@ feature_group_lookup <- function() {
     "per90_back_passes",                        "Passing volume",
     "per90_lateral_passes",                     "Passing volume",
     "per90_long_passes",                        "Passing volume",
-    "per90_smart_passes",                       "Passing volume",
     "per90_progressive_passes",                 "Passing volume",
     "per90_passes_to_final_third",              "Passing volume",
-    "per90_key_passes",                         "Passing volume",
-    "per90_through_passes",                     "Passing volume",
-    "per90_crosses",                            "Passing volume",
-    "per90_shot_assists",                       "Passing volume",
+    "per90_smart_passes",                       "Chance creation",
+    "per90_key_passes",                         "Chance creation",
+    "per90_through_passes",                     "Chance creation",
+    "per90_crosses",                            "Chance creation",
+    "per90_shot_assists",                       "Chance creation",
     "rate_successful_passes",                   "Passing quality",
     "rate_successful_progressive_passes",       "Passing quality",
     "rate_successful_crosses",                  "Passing quality",
@@ -60,20 +60,34 @@ feature_group_lookup <- function() {
 }
 
 group_order <- function() {
-  c("Attacking output", "Shooting rates", "Passing volume", "Passing quality",
-    "Progressive actions", "Defending", "Dueling", "Discipline")
+  c("Attacking output", "Shooting rates", "Passing volume", "Chance creation",
+    "Passing quality", "Progressive actions", "Defending", "Dueling", "Discipline")
 }
 
+# Palette redesigned (results §6 revision) to avoid red and blue entirely -- both hues are
+# already used by the loading heatmap's own red-blue diverging fill scale (RdBu_r-style,
+# `outputs/figures/47_loading_heatmap.R`), so a red/blue group colour used to collide visually
+# with strong positive/negative loadings. Third pass (2026-09): the second-pass palette still
+# had three different greens (Attacking output, Chance creation, Passing quality), flagged as
+# too similar to tell apart. Rebuilt around three visually distinct "families" instead: a
+# three-tier greyscale (Passing quality near-black, Defending medium grey, Discipline light
+# grey), one green (Attacking output) and one teal (Chance creation, clearly different from
+# the green and far enough from the scale's blue pole), and a purple/magenta/gold trio
+# (Passing volume, Dueling, Progressive actions). No two groups share a colour family, and
+# none is close enough to red or blue to collide with the heatmap's own diverging scale.
+# "Shooting rates" keeps a colour for completeness (feature_group_lookup() defines the name)
+# even though the current 48-feature model has zero members in it.
 group_colours <- function() {
   c(
-    "Attacking output"   = "#E63946",
-    "Shooting rates"     = "#FF6B6B",
-    "Passing volume"     = "#2196F3",
-    "Passing quality"    = "#64B5F6",
-    "Progressive actions"= "#9C27B0",
-    "Defending"          = "#4CAF50",
-    "Dueling"            = "#FF9800",
-    "Discipline"         = "#795548"
+    "Attacking output"   = "#228B22",
+    "Shooting rates"     = "#C49C94",
+    "Passing volume"     = "#7B3294",
+    "Chance creation"    = "#1B9AAA",
+    "Passing quality"    = "#1A1A1A",
+    "Progressive actions"= "#E6AB02",
+    "Defending"          = "#4D4D4D",
+    "Dueling"            = "#E7298A",
+    "Discipline"         = "#A6A6A6"
   )
 }
 

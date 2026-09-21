@@ -92,37 +92,55 @@ init_fn_phi <- function(chain_id = 1) {
   init
 }
 
+# ── Variant selection (default: both, preserves prior behaviour) ─────────────
+# BFA_MV_VARIANTS="a" / "b" / "ab" (default "ab") lets a caller fit only one
+# variant -- e.g. a K-selection refit that only needs the fixed-phi production
+# model doesn't need to also pay for the estimated-phi fit.
+variants_env <- Sys.getenv("BFA_MV_VARIANTS", unset = "ab")
+run_variant_a <- grepl("a", variants_env, ignore.case = TRUE)
+run_variant_b <- grepl("b", variants_env, ignore.case = TRUE)
+
 # ── Fit variant A: fixed phi = 0.5 ────────────────────────────────────────────
 
-fit_a_id   <- sprintf("34a_real_lowrank_a_diag_b_t_mv_k%d", rank_a)
-fit_a_path <- file.path(paths$fits, paste0(fit_a_id, "_fit.rds"))
-stan_file_a <- file.path(paths$stan, "additive_lowrank_a_diag_b_t_mv.stan")
+fit_a <- NULL
+if (run_variant_a) {
+  fit_a_id   <- sprintf("34a_real_lowrank_a_diag_b_t_mv_k%d", rank_a)
+  fit_a_path <- file.path(paths$fits, paste0(fit_a_id, "_fit.rds"))
+  stan_file_a <- file.path(paths$stan, "additive_lowrank_a_diag_b_t_mv.stan")
 
-fit_a <- fit_cmdstan_model(
-  stan_file  = stan_file_a,
-  stan_data  = stan_data_mv,
-  fit_path   = fit_a_path,
-  seed       = pipeline$seed + 340L,
-  model_id   = fit_a_id,
-  init       = init_fn_fixed
-)
-write_fit_outputs(fit_a, fit_a_id)
+  fit_a <- fit_cmdstan_model(
+    stan_file  = stan_file_a,
+    stan_data  = stan_data_mv,
+    fit_path   = fit_a_path,
+    seed       = pipeline$seed + 340L,
+    model_id   = fit_a_id,
+    init       = init_fn_fixed
+  )
+  write_fit_outputs(fit_a, fit_a_id)
+} else {
+  message("BFA_MV_VARIANTS='", variants_env, "': skipping variant A (fixed phi=0.5).")
+}
 
 # ── Fit variant B: estimated phi ───────────────────────────────────────────────
 
-fit_b_id   <- sprintf("34b_real_lowrank_a_diag_b_t_mv_phi_k%d", rank_a)
-fit_b_path <- file.path(paths$fits, paste0(fit_b_id, "_fit.rds"))
-stan_file_b <- file.path(paths$stan, "additive_lowrank_a_diag_b_t_mv_phi.stan")
+fit_b <- NULL
+if (run_variant_b) {
+  fit_b_id   <- sprintf("34b_real_lowrank_a_diag_b_t_mv_phi_k%d", rank_a)
+  fit_b_path <- file.path(paths$fits, paste0(fit_b_id, "_fit.rds"))
+  stan_file_b <- file.path(paths$stan, "additive_lowrank_a_diag_b_t_mv_phi.stan")
 
-fit_b <- fit_cmdstan_model(
-  stan_file  = stan_file_b,
-  stan_data  = stan_data_mv,
-  fit_path   = fit_b_path,
-  seed       = pipeline$seed + 341L,
-  model_id   = fit_b_id,
-  init       = init_fn_phi
-)
-write_fit_outputs(fit_b, fit_b_id)
+  fit_b <- fit_cmdstan_model(
+    stan_file  = stan_file_b,
+    stan_data  = stan_data_mv,
+    fit_path   = fit_b_path,
+    seed       = pipeline$seed + 341L,
+    model_id   = fit_b_id,
+    init       = init_fn_phi
+  )
+  write_fit_outputs(fit_b, fit_b_id)
+} else {
+  message("BFA_MV_VARIANTS='", variants_env, "': skipping variant B (estimated phi).")
+}
 
 # ── Summary: nu and phi posteriors ────────────────────────────────────────────
 

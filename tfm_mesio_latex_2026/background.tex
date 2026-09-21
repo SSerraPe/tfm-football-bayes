@@ -48,7 +48,7 @@ These two measures are not intended to exhaust the set of reasonable comparisons
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.8\textwidth]{images/scatter_distances.png}
+    \includegraphics[width=0.55\textwidth]{images/scatter_distances.png}
     \caption{Pairwise Euclidean vs. cosine dissimilarities for the player-season subset (N = 900, ~30,000 sampled pairs). The two metrics show moderate-to-strong agreement (Pearson = 0.746, Spearman = 0.774).}
     \label{fig:scatter_dist}
 \end{figure}
@@ -121,7 +121,7 @@ PCA is used as an exploratory instrument applied only to the transformed footbal
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.8\textwidth]{images/scree_pca.png}
+    \includegraphics[width=0.55\textwidth]{images/scree_pca.png}
     \caption{Scree plot of the first 30 principal components. PC1 and PC2 jointly explain approximately \(48\%\) of the variance, while the first ten components explain approximately \(79\%\). The dashed line marks the first component count reaching at least \(90\%\) cumulative explained variance (nineteen components).}
     \label{fig:scree_plot}
 \end{figure}
@@ -132,39 +132,24 @@ The exploratory results suggest that the data are structured but not trivially s
 \centering
 \caption{Largest absolute PCA loadings for the first five principal components.}
 \label{tab:pca_loadings}
-\begin{tabular}{llr}
+\small
+\begin{tabular}{lr@{\hspace{1.3em}}lr@{\hspace{1.3em}}lr}
 \toprule
-Component & Feature & Loading \\
+\multicolumn{2}{c}{PC1} & \multicolumn{2}{c}{PC2} & \multicolumn{2}{c}{PC3} \\
+\cmidrule(lr){1-2}\cmidrule(lr){3-4}\cmidrule(lr){5-6}
+dribbles          &  0.318 & head shots       & -0.298 & defensive duels    & -0.342 \\
+touch in box      &  0.251 & progressive run  &  0.295 & fouls              & -0.341 \\
+shots             &  0.244 & accelerations    &  0.279 & successful dribbles&  0.303 \\
+accelerations     &  0.229 & aerial duels     & -0.242 & loose ball duels   & -0.268 \\
+progressive run   &  0.225 & dribbles         &  0.215 & dribbles against   & -0.263 \\
 \midrule
-PC1 & \texttt{per90\_dribbles}          &  0.318 \\
-PC1 & \texttt{per90\_touch\_in\_box}    &  0.251 \\
-PC1 & \texttt{per90\_shots}             &  0.244 \\
-PC1 & \texttt{per90\_accelerations}     &  0.229 \\
-PC1 & \texttt{per90\_progressive\_run}  &  0.225 \\
-\midrule
-PC2 & \texttt{per90\_head\_shots}       & -0.298 \\
-PC2 & \texttt{per90\_progressive\_run}  &  0.295 \\
-PC2 & \texttt{per90\_accelerations}     &  0.279 \\
-PC2 & \texttt{per90\_aerial\_duels}     & -0.242 \\
-PC2 & \texttt{per90\_dribbles}          &  0.215 \\
-\midrule
-PC3 & \texttt{per90\_defensive\_duels}      & -0.342 \\
-PC3 & \texttt{per90\_fouls}                 & -0.341 \\
-PC3 & \texttt{rate\_successful\_dribbles}   &  0.303 \\
-PC3 & \texttt{per90\_loose\_ball\_duels}    & -0.268 \\
-PC3 & \texttt{per90\_dribbles\_against}     & -0.263 \\
-\midrule
-PC4 & \texttt{rate\_successful\_dribbles}       &  0.308 \\
-PC4 & \texttt{per90\_accelerations}             & -0.299 \\
-PC4 & \texttt{per90\_progressive\_run}          & -0.286 \\
-PC4 & \texttt{per90\_passes\_to\_final\_third}  &  0.228 \\
-PC4 & \texttt{per90\_through\_passes}           &  0.223 \\
-\midrule
-PC5 & \texttt{rate\_successful\_dribbles}   &  0.754 \\
-PC5 & \texttt{rate\_offensive\_duels\_won}  &  0.281 \\
-PC5 & \texttt{per90\_accelerations}         &  0.217 \\
-PC5 & \texttt{per90\_progressive\_run}      &  0.177 \\
-PC5 & \texttt{per90\_dribbles}              &  0.171 \\
+\multicolumn{2}{c}{PC4} & \multicolumn{2}{c}{PC5} & & \\
+\cmidrule(lr){1-2}\cmidrule(lr){3-4}
+successful dribbles    &  0.308 & successful dribbles  &  0.754 & & \\
+accelerations          & -0.299 & offensive duels won  &  0.281 & & \\
+progressive run        & -0.286 & accelerations        &  0.217 & & \\
+passes to final third  &  0.228 & progressive run      &  0.177 & & \\
+through passes         &  0.223 & dribbles             &  0.171 & & \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -217,7 +202,7 @@ More specifically, the root mean square residual (RMSR) summarises the average s
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.8\textwidth]{images/scree_fa.png}
+    \includegraphics[width=0.55\textwidth]{images/scree_fa.png}
     \caption{Parallel analysis scree plot for factor analysis. The observed eigenvalues are compared with the $95$th percentile of eigenvalues obtained from simulated random datasets. The vertical dashed line indicates the suggested number of retained factors, $k=11$, corresponding to the point after which the observed eigenvalues no longer exceed the simulated reference values.}
     \label{fig:parallel_analysis}
 \end{figure}
@@ -269,20 +254,24 @@ Thus, the double-centred matrix provides a closed-form route to principal coordi
 
 In the present work, CMDS was applied in particular to the cosine-based dissimilarity matrix. This matrix should be understood as an angular-based dissimilarity matrix rather than as a strict metric distance matrix. Cosine-based dissimilarity emphasizes the direction of the player profile rather than its overall norm, and when vectors are centred this directional comparison is equivalent to correlation. In this sense, two player--season observations may be regarded as similar not because they have the same absolute output, but because they exhibit a similar pattern across features. For example, two players with very different total event volumes may still be close under cosine-based dissimilarity if both display the same relative emphasis on progression, dribbling, defensive work, and duel involvement. CMDS then provides a first low-dimensional map of this pattern-based similarity structure.
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.8\textwidth]{images/cmds_cosine.png}
-    \caption{Two-dimensional CMDS embedding of the player--season observations using cosine-based dissimilarity. Points are coloured by minutes played. The absence of a clear minutes gradient suggests that the embedding is not primarily driven by playing time.}
-    \label{fig:cmds_cosine}
-\end{figure}
-
 This representation is useful for exploratory purposes. It allows one to inspect whether the player--season observations occupy a coherent geometric space, whether certain profiles appear as extremes of the representation, and whether metadata-defined subsets of the data---for instance observations from different seasons, positional groups, or usage levels---occupy comparable regions of the map. At the same time, the limitations of CMDS are clear. It yields a deterministic embedding rather than a probabilistic one, provides no direct quantification of uncertainty for player locations, and does not by itself account for repeated observations of the same player across seasons or for more structured hierarchical variation.
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.8\textwidth]{images/cmds_extreme_obs.png}
-    \caption{CMDS map with extreme observations labelled. The four groups of extremes correspond to high and low values along each displayed dimension. Dimension 1 is mainly anchored by wide attacking profiles on the positive side and centre-back profiles on the negative side, while Dimension 2 contrasts aerial or box-reference forwards with attacking full-back profiles.}
-    \label{fig:cmds_extremes}
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/cmds_cosine.png}
+        \caption{Coloured by minutes played. The absence of a clear minutes gradient suggests that the embedding is not primarily driven by playing time.}
+        \label{fig:cmds_cosine}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/cmds_extreme_obs.png}
+        \caption{Extreme observations labelled. Dimension 1 is anchored by wide attacking profiles (positive) vs.\ centre-back profiles (negative); Dimension 2 contrasts aerial/box-reference forwards with attacking full-backs.}
+        \label{fig:cmds_extremes}
+    \end{subfigure}
+    \caption{Two-dimensional CMDS embedding of the player--season observations using cosine-based dissimilarity.}
+    \label{fig:cmds_combined}
 \end{figure}
 
 The labelled extremes in \autoref{fig:cmds_extremes} help interpret the two displayed dimensions. The positive side of Dimension 1 is anchored mainly by wide attacking profiles, such as F. Orellana, Mikel Oyarzabal, Iñaki Williams, and I. Cavaleiro, whereas the negative side contains centre-back profiles, such as G. Cabral, Carlos Domínguez, David López, David Costas, and S. Savić. Dimension 2 separates aerial or penalty-box reference forwards, such as A. Véliz, S. Rondón, Hugo Duro, and Y. En-Nesyri, from attacking full-back profiles with substantial progression involvement, such as Dani Carvajal, Filipe Luís, M. Acuña, and Sergi Roberto. These labels should be interpreted descriptively: they identify the observed profiles anchoring the CMDS axes, not fixed universal football roles.  For these reasons, CMDS is best viewed here as an exploratory geometric benchmark rather than as the final model. It indicates whether the chosen dissimilarity admits a coherent low-dimensional approximation, and it provides a descriptive precursor to more structured probabilistic latent-space models, including Bayesian and hierarchical extensions \cite{oh2001bayesian,yanchenko2020hierarchical}.

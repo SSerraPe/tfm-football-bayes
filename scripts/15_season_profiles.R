@@ -63,40 +63,19 @@ save_plot <- function(p, fname, w = 12, h = 8) {
 
 # ── Load fit ──────────────────────────────────────────────────────────────────
 
-# Fit selection: prefer the t-model at K* (from stage 32 ELPD, or BFA_SIM_RANK_A),
-# then the stage-28 production fit, then the stage-10 Normal baseline.
-rank_a_env <- Sys.getenv("BFA_SIM_RANK_A", unset = "")
-chosen_k <- if (nchar(rank_a_env) > 0L) {
-  as.integer(rank_a_env)
-} else {
-  elpd_path <- file.path(paths$tables, "32_player_holdout_elpd.csv")
-  if (file.exists(elpd_path)) {
-    et <- readr::read_csv(elpd_path, show_col_types = FALSE) |>
-      dplyr::filter(!is.na(elpd_mv))
-    if (nrow(et) > 0L) et$K[which.max(et$elpd_mv)] else NA_integer_
-  } else NA_integer_
-}
-
-candidate_ids <- if (!is.na(chosen_k)) {
-  c(sprintf("28_real_lowrank_a_diag_b_t_k%d", chosen_k),
-    sprintf("34a_real_lowrank_a_diag_b_t_mv_k%d", chosen_k),
-    "28_real_lowrank_a_diag_b_t_k3",
-    "10_real_lowrank_a_diag_b")
-} else {
-  c("28_real_lowrank_a_diag_b_t_k3", "10_real_lowrank_a_diag_b")
-}
-
-csv_files <- NULL
-fit_id_used <- NULL
-for (.id in candidate_ids) {
-  found <- discover_cmdstan_csv_files(.id)
-  if (length(found) > 0L) { csv_files <- found; fit_id_used <- .id; message("Using CSVs: ", .id); break }
-}
-rm(.id)
-if (is.null(csv_files)) {
-  message("No fit available — skipping 15_season_profiles. Run stage 28 or set BFA_SIM_RANK_A.")
+# Repointed to the corrected production fit (revision pass 3, Execution step F): stage
+# 34a, minutes-scaled, fixed phi=0.5, K*=3 confirmed unchanged by Execution step D.
+# Previously a multi-candidate fallback chain that tried stage 28 (constant-scale) before
+# stage 34a even when both existed -- simplified now that there is one production fit,
+# not an evolving set of candidates to fall back across.
+MODEL_ID <- "34a_real_lowrank_a_diag_b_t_mv_k3"
+csv_files <- discover_cmdstan_csv_files(MODEL_ID)
+fit_id_used <- MODEL_ID
+if (length(csv_files) == 0L) {
+  message("No fit available for ", MODEL_ID, " — skipping 15_season_profiles.")
   quit(save = "no", status = 0)
 }
+message("Using CSVs: ", fit_id_used)
 
 # ── Extract draws (column-pass, not as_cmdstan_fit()) ────────────────────────
 # sigma_b/z_b are small (P + S*P = 48 + 576 = 624 cols), but the production K=3

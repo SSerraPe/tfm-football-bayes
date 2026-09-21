@@ -34,7 +34,13 @@ suppressPackageStartupMessages({
   library(readr); library(dplyr); library(tibble); library(tidyr); library(ggplot2)
 })
 
-MODEL_ID <- "28_real_lowrank_a_diag_b_t_k3"
+# Repointed to the corrected production fit (Execution step F): stage 34a, minutes-scaled,
+# fixed phi=0.5, K*=3 confirmed unchanged by Execution step D. The posterior-mean sigma_e
+# used below for the correlation-check denominator needs no further change: it already IS
+# sigma_e,p, the reference-exposure residual scale (Definition def:phi), since the fit's
+# posterior mean of the `sigma_e` parameter is exactly that quantity, not an average over
+# observations at varying exposure.
+MODEL_ID <- "34a_real_lowrank_a_diag_b_t_mv_k3"
 K <- 3L
 py_script <- file.path(model_root, "src", "extract_stan_csv_params.py")
 
@@ -127,22 +133,41 @@ rm(implied_corr_draws); gc()
 
 obs_corr  <- cor(Y_obs)
 idx_pairs <- which(lower.tri(obs_corr), arr.ind = TRUE)
-plot_df <- tibble(
+plot_df_k3 <- tibble(
+  model     = sprintf("K=%d (production)", K),
   feature_k = feature_names[idx_pairs[, 1]], feature_l = feature_names[idx_pairs[, 2]],
   obs_corr  = obs_corr[idx_pairs],
   pred_corr = implied_corr_mean[idx_pairs], pred_lo = implied_corr_lo[idx_pairs], pred_hi = implied_corr_hi[idx_pairs]
 )
-write_csv(plot_df, file.path(paths$tables, "40_correlation_ppc_k3.csv"))
-message(sprintf("Correlation PPC: r(obs, model-implied) = %.3f", cor(plot_df$obs_corr, plot_df$pred_corr)))
 
+# K=0 comparison panel: under the diagonal player-covariance model (no shared factors),
+# Sigma_a's off-diagonal entries are exactly zero for every posterior draw regardless of
+# any parameter values -- Sigma_b and Sigma_e are diagonal too (Sec. sec:covariance), so
+# every off-diagonal model-implied correlation is identically zero. This needs no fit and
+# no draws: it is a closed-form consequence of the K=0 model structure.
+plot_df_k0 <- tibble(
+  model     = "K=0 (diagonal)",
+  feature_k = feature_names[idx_pairs[, 1]], feature_l = feature_names[idx_pairs[, 2]],
+  obs_corr  = obs_corr[idx_pairs],
+  pred_corr = 0, pred_lo = 0, pred_hi = 0
+)
+
+plot_df <- bind_rows(plot_df_k0, plot_df_k3) |>
+  mutate(model = factor(model, levels = c(sprintf("K=0 (diagonal)"), sprintf("K=%d (production)", K))))
+write_csv(plot_df, file.path(paths$tables, "40_correlation_ppc_k3.csv"))
+message(sprintf("Correlation PPC: r(obs, model-implied) = %.3f [K=%d]; K=0 model-implied is identically zero.",
+  cor(plot_df_k3$obs_corr, plot_df_k3$pred_corr), K))
+
+# Titles/subtitles are deliberately omitted (G2): all explanatory content -- what the
+# panels are, what r is, why K=0's line is flat at zero -- lives in the LaTeX caption.
 p_corr <- ggplot(plot_df, aes(obs_corr, pred_corr)) +
   geom_errorbar(aes(ymin = pred_lo, ymax = pred_hi), alpha = 0.15, width = 0) +
   geom_point(alpha = 0.35, size = 0.8) +
   geom_abline(slope = 1, intercept = 0, colour = "firebrick", linewidth = 0.7) +
-  labs(x = "Observed sample correlation", y = "Model-implied correlation (posterior mean ± 90% CI)",
-       title = "Cross-feature correlation: observed vs. model-implied (K=3 production fit)") +
+  facet_wrap(~model, nrow = 1) +
+  labs(x = "Observed sample correlation", y = "Model-implied correlation (posterior mean ± 90% CI)") +
   theme_minimal(base_size = 11)
-ggsave(file.path(paths$figures, "40_correlation_ppc_scatter_k3.png"), p_corr, width = 7, height = 6, dpi = 150)
+ggsave(file.path(paths$figures, "40_correlation_ppc_scatter_k3.png"), p_corr, width = 10, height = 5, dpi = 150)
 message("Saved: 40_correlation_ppc_scatter_k3.png")
 
 # ── Check 2: residual distribution (uses K=3 A_mean/B_mean from stage 29) ─────
@@ -192,9 +217,9 @@ p_resid <- ggplot(resid_long, aes(residual)) +
     aes(x = x, y = y), colour = "firebrick", linewidth = 0.8
   ) +
   facet_wrap(~feature, scales = "free", ncol = 2) +
-  labs(x = "Residual  (Y - a_hat - b_hat)", y = "Density",
-       title = "Residual distributions vs Normal(0, sigma_e)  --  K=3 production fit",
-       subtitle = "Red curve: posterior-mean Normal(0, sigma_e). Note: fitted residuals use Student-t, not Normal.") +
+  # Title/subtitle deliberately omitted (G2): the LaTeX caption states what the red curve
+  # is and that the fitted model is Student-t, not Normal.
+  labs(x = "Residual  (Y - a_hat - b_hat)", y = "Density") +
   theme_minimal(base_size = 11)
 ggsave(file.path(paths$figures, "40_residual_distribution_check_k3.png"), p_resid, width = 8, height = 10, dpi = 150)
 message("Saved: 40_residual_distribution_check_k3.png")

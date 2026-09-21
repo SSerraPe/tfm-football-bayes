@@ -6,15 +6,26 @@
 #   * loads sigma_e[p] and nu_hat from the fit's posterior summary
 #   * computes standardised residuals, per-feature tail stats, verdict counts
 #
-# Selects the fit via BFA_K env var (2, 3, or 4). Maps:
-#   K=2 -> 18_real_lowrank_a_diag_b_t
-#   K=3 -> 28_real_lowrank_a_diag_b_t_k3
-#   K=4 -> 21_real_k4_t
+# Selects the fit via BFA_K env var (2, 3, or 4) and BFA_FAMILY ("constant", the default,
+# or "mv" for the minutes-scaled, fixed-phi=0.5 production family -- revision pass 3,
+# Decision 2). Maps:
+#   family=constant: K=2 -> 18_real_lowrank_a_diag_b_t
+#                    K=3 -> 28_real_lowrank_a_diag_b_t_k3
+#                    K=4 -> 21_real_k4_t
+#   family=mv:       K=2 -> 34a_real_lowrank_a_diag_b_t_mv_k2
+#                    K=3 -> 34a_real_lowrank_a_diag_b_t_mv_k3
+#                    K=4 -> not fit under this family (Decision 2); errors if requested
+#
+# For family=mv, standardised residuals use the observation-dependent residual scale
+# sigma_e[p] * (m_ref/m_n)^0.5 (Definition def:phi / Corollary cor:t_variance_mv in
+# methodology.tex), not a single constant sigma_e[p] per feature.
 #
 # Writes:
 #   outputs/tables/29b_k{K}_residual_feature_summary.csv
 #   outputs/tables/29b_k{K}_residual_skew_triangulation.csv
-#   outputs/tables/29b_kcompare_summary.csv (appended across K)
+#   outputs/tables/29b_kcompare_summary.csv (appended across K; family=mv rows replace the
+#     same K's family=constant row if both are run -- run family=constant K=4 last if you
+#     want to keep it, since Decision 2 does not refit K=4 under family=mv)
 
 script_arg  <- grep("^--file=", commandArgs(FALSE), value = TRUE)
 script_path <- if (length(script_arg) > 0) sub("^--file=", "", script_arg[1]) else
@@ -28,21 +39,29 @@ suppressPackageStartupMessages({
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-K <- as.integer(Sys.getenv("BFA_K", unset = "3"))
-stopifnot(K %in% c(2L, 3L, 4L))
+K      <- as.integer(Sys.getenv("BFA_K", unset = "3"))
+FAMILY <- Sys.getenv("BFA_FAMILY", unset = "constant")
+stopifnot(K %in% c(2L, 3L, 4L), FAMILY %in% c("constant", "mv"))
 
-fit_map <- c(
+fit_map_constant <- c(
   "2" = "18_real_lowrank_a_diag_b_t",
   "3" = "28_real_lowrank_a_diag_b_t_k3",
   "4" = "21_real_k4_t"
 )
-fit_id  <- fit_map[[as.character(K)]]
+fit_map_mv <- c(
+  "2" = "34a_real_lowrank_a_diag_b_t_mv_k2",
+  "3" = "34a_real_lowrank_a_diag_b_t_mv_k3"
+)
+if (FAMILY == "mv" && !as.character(K) %in% names(fit_map_mv))
+  stop("K=", K, " has no minutes-scaled (mv) fit under Decision 2 (K=4 is not refit under ",
+       "this family -- use FAMILY=constant for K=4).")
+fit_id  <- if (FAMILY == "mv") fit_map_mv[[as.character(K)]] else fit_map_constant[[as.character(K)]]
 ps_path <- file.path(paths$tables, paste0(fit_id, "_posterior_summary.csv"))
 
 if (!file.exists(ps_path))
   stop("Posterior summary not found: ", ps_path)
 
-message(sprintf("Stage 29b: K=%d, fit_id=%s", K, fit_id))
+message(sprintf("Stage 29b: K=%d, family=%s, fit_id=%s", K, FAMILY, fit_id))
 
 # ── Load model objects ────────────────────────────────────────────────────────
 
@@ -171,16 +190,33 @@ message(sprintf("A_mean range: [%.3f, %.3f]; B_mean range: [%.3f, %.3f]",
                 min(A_mean), max(A_mean), min(B_mean), max(B_mean)))
 
 # ── Standardised residuals ────────────────────────────────────────────────────
+# For family="mv", the residual scale is observation-dependent (Definition def:phi):
+# sigma_e[n,p] = sigma_e[p] * (m_ref/m_n)^phi, phi fixed at 0.5 (Decision 1). Criterion B's
+# threshold tau_99 itself is unitless (depends only on nu_hat) and is unaffected.
 
-scale_e <- sigma_e * sqrt(nu_hat / (nu_hat - 2))
 tau_99  <- qt(0.995, df = nu_hat) / sqrt(nu_hat / (nu_hat - 2))
 message(sprintf("tau_99 at nu=%.4f: %.4f", nu_hat, tau_99))
 
 A_n     <- A_mean[row_map$player_index, ]
 B_n     <- B_mean[row_map$season_index, ]
 eps_raw <- Y_scaled - A_n - B_n
-z_std   <- sweep(eps_raw, 2, scale_e, "/")
 rm(A_n, B_n)
+
+if (FAMILY == "mv") {
+  PHI <- 0.5
+  minutes <- mo$metadata$minutes
+  stopifnot(length(minutes) == N)
+  m_ref  <- median(minutes)
+  scale_factor_n <- (m_ref / minutes)^PHI               # length N
+  message(sprintf("mv family: m_ref=%.0f minutes, phi=%.2f, scale_factor range [%.3f, %.3f]",
+                  m_ref, PHI, min(scale_factor_n), max(scale_factor_n)))
+  sigma_e_np <- outer(scale_factor_n, sigma_e)          # N x P, sigma_e[n,p] before the t-scale factor
+  scale_e_np <- sigma_e_np * sqrt(nu_hat / (nu_hat - 2))
+  z_std <- eps_raw / scale_e_np
+} else {
+  scale_e <- sigma_e * sqrt(nu_hat / (nu_hat - 2))
+  z_std   <- sweep(eps_raw, 2, scale_e, "/")
+}
 
 message(sprintf("Residuals: mean=%.4f, sd=%.4f, p99(|z|)=%.4f",
                 mean(z_std), sd(z_std), quantile(abs(z_std), 0.99)))
@@ -251,6 +287,7 @@ message(sprintf("Saved: 29b_k%d_residual_skew_triangulation.csv", K))
 
 summary_row <- tibble(
   K                             = K,
+  family                        = FAMILY,
   fit_id                        = fit_id,
   nu_hat                        = nu_hat,
   tau_99                        = tau_99,

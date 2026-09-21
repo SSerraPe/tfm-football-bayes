@@ -21,7 +21,9 @@ source("src/loading_visualization.R")
 
 # ── 1. Load posterior summary ─────────────────────────────────────────────────
 
-ps_path <- file.path(paths$tables, "28_real_lowrank_a_diag_b_t_k3_posterior_summary.csv")
+# Repointed to the corrected production fit (revision pass 3, Execution step F): stage
+# 34a, minutes-scaled, fixed phi=0.5, K*=3 confirmed unchanged by Execution step D.
+ps_path <- file.path(paths$tables, "34a_real_lowrank_a_diag_b_t_mv_k3_posterior_summary.csv")
 if (!file.exists(ps_path)) stop("Posterior summary not found: ", ps_path)
 ps <- read_csv(ps_path, show_col_types = FALSE)
 

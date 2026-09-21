@@ -1,181 +1,191 @@
 query_player_name,query_archetype,neighbor_player_name,rank,style_dist,level_gap
-Sergio Ramos,Centre backs,Javi García,1,0.1611,1.1255494326508588
-Sergio Ramos,Centre backs,Gerard Piqué,2,0.1641,0.7718346804302151
-Sergio Ramos,Centre backs,S. Umtiti,3,0.3157,1.3298856936982661
-Sergio Ramos,Centre backs,A. Christensen,4,0.3818,0.9604908759893807
-Sergio Ramos,Centre backs,A. Rüdiger,5,0.4236,1.1034028630102732
-Sergio Ramos,Centre backs,R. Araújo,6,0.4383,0.4863931300483108
-Sergio Ramos,Centre backs,T. Vermaelen,7,0.5131,0.9641283659639632
-Sergio Ramos,Centre backs,Diego Carlos,8,0.562,0.8741140238572567
-Sergio Ramos,Centre backs,J. Mathieu,9,0.5628,0.9917668258696208
-Sergio Ramos,Centre backs,A. Mandi,10,0.618,0.9852893770265347
-K. Benzema,Attacking midfielders,Cristiano Ronaldo,1,0.5622,1.187608677107224
-K. Benzema,Attacking midfielders,S. Jovetić,2,0.774,0.9118558082041803
-K. Benzema,Attacking midfielders,L. Suárez,3,0.8265,0.4851638697854664
-K. Benzema,Attacking midfielders,Rubén Castro,4,1.1861,0.8851602125805769
-K. Benzema,Attacking midfielders,K. Mbappé,5,1.1929,0.1788055618989476
-K. Benzema,Attacking midfielders,Paulinho,6,1.3534,1.994046829556496
-K. Benzema,Attacking midfielders,A. Griezmann,7,1.3569,1.181804125718727
-K. Benzema,Attacking midfielders,L. Vietto,8,1.4013,1.7989774110595957
-K. Benzema,Attacking midfielders,Iago Aspas,9,1.405,1.0505184229142472
-K. Benzema,Attacking midfielders,K. Boateng,10,1.4519,1.6360039704189904
-Cristiano Ronaldo,Forwards,K. Benzema,1,0.5622,1.187608677107224
-Cristiano Ronaldo,Forwards,L. Suárez,2,1.0078,0.7683005063106312
-Cristiano Ronaldo,Forwards,S. Jovetić,3,1.089,2.0536073744335606
-Cristiano Ronaldo,Forwards,Rubén Castro,4,1.2874,2.033115894005987
-Cristiano Ronaldo,Forwards,K. Mbappé,5,1.5133,1.2552214197453957
-Cristiano Ronaldo,Forwards,W. Ben Yedder,6,1.6511,1.7685937510962702
-Cristiano Ronaldo,Forwards,P. Aubameyang,7,1.6701,1.7284784727938045
-Cristiano Ronaldo,Forwards,I. Uche,8,1.6721,2.5905158665000583
-Cristiano Ronaldo,Forwards,L. Jović,9,1.725,2.107158771171041
-Cristiano Ronaldo,Forwards,L. Vietto,10,1.7308,2.9783377956082635
-Gerard Piqué,Centre backs,Sergio Ramos,1,0.1641,0.7718346804302151
-Gerard Piqué,Centre backs,S. Umtiti,2,0.2878,0.5660996429806698
-Gerard Piqué,Centre backs,Javi García,3,0.3013,0.39508436872097896
-Gerard Piqué,Centre backs,A. Christensen,4,0.5177,0.27206280525035026
-Gerard Piqué,Centre backs,A. Rüdiger,5,0.5207,0.334413755187172
-Gerard Piqué,Centre backs,T. Vermaelen,6,0.5491,0.2731210658725842
-Gerard Piqué,Centre backs,R. Araújo,7,0.5655,0.34146397513131305
-Gerard Piqué,Centre backs,Diego Carlos,8,0.5701,0.13062324134084455
-Gerard Piqué,Centre backs,J. Mathieu,9,0.5867,0.324475297555935
-Gerard Piqué,Centre backs,A. Mandi,10,0.6426,0.21849086868411335
-Sergio Busquets,Defensive midfielders,Damián Rodríguez,1,0.4545,0.4372994070102545
-Sergio Busquets,Defensive midfielders,Marc Casadó,2,0.4756,0.4208363931181031
-Sergio Busquets,Defensive midfielders,Z. Kuzmanović,3,0.5695,0.42272790340879457
-Sergio Busquets,Defensive midfielders,M. Díaz,4,0.5938,0.25722752557885237
-Sergio Busquets,Defensive midfielders,Dean Huijsen,5,0.5943,0.4467421029546739
-Sergio Busquets,Defensive midfielders,Sergio Marcos,6,0.6776,0.059075944971829046
-Sergio Busquets,Defensive midfielders,M. Perrone,7,0.7065,0.21717648325846245
-Sergio Busquets,Defensive midfielders,D. Blind,8,0.7224,0.04963522804314572
-Sergio Busquets,Defensive midfielders,Kirian Rodríguez,9,0.7637,0.8382294515383815
-Sergio Busquets,Defensive midfielders,J. Mascherano,10,0.7653,0.05790178071712032
-Xavi,Midfielders,M. Pjanić,1,0.6463,0.3206767075998061
-Xavi,Midfielders,T. Kroos,2,1.1949,0.4379938684049361
-Xavi,Midfielders,Andrés Iniesta,3,1.2886,0.6197615649017025
-Xavi,Midfielders,T. Gayoso Roberto,4,1.6285,0.4311241790586647
-Xavi,Midfielders,Arthur,5,1.6288,0.16078773770829385
-Xavi,Midfielders,F. de Jong,6,1.7192,0.31161501926961876
-Xavi,Midfielders,İ. Gündoğan,7,1.8195,0.9313016038857632
-Xavi,Midfielders,S. Nasri,8,1.823,0.7816272027376542
-Xavi,Midfielders,L. Modrić,9,1.8629,0.3089717793732716
-Xavi,Midfielders,Riqui Puig,10,1.9593,0.803957579942128
-L. Messi,Attacking midfielders,Neymar,1,1.7356,1.9875664144210736
-L. Messi,Attacking midfielders,Pedro,2,2.014,2.7571319473074496
-L. Messi,Attacking midfielders,Philippe Coutinho,3,2.1154,3.1354889113211284
-L. Messi,Attacking midfielders,J. Rodríguez,4,2.1546,3.435476596626453
-L. Messi,Attacking midfielders,Jonathan Viera,5,2.1811,3.8395477353211627
-L. Messi,Attacking midfielders,S. Nasri,6,2.2567,4.243957993846849
-L. Messi,Attacking midfielders,Isco,7,2.4473,4.015617560492568
-L. Messi,Attacking midfielders,Riqui Puig,8,2.495,4.214393388791447
-L. Messi,Attacking midfielders,İ. Gündoğan,9,2.5186,4.104397200034815
-L. Messi,Attacking midfielders,K. Mbappé,10,2.5557,1.2769580962482954
-Koke,Midfielders,Dani Parejo,1,0.2099,0.7589530348328025
-Koke,Midfielders,Hugo Sotelo,2,0.2615,0.3309249754547234
-Koke,Midfielders,Sergi Roberto,3,0.3204,0.07677105776610184
-Koke,Midfielders,Álex López,4,0.3983,0.38073900450985987
-Koke,Midfielders,Aleix García,5,0.4566,0.0466519200967848
-Koke,Midfielders,S. Amrabat,6,0.4568,0.3835741986348132
-Koke,Midfielders,Marc Casadó,7,0.4943,0.09870769313247399
-Koke,Midfielders,Kirian Rodríguez,8,0.5078,0.3204802020944622
-Koke,Midfielders,H. Herrera,9,0.5103,0.4373027940528029
-Koke,Midfielders,Adriano,10,0.5346,0.4279626565225687
-A. Griezmann,Attacking midfielders,G. Bale,1,0.5023,0.39876761629842317
-A. Griezmann,Attacking midfielders,Alberto Bueno,2,0.5023,1.0151146564933256
-A. Griezmann,Attacking midfielders,Iago Aspas,3,0.5655,0.23423169122951928
-A. Griezmann,Attacking midfielders,Malcom,4,0.6089,1.2116481765549691
-A. Griezmann,Attacking midfielders,Xabi Prieto,5,0.6265,2.0762608025840312
-A. Griezmann,Attacking midfielders,João Félix,6,0.6556,0.28537516909464977
-A. Griezmann,Attacking midfielders,K. Boateng,7,0.6956,0.5043027154852406
-A. Griezmann,Attacking midfielders,L. Vietto,8,0.7461,0.6518470414756796
-A. Griezmann,Attacking midfielders,Gerard Moreno,9,0.8269,0.48440139579981
-A. Griezmann,Attacking midfielders,Fermín López,10,0.8327,0.3259661601192409
-Iago Aspas,Attacking midfielders,G. Bale,1,0.2417,0.2635584099584661
-Iago Aspas,Attacking midfielders,João Félix,2,0.3617,0.22042397931224517
-Iago Aspas,Attacking midfielders,Malcom,3,0.3672,1.3065262040538166
-Iago Aspas,Attacking midfielders,Ansu Fati,4,0.3808,0.21895563134749169
-Iago Aspas,Attacking midfielders,C. Vela,5,0.5094,1.0886084824445403
-Iago Aspas,Attacking midfielders,A. Griezmann,6,0.5655,0.23423169122951928
-Iago Aspas,Attacking midfielders,L. Vietto,7,0.6028,0.7496191852768775
-Iago Aspas,Attacking midfielders,Fermín López,8,0.6494,0.49176163738703965
-Iago Aspas,Attacking midfielders,Francisco Trincão,9,0.6786,1.3540862917900447
-Iago Aspas,Attacking midfielders,M. Depay,10,0.6885,0.3046916365950782
-Saúl Ñíguez,Defensive midfielders,Gerard Gumbau,1,0.142,0.6728089103846254
-Saúl Ñíguez,Defensive midfielders,N. Petrović,2,0.1546,0.448292016303061
-Saúl Ñíguez,Defensive midfielders,Carlos Dotor,3,0.1728,0.5578191563918549
-Saúl Ñíguez,Defensive midfielders,Nacho Monreal,4,0.2439,0.6029801112736486
-Saúl Ñíguez,Defensive midfielders,Danilo Barbosa,5,0.2453,0.4666182379852382
-Saúl Ñíguez,Defensive midfielders,B. Mendy,6,0.2631,0.5694673729587125
-Saúl Ñíguez,Defensive midfielders,Y. Herrera,7,0.2849,0.19540155404777396
-Saúl Ñíguez,Defensive midfielders,Monchu,8,0.3116,0.33583016658348935
-Saúl Ñíguez,Defensive midfielders,Álex Fernández,9,0.3367,0.056199379309637636
-Saúl Ñíguez,Defensive midfielders,G. Escalante,10,0.3412,0.19709665846538033
-L. Suárez,Forwards,S. Jovetić,1,0.2496,1.3970051810539237
-L. Suárez,Forwards,Rubén Castro,2,0.6302,1.3702798637289006
-L. Suárez,Forwards,L. Vietto,3,0.7595,2.2711602220518845
-L. Suárez,Forwards,W. Ben Yedder,4,0.7662,1.0795852051556716
-L. Suárez,Forwards,I. Uche,5,0.8169,1.9211986712795615
-L. Suárez,Forwards,G. Rossi,6,0.8196,1.9248561999016012
-L. Suárez,Forwards,K. Benzema,7,0.8265,0.4851638697854664
-L. Suárez,Forwards,K. Boateng,8,0.8535,2.1097574462596516
-L. Suárez,Forwards,L. Rémy,9,0.9064,1.5951405805757741
-L. Suárez,Forwards,M. Depay,10,0.9482,1.2834560360432603
-L. Modrić,Midfielders,Pedri,1,0.2562,0.6395319697554313
-L. Modrić,Midfielders,F. de Jong,2,0.4609,0.07528673538477638
-L. Modrić,Midfielders,T. Gayoso Roberto,3,0.552,0.12853696901599082
-L. Modrić,Midfielders,Riqui Puig,4,0.5646,0.9301016433841748
-L. Modrić,Midfielders,M. Kovačić,5,0.5691,0.28085195268183716
-L. Modrić,Midfielders,Andrés Iniesta,6,0.6361,0.3459255267953921
-L. Modrić,Midfielders,S. Nasri,7,0.6838,0.9019566672792123
-L. Modrić,Midfielders,Arthur,8,0.6869,0.2051094112606286
-L. Modrić,Midfielders,É. Banega,9,0.6869,0.2503163403483344
-L. Modrić,Midfielders,Dani Ceballos,10,0.7439,0.39523781917749234
-Neymar,Attacking midfielders,Jonathan Viera,1,1.2124,1.852501799496105
-Neymar,Attacking midfielders,E. Hazard,2,1.2771,1.7114632414290114
-Neymar,Attacking midfielders,Pedro,3,1.3126,0.7818745499350384
-Neymar,Attacking midfielders,Philippe Coutinho,4,1.3408,1.1479511556968334
-Neymar,Attacking midfielders,Lamine Yamal,5,1.3819,1.1588621993386892
-Neymar,Attacking midfielders,O. Dembélé,6,1.3852,1.525635969390588
-Neymar,Attacking midfielders,Isco,7,1.3997,2.0282099450004885
-Neymar,Attacking midfielders,J. Rodríguez,8,1.4539,1.5187211503607474
-Neymar,Attacking midfielders,Gerard Deulofeu,9,1.6824,1.5806922919853141
-Neymar,Attacking midfielders,M. Ødegaard,10,1.6872,2.353688345722024
-J. Giménez,Centre backs,Bakary Koné,1,0.0595,0.23434404855986282
-J. Giménez,Centre backs,S. Papastathopoulos,2,0.08,0.2186691957040643
-J. Giménez,Centre backs,A. Rami,3,0.1364,0.12334649855904085
-J. Giménez,Centre backs,Daniel Carriço,4,0.1467,0.22642126292991993
-J. Giménez,Centre backs,Deivid,5,0.1632,0.14316677178210988
-J. Giménez,Centre backs,M. Diakhaby,6,0.1644,0.4434506118291905
-J. Giménez,Centre backs,Gonzalo Verdú,7,0.1651,0.2516218993058479
-J. Giménez,Centre backs,M. Musacchio,8,0.1668,0.38907053999677205
-J. Giménez,Centre backs,Lluis López,9,0.1708,0.14331278404518305
-J. Giménez,Centre backs,Ó. Duarte,10,0.1804,0.11555313525443889
-Iñaki Williams,Forwards,Ferrán Jutglà,1,0.1956,0.24381183941181964
-Iñaki Williams,Forwards,S. Becker,2,0.3134,0.08363218747120849
-Iñaki Williams,Forwards,Sandro Ramírez,3,0.3273,0.2040158095383573
-Iñaki Williams,Forwards,W. Swedberg,4,0.3567,0.26959387782163413
-Iñaki Williams,Forwards,C. Hernández,5,0.3631,0.3434067408020507
-Iñaki Williams,Forwards,E. Ávila,6,0.3652,0.3550896669915899
-Iñaki Williams,Forwards,A. Peñaranda,7,0.3681,0.49326141050210925
-Iñaki Williams,Forwards,Portu,8,0.3698,0.41922065897729444
-Iñaki Williams,Forwards,I. Ezekiel,9,0.3753,0.19221066215097513
-Iñaki Williams,Forwards,Ayoze Pérez,10,0.3782,0.4122846655786467
-L. Suárez,Attacking midfielders,Eraso,1,0.2082,0.6366405210678127
-L. Suárez,Attacking midfielders,D. van de Beek,2,0.2288,0.4961800670376175
-L. Suárez,Attacking midfielders,L. Romero,3,0.326,0.28905300010092894
-L. Suárez,Attacking midfielders,Miguel Baeza,4,0.3335,0.7164969038246553
-L. Suárez,Attacking midfielders,Jon Guridi,5,0.365,0.8087246393161753
-L. Suárez,Attacking midfielders,A. Sánchez,6,0.3743,0.17914636759970168
-L. Suárez,Attacking midfielders,Peque Fernández,7,0.4351,0.5014352091032952
-L. Suárez,Attacking midfielders,Coro,8,0.4446,0.37807026913488495
-L. Suárez,Attacking midfielders,Chuki,9,0.4454,0.6077034410166279
-L. Suárez,Attacking midfielders,D. Rolán,10,0.4655,0.530741159614065
-L. Suárez,Forwards,Sergi Guardiola,1,0.1358,0.5881120192890302
-L. Suárez,Forwards,N. Ghilas,2,0.1498,0.2816358902843992
-L. Suárez,Forwards,Iván Romero,3,0.1839,0.38296485810887604
-L. Suárez,Forwards,Fábio Silva,4,0.1898,0.4303149954331909
-L. Suárez,Forwards,F. Smolov,5,0.2073,0.3752133425684474
-L. Suárez,Forwards,Matheus Cunha,6,0.2762,0.5293967024137303
-L. Suárez,Forwards,Alejandro Cantero,7,0.3037,0.4597810748095124
-L. Suárez,Forwards,Isaac Romero,8,0.3223,0.1607680961476652
-L. Suárez,Forwards,L. Beltrán,9,0.3426,0.44972964697985085
-L. Suárez,Forwards,Dyego Sousa,10,0.3536,0.41896789318149064
+Sergio Ramos,Centre backs,Gerard Piqué,1,0.1582,0.7793374097705988
+Sergio Ramos,Centre backs,S. Umtiti,2,0.3063,1.3087487480668054
+Sergio Ramos,Centre backs,Javi García,3,0.3083,1.0149077006491989
+Sergio Ramos,Centre backs,R. Araújo,4,0.4194,0.5402958955575888
+Sergio Ramos,Centre backs,A. Rüdiger,5,0.4791,1.0835393275686618
+Sergio Ramos,Centre backs,A. Christensen,6,0.4823,0.8778821822500424
+Sergio Ramos,Centre backs,T. Vermaelen,7,0.5242,0.9401779706814615
+Sergio Ramos,Centre backs,J. Mathieu,8,0.5609,1.0075473257220071
+Sergio Ramos,Centre backs,A. Mandi,9,0.5817,1.04038001340179
+Sergio Ramos,Centre backs,Diego Carlos,10,0.5832,0.8954318671864026
+K. Benzema,Attacking midfielders,Cristiano Ronaldo,1,0.6512,1.4040837129662727
+K. Benzema,Attacking midfielders,L. Suárez,2,0.8292,0.4907371061001184
+K. Benzema,Attacking midfielders,S. Jovetić,3,0.8796,1.0629649396821588
+K. Benzema,Attacking midfielders,K. Mbappé,4,1.1849,0.27441138700865086
+K. Benzema,Attacking midfielders,Rubén Castro,5,1.2151,0.9066853679274598
+K. Benzema,Attacking midfielders,Paulinho,6,1.3331,2.0031020695195996
+K. Benzema,Attacking midfielders,A. Griezmann,7,1.3674,1.2577598216803854
+K. Benzema,Attacking midfielders,Alberto Bueno,8,1.4327,2.079208992235789
+K. Benzema,Attacking midfielders,Iago Aspas,9,1.4482,1.0982439146680516
+K. Benzema,Attacking midfielders,L. Vietto,10,1.4603,1.8208779255258878
+Cristiano Ronaldo,Forwards,K. Benzema,1,0.6512,1.4040837129662727
+Cristiano Ronaldo,Forwards,L. Suárez,2,1.0875,0.939839753689771
+Cristiano Ronaldo,Forwards,S. Jovetić,3,1.2647,2.4171385841648827
+Cristiano Ronaldo,Forwards,Rubén Castro,4,1.3257,2.257165896389733
+Cristiano Ronaldo,Forwards,K. Mbappé,5,1.601,1.4305476487568838
+Cristiano Ronaldo,Forwards,L. Jović,6,1.6721,2.6923999121588427
+Cristiano Ronaldo,Forwards,W. Ben Yedder,7,1.7609,2.0006586254677234
+Cristiano Ronaldo,Forwards,P. Aubameyang,8,1.7761,2.0439989756702626
+Cristiano Ronaldo,Forwards,I. Uche,9,1.8008,3.107085786106624
+Cristiano Ronaldo,Forwards,Chicharito,10,1.8157,2.5547129715988945
+Gerard Piqué,Centre backs,Sergio Ramos,1,0.1582,0.7793374097705988
+Gerard Piqué,Centre backs,S. Umtiti,2,0.2763,0.5534076429958983
+Gerard Piqué,Centre backs,Javi García,3,0.4494,0.31761881229526195
+Gerard Piqué,Centre backs,R. Araújo,4,0.5402,0.26515331091235833
+Gerard Piqué,Centre backs,T. Vermaelen,5,0.5816,0.2418814107688448
+Gerard Piqué,Centre backs,A. Christensen,6,0.5844,0.27689387173461866
+Gerard Piqué,Centre backs,A. Rüdiger,7,0.5859,0.3093370028719694
+Gerard Piqué,Centre backs,J. Mathieu,8,0.5994,0.33130684654084497
+Gerard Piqué,Centre backs,Diego Carlos,9,0.6226,0.14600394400197303
+Gerard Piqué,Centre backs,A. Mandi,10,0.6318,0.2716965216607909
+Sergio Busquets,Defensive midfielders,Z. Kuzmanović,1,0.4161,0.4744549933894626
+Sergio Busquets,Defensive midfielders,Damián Rodríguez,2,0.4713,0.46761111835007113
+Sergio Busquets,Defensive midfielders,Marc Casadó,3,0.5103,0.43475316026891303
+Sergio Busquets,Defensive midfielders,Sergio Marcos,4,0.54990000000000006,0.09575185913929071
+Sergio Busquets,Defensive midfielders,M. Díaz,5,0.6053,0.27015996937292175
+Sergio Busquets,Defensive midfielders,D. Blind,6,0.6484,0.08226969688457213
+Sergio Busquets,Defensive midfielders,Dean Huijsen,7,0.6511,0.3704658373348952
+Sergio Busquets,Defensive midfielders,Kirian Rodríguez,8,0.7549,0.8606351042552244
+Sergio Busquets,Defensive midfielders,Dani Parejo,9,0.755,1.2986115835566858
+Sergio Busquets,Defensive midfielders,J. Mascherano,10,0.7989,0.03941198138984797
+Xavi,Midfielders,M. Pjanić,1,0.6473,0.2014146651436067
+Xavi,Midfielders,T. Kroos,2,1.116,0.4632972654673672
+Xavi,Midfielders,Andrés Iniesta,3,1.2289,0.6205414785392512
+Xavi,Midfielders,Arthur,4,1.5094,0.13927669652057761
+Xavi,Midfielders,T. Gayoso Roberto,5,1.6378,0.4477489953377196
+Xavi,Midfielders,F. de Jong,6,1.6544,0.3274712198773165
+Xavi,Midfielders,L. Modrić,7,1.7946,0.2811656100047049
+Xavi,Midfielders,S. Nasri,8,1.821,0.7609467399625568
+Xavi,Midfielders,İ. Gündoğan,9,1.8824,0.9661971297969338
+Xavi,Midfielders,Riqui Puig,10,1.9274,0.7320235882810194
+L. Messi,Attacking midfielders,Neymar,1,1.8177,2.252541842622912
+L. Messi,Attacking midfielders,Pedro,2,2.1404,3.1708800055015556
+L. Messi,Attacking midfielders,Philippe Coutinho,3,2.1717,3.5478003483370837
+L. Messi,Attacking midfielders,Jonathan Viera,4,2.2451,4.100884642969239
+L. Messi,Attacking midfielders,J. Rodríguez,5,2.2529,3.8053497006418846
+L. Messi,Attacking midfielders,S. Nasri,6,2.3489,4.57231156180013
+L. Messi,Attacking midfielders,Isco,7,2.5138,4.221539691342133
+L. Messi,Attacking midfielders,Xavi,8,2.6135,5.251709001211973
+L. Messi,Attacking midfielders,Riqui Puig,9,2.6175,4.569472595062768
+L. Messi,Attacking midfielders,İ. Gündoğan,10,2.6244,4.41157700350344
+Koke,Midfielders,Fabián Ruiz,1,0.22,0.14536909164910383
+Koke,Midfielders,Dani Parejo,2,0.2313,0.7716097791592412
+Koke,Midfielders,Hugo Sotelo,3,0.2848,0.2638841994700219
+Koke,Midfielders,Sergi Roberto,4,0.2879,0.137257719221493
+Koke,Midfielders,Aleix García,5,0.3515,0.02739726684515506
+Koke,Midfielders,Marc Casadó,6,0.3851,0.10191276701283115
+Koke,Midfielders,Álex López,7,0.4081,0.38148255760575345
+Koke,Midfielders,S. Amrabat,8,0.4549,0.35682169121737034
+Koke,Midfielders,M. Kovačić,9,0.5015,0.09508062950997535
+Koke,Midfielders,H. Herrera,10,0.5172,0.42198114194710756
+A. Griezmann,Attacking midfielders,G. Bale,1,0.495,0.3994577187146579
+A. Griezmann,Attacking midfielders,Alberto Bueno,2,0.5304,0.8536233853315097
+A. Griezmann,Attacking midfielders,Iago Aspas,3,0.5647,0.2659473825027599
+A. Griezmann,Attacking midfielders,Xabi Prieto,4,0.6222,2.0926787330220478
+A. Griezmann,Attacking midfielders,Malcom,5,0.6292,1.1560648573155348
+A. Griezmann,Attacking midfielders,João Félix,6,0.6949,0.3383399491155986
+A. Griezmann,Attacking midfielders,L. Vietto,7,0.7882,0.6005250099899335
+A. Griezmann,Attacking midfielders,Ansu Fati,8,0.8213,0.07252087649183554
+A. Griezmann,Attacking midfielders,K. Boateng,9,0.8355,0.47113699407895177
+A. Griezmann,Attacking midfielders,Dani Olmo,10,0.8662,0.6611030382024963
+C. Stuani,Forwards,Manucho Gonçalves,1,0.5609,1.8212289308877356
+C. Stuani,Forwards,E. Boateng,2,0.5729,1.7750806951954434
+C. Stuani,Forwards,G. Carrillo,3,0.6882,2.3207606150847515
+C. Stuani,Forwards,Samu Omorodion,4,0.7626,1.3608459623045674
+C. Stuani,Forwards,A. Budimir,5,0.764,1.0416308495071622
+C. Stuani,Forwards,R. Falcao,6,0.7769,1.5359818436464054
+C. Stuani,Forwards,Y. En-Nesyri,7,0.8091,1.6167049930666069
+C. Stuani,Forwards,L. de Jong,8,0.8126,1.7621655954339974
+C. Stuani,Forwards,V. Muriqi,9,0.8239,1.761153776471039
+C. Stuani,Forwards,Rafa Mir,10,0.843,1.364533813575542
+Iago Aspas,Attacking midfielders,G. Bale,1,0.1517,0.2651904714322643
+Iago Aspas,Attacking midfielders,Ansu Fati,2,0.2586,0.21277350296958886
+Iago Aspas,Attacking midfielders,João Félix,3,0.3167,0.3298780244972278
+Iago Aspas,Attacking midfielders,Malcom,4,0.4822,1.297954270788877
+Iago Aspas,Attacking midfielders,C. Vela,5,0.5124,1.1732627782967722
+Iago Aspas,Attacking midfielders,A. Griezmann,6,0.5647,0.2659473825027599
+Iago Aspas,Attacking midfielders,M. Depay,7,0.565,0.255619017094637
+Iago Aspas,Attacking midfielders,L. Vietto,8,0.5754,0.7252272773480762
+Iago Aspas,Attacking midfielders,Rodrygo,9,0.6285,1.247231508057893
+Iago Aspas,Attacking midfielders,Francisco Trincão,10,0.7077,1.4048858103808528
+Saúl Ñíguez,Defensive midfielders,Carlos Dotor,1,0.1029,0.46771600886517994
+Saúl Ñíguez,Defensive midfielders,Nacho Monreal,2,0.1461,0.6017365443846676
+Saúl Ñíguez,Defensive midfielders,Gerard Gumbau,3,0.1842,0.7319054538177108
+Saúl Ñíguez,Defensive midfielders,J. Lerma,4,0.2017,0.7370602860256585
+Saúl Ñíguez,Defensive midfielders,Álex Fernández,5,0.2443,0.06331838305366679
+Saúl Ñíguez,Defensive midfielders,N. Petrović,6,0.2467,0.4205123928365624
+Saúl Ñíguez,Defensive midfielders,Víctor Meseguer,7,0.2729,0.2119813841389582
+Saúl Ñíguez,Defensive midfielders,D. Lopy,8,0.2794,0.8128852227708588
+Saúl Ñíguez,Defensive midfielders,Monchu,9,0.2984,0.18883327960634866
+Saúl Ñíguez,Defensive midfielders,Iker Muñoz,10,0.3194,0.5716350338552507
+L. Suárez,Forwards,S. Jovetić,1,0.2538,1.5504506649332022
+L. Suárez,Forwards,Rubén Castro,2,0.6889,1.3925830421523009
+L. Suárez,Forwards,L. Vietto,3,0.7919,2.310052256008372
+L. Suárez,Forwards,W. Ben Yedder,4,0.8225,1.1140643066883344
+L. Suárez,Forwards,K. Benzema,5,0.8292,0.4907371061001184
+L. Suárez,Forwards,I. Uche,6,0.8622,2.2195815688283655
+L. Suárez,Forwards,Chicharito,7,0.8841,1.7138635854429087
+L. Suárez,Forwards,G. Rossi,8,0.8943,2.075489228586028
+L. Suárez,Forwards,K. Boateng,9,0.9167,2.1711278333168957
+L. Suárez,Forwards,L. Rémy,10,0.9865,1.7417980002111435
+L. Modrić,Midfielders,Pedri,1,0.2654,0.5303058592455758
+L. Modrić,Midfielders,F. de Jong,2,0.4625,0.05007986864948863
+L. Modrić,Midfielders,Riqui Puig,3,0.4799,0.8504475638748339
+L. Modrić,Midfielders,T. Gayoso Roberto,4,0.5304,0.17128125022276777
+L. Modrić,Midfielders,Andrés Iniesta,5,0.6265,0.38344750786376125
+L. Modrić,Midfielders,M. Kovačić,6,0.6335,0.27385134154104795
+L. Modrić,Midfielders,S. Nasri,7,0.6526,0.8565843241897956
+L. Modrić,Midfielders,É. Banega,8,0.7007,0.194927413761467
+L. Modrić,Midfielders,Arthur,9,0.7325,0.20462288183006763
+L. Modrić,Midfielders,İ. Gündoğan,10,0.8156,1.0437878772509281
+Neymar,Attacking midfielders,Jonathan Viera,1,1.2195,1.8491149802412954
+Neymar,Attacking midfielders,E. Hazard,2,1.2787,1.815560076836437
+Neymar,Attacking midfielders,Pedro,3,1.3028,0.9224880055239656
+Neymar,Attacking midfielders,Philippe Coutinho,4,1.3399,1.2952781427244835
+Neymar,Attacking midfielders,O. Dembélé,5,1.3767,1.5897595549466148
+Neymar,Attacking midfielders,Isco,6,1.3792,1.9690587893683382
+Neymar,Attacking midfielders,Lamine Yamal,7,1.4882,1.2621321596933028
+Neymar,Attacking midfielders,J. Rodríguez,8,1.5048,1.6065110160979605
+Neymar,Attacking midfielders,Gerard Deulofeu,9,1.7313,1.653632403583391
+Neymar,Attacking midfielders,S. Nasri,10,1.744,2.319784931394269
+J. Giménez,Centre backs,A. Rami,1,0.0752,0.0953575143760995
+J. Giménez,Centre backs,S. Papastathopoulos,2,0.0878,0.18091729142587928
+J. Giménez,Centre backs,Ó. Duarte,3,0.1292,0.1382096175663922
+J. Giménez,Centre backs,Deivid,4,0.1612,0.11996144120462962
+J. Giménez,Centre backs,Daniel Carriço,5,0.1744,0.19504694694129973
+J. Giménez,Centre backs,Édgar González,6,0.1769,0.19230129462557807
+J. Giménez,Centre backs,C. Montes,7,0.19,0.23437275218083117
+J. Giménez,Centre backs,Iván Ramis,8,0.2062,0.2462631042579569
+J. Giménez,Centre backs,S. Babić,9,0.2066,0.4025324663152939
+J. Giménez,Centre backs,M. Diakhaby,10,0.2167,0.33228893089206607
+Iñaki Williams,Forwards,Ferrán Jutglà,1,0.1876,0.18354897113022564
+Iñaki Williams,Forwards,Sandro Ramírez,2,0.3025,0.2054213952032853
+Iñaki Williams,Forwards,C. Hernández,3,0.3074,0.310659523872315
+Iñaki Williams,Forwards,Portu,4,0.3361,0.41311734072986717
+Iñaki Williams,Forwards,A. Peñaranda,5,0.3369,0.4523940184240123
+Iñaki Williams,Forwards,W. Swedberg,6,0.3446,0.21656038030391253
+Iñaki Williams,Forwards,S. Becker,7,0.3508,0.10769918417524987
+Iñaki Williams,Forwards,Ayoze Pérez,8,0.3558,0.5013744925964262
+Iñaki Williams,Forwards,J. Kluivert,9,0.3989,0.23533928400304163
+Iñaki Williams,Forwards,Rober Ibáñez,10,0.4106,0.5983769201637894
+L. Suárez,Attacking midfielders,D. van de Beek,1,0.2449,0.3365169079458077
+L. Suárez,Attacking midfielders,Miguel Baeza,2,0.2678,0.3955183061122519
+L. Suárez,Attacking midfielders,A. Sánchez,3,0.297,0.100434291915908
+L. Suárez,Attacking midfielders,L. Romero,4,0.2971,0.21640626935732865
+L. Suárez,Attacking midfielders,Coro,5,0.3231,0.19585021170889347
+L. Suárez,Attacking midfielders,Eraso,6,0.3624,0.4230816542941245
+L. Suárez,Attacking midfielders,Carles Aleñà,7,0.3935,0.940843834901552
+L. Suárez,Attacking midfielders,Gabriel Pires,8,0.4057,0.41552854403623274
+L. Suárez,Attacking midfielders,Manu del Moral,9,0.4361,0.34892622790752503
+L. Suárez,Attacking midfielders,Jon Guridi,10,0.4511,0.5979916872986947
+L. Suárez,Forwards,Sergi Guardiola,1,0.1287,0.4450889700477851
+L. Suárez,Forwards,Iván Romero,2,0.1519,0.33243400881336077
+L. Suárez,Forwards,N. Ghilas,3,0.2091,0.24507536691821802
+L. Suárez,Forwards,Fábio Silva,4,0.2735,0.5209515716165961
+L. Suárez,Forwards,Matheus Cunha,5,0.3061,0.5310200159038165
+L. Suárez,Forwards,M. Livaja,6,0.3395,0.48870968628644473
+L. Suárez,Forwards,F. Smolov,7,0.3546,0.2737081677433927
+L. Suárez,Forwards,Isaac Romero,8,0.3648,0.1465314778450392
+L. Suárez,Forwards,F. Viñas,9,0.365,0.2740430772104827
+L. Suárez,Forwards,A. Peñaranda,10,0.3812,0.7490822572125013

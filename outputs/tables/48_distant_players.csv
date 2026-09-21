@@ -1,10 +1,13 @@
-target,player_name,rank,style_dist
-L. Messi,O. Vranješ,1,8.4018
-L. Messi,Juan Iglesias,2,7.7809
-L. Messi,Iván Alejo,3,7.6279
-Sergio Ramos,Hélder Costa,1,4.9777
-Sergio Ramos,L. Messi,2,4.9052
-Sergio Ramos,Pedro Porro,3,4.8577
-Xavi,A. Budimir,1,6.8557
-Xavi,C. Stuani,2,6.742
-Xavi,Y. En-Nesyri,3,6.7144
+target,player_name,rank,style_dist,similarity_score
+L. Messi,O. Vranješ,1,8.4079,2.4
+L. Messi,Juan Iglesias,2,7.8654,3.1
+L. Messi,Iván Alejo,3,7.8044,3.1
+Sergio Ramos,Hélder Costa,1,5.0483,10.7
+Sergio Ramos,L. Messi,2,4.9348,11.2
+Sergio Ramos,Pedro Porro,3,4.9508,11.1
+Xavi,A. Budimir,1,6.9016,4.7
+Xavi,C. Larin,2,6.7483,5
+Xavi,Y. En-Nesyri,3,6.7402,5
+C. Stuani,Xavi,1,6.7673,5
+C. Stuani,L. Messi,2,6.6023,5.3
+C. Stuani,Andrés Iniesta,3,6.0579,6.8
